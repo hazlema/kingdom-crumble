@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://vkw7r7tyi210"
+path="res://.godot/imported/Echoes in the Stone.mp3-2c2cfe0f78302884966ffc91e78f4a77.mp3str"
+
+[deps]
+
+source_file="res://music/chill/Echoes in the Stone.mp3"
+dest_files=["res://.godot/imported/Echoes in the Stone.mp3-2c2cfe0f78302884966ffc91e78f4a77.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

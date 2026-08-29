@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bmrqjyk5flsis"
+path="res://.godot/imported/Stone and Static.mp3-ae09adf4ca9b4ff6f97a8f99c57b3887.mp3str"
+
+[deps]
+
+source_file="res://music/chill/Stone and Static.mp3"
+dest_files=["res://.godot/imported/Stone and Static.mp3-ae09adf4ca9b4ff6f97a8f99c57b3887.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
