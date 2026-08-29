@@ -8,6 +8,5 @@
 
 ## Rig notes (soldier)
 
-- Leg animation: rotate the **BackTorso / FrontTorso** bones, NOT the
-  thigh bones (owner's rig structure; thigh bones may get deleted as
-  redundant leaf bones).
+- Leg bones simplified and renamed: **Hip/FrontLeg** and **Hip/BackLeg**
+  (redundant thigh leaf bones removed). Rotate those for leg animation.
