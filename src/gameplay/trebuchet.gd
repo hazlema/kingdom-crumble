@@ -11,6 +11,14 @@ var aim_angle_deg := 45.0
 var charge := 0.0
 var _charging := false
 
+func _process(_delta: float) -> void:
+	if has_node("AimIndicator"):
+		var indicator := $AimIndicator
+		indicator.rotation = -deg_to_rad(aim_angle_deg)
+		var pt := indicator.points[1]
+		pt.x = 90.0 + charge * 60.0
+		indicator.set_point_position(1, pt)
+
 func process_aim(delta: float) -> void:
 	var dir := Input.get_axis("aim_left", "aim_right")
 	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta,
