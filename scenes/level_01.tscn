@@ -34,17 +34,14 @@ shape = SubResource("ground_shape")
 [node name="Trebuchet" parent="." instance=ExtResource("2")]
 position = Vector2(200, 600)
 
-[node name="Crate1" parent="." instance=ExtResource("3")]
+[node name="Crate1" parent="." groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 568)
-groups = ["crates"]
 
-[node name="Crate2" parent="." instance=ExtResource("3")]
+[node name="Crate2" parent="." groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 502)
-groups = ["crates"]
 
-[node name="Crate3" parent="." instance=ExtResource("3")]
+[node name="Crate3" parent="." groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 436)
-groups = ["crates"]
 
 [node name="CameraDirector" type="Camera2D" parent="."]
 position = Vector2(800, 400)
