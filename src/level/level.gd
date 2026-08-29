@@ -12,6 +12,7 @@ var state := State.AIMING
 var shots_left := 0
 var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
+var _active_stone: Stone
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -52,6 +53,7 @@ func _on_fired(velocity: Vector2) -> void:
 	var stone: Stone = STONE_SCENE.instantiate()
 	add_child(stone)
 	stone.launch(trebuchet.get_node("LaunchPoint").global_position, velocity)
+	_active_stone = stone
 	cam.follow_target = stone
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))
 	_resolve_clock = 0.0
@@ -59,7 +61,7 @@ func _on_fired(velocity: Vector2) -> void:
 
 func _settle() -> void:
 	state = State.RESOLVING
-	_award_leans()
+	await _award_leans()
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "settled"))
 	var standing := count_standing(_crates())
 	if standing == 0:
@@ -81,13 +83,21 @@ func _award_leans() -> void:
 			if other is Crate and _ledger.claim(crate.get_instance_id(), other.get_instance_id()):
 				hud.banner("LEAN BONUS!", "")
 				await get_tree().create_timer(1.2).timeout
-				if state == State.AIMING or state == State.RESOLVING or state == State.FLIGHT:
-					hud.clear_banner()
+				hud.clear_banner()
 
 func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
 
+func _stone_is_done() -> bool:
+	if not is_instance_valid(_active_stone):
+		return true
+	if _active_stone.global_position.y > 2000.0:
+		return true
+	return _active_stone.sleeping
+
 func _all_sleeping() -> bool:
+	if not _stone_is_done():
+		return false
 	for crate in _crates():
 		if not crate.sleeping:
 			return false
