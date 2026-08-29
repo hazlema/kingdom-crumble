@@ -2,7 +2,7 @@ extends GutTest
 
 func test_actions_registered():
 	GameInput.ensure_actions()
-	for action in ["aim_left", "aim_right", "fire", "advance", "scout_left", "scout_right"]:
+	for action in ["aim_left", "aim_right", "fire", "advance", "scout_left", "scout_right", "backdrop_toggle"]:
 		assert_true(InputMap.has_action(action), action)
 
 func test_ensure_actions_is_idempotent():

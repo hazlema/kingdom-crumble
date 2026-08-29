@@ -13,6 +13,7 @@ var shots_left := 0
 var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
 var _active_stone: Stone
+var _backdrop := BackdropMode.new()
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -27,6 +28,8 @@ func _ready() -> void:
 	trebuchet.fired.connect(_on_fired)
 
 func _physics_process(delta: float) -> void:
+	if Input.is_action_just_pressed("backdrop_toggle"):
+		_apply_backdrop_alpha(_backdrop.toggle())
 	match state:
 		State.AIMING:
 			trebuchet.process_aim(delta)
@@ -84,6 +87,15 @@ func _award_leans() -> void:
 				hud.banner("LEAN BONUS!", "")
 				await get_tree().create_timer(1.2).timeout
 				hud.clear_banner()
+
+func _apply_backdrop_alpha(alpha: float) -> void:
+	var targets: Array = [trebuchet]
+	targets.append_array(_crates())
+	if is_instance_valid(_active_stone):
+		targets.append(_active_stone)
+	var tween := create_tween().set_parallel(true)
+	for target in targets:
+		tween.tween_property(target, "modulate:a", alpha, 0.25)
 
 func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
