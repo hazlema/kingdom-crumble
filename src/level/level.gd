@@ -35,10 +35,12 @@ func _physics_process(delta: float) -> void:
 			elif Input.get_axis("aim_left", "aim_right") != 0.0 \
 					or Input.is_action_pressed("fire"):
 				cam.set_mode(CameraDirector.next_mode(cam.mode, "aim_input"))
-		State.FLIGHT, State.RESOLVING:
+		State.FLIGHT:
 			_resolve_clock += delta
 			if _resolve_clock > RESOLVE_MIN and (_all_sleeping() or _resolve_clock > RESOLVE_MAX):
 				_settle()
+		State.RESOLVING:
+			pass
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
 				get_tree().reload_current_scene()
@@ -56,6 +58,7 @@ func _on_fired(velocity: Vector2) -> void:
 	state = State.FLIGHT
 
 func _settle() -> void:
+	state = State.RESOLVING
 	_award_leans()
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "settled"))
 	var standing := count_standing(_crates())
