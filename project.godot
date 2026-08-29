@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 
 Settings="*res://src/settings/settings.gd"
 GameInput="*res://src/settings/game_input.gd"
+Music="*res://src/audio/music_director.gd"
 
 [physics]
 
