@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 Settings="*res://src/settings/settings.gd"
+GameInput="*res://src/settings/game_input.gd"
 
 [physics]
 
