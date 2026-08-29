@@ -13,9 +13,9 @@ var _charging := false
 
 func _process(_delta: float) -> void:
 	if has_node("AimIndicator"):
-		var indicator := $AimIndicator
+		var indicator: Line2D = $AimIndicator
 		indicator.rotation = -deg_to_rad(aim_angle_deg)
-		var pt := indicator.points[1]
+		var pt: Vector2 = indicator.points[1]
 		pt.x = 90.0 + charge * 60.0
 		indicator.set_point_position(1, pt)
 
