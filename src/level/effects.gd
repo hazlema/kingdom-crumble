@@ -50,6 +50,9 @@ static func _confetti_colors() -> Gradient:
 	return g
 
 static func _sound(host: Node2D, name: String) -> bool:
+	if name.contains("/") or name.contains("\\") or name.contains(".."):
+		push_warning("Unsafe sound name rejected: %s" % name)
+		return false
 	var path := "%s/%s.ogg" % [SFX_DIR, name]
 	if not ResourceLoader.exists(path):
 		push_warning("No such sound effect: %s" % name)
