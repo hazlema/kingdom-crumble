@@ -10,9 +10,11 @@ var current := LevelLayout.new()
 var occupancy := {}           # Vector2i -> Crate
 var carrying := ""            # asset id while placing, "" = none
 var moving_from := Vector2i(-1, -1)
+var save_path := ""           # last saved path, "" = unsaved
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
+@onready var menu: EditorMenu = $Ui/EditorMenu
 
 func _ready() -> void:
 	EditorAssets.scan()
@@ -20,10 +22,54 @@ func _ready() -> void:
 		carrying = id
 		moving_from = Vector2i(-1, -1)
 		overlay.selected_cell = Vector2i(-1, -1))
+	menu.save_requested.connect(_on_save)
+	menu.save_as_requested.connect(_on_save_as)
+	menu.load_requested.connect(_on_load)
+	menu.clear_requested.connect(_on_clear)
+	menu.exit_requested.connect(_on_exit)
+	menu.test_requested.connect(_on_test)
+	menu.background_picked.connect(_on_background_picked)
 	if resume_layout != null:
 		current = resume_layout
 		resume_layout = null
 	_rebuild()
+
+func _on_save() -> void:
+	if save_path == "":
+		# No stem — we can't auto-save; treat as Save As with current title
+		# (If title is still Untitled the user must use Save As explicitly.)
+		if current.title != "Untitled":
+			save_path = LevelStore.save_user(current, current.title)
+		# else: silently do nothing — panel already closed; user must use Save As
+	else:
+		var stem := save_path.get_file().get_basename()
+		LevelStore.save_user(current, stem)
+
+func _on_save_as(stem: String) -> void:
+	if current.title == "Untitled":
+		current.title = stem
+	save_path = LevelStore.save_user(current, stem)
+
+func _on_load(path: String) -> void:
+	var loaded := LevelStore.load_level(path)
+	if loaded == null:
+		return
+	current = loaded
+	save_path = path
+	_rebuild()
+
+func _on_clear() -> void:
+	current.crates.clear()
+	_rebuild()
+
+func _on_exit() -> void:
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+func _on_test() -> void:
+	pass  # Task 10 fills this in
+
+func _on_background_picked(id: String) -> void:
+	current.background = id
 
 func _rebuild() -> void:
 	for c in occupancy.values():
