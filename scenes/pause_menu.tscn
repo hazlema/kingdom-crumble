@@ -43,6 +43,11 @@ unique_name_in_owner = true
 theme_override_font_sizes/font_size = 20
 text = "Restart Level"
 
+[node name="BackToEditor" type="Button" parent="Center/Panel/Margin/Items"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = "Back to Editor"
+
 [node name="MusicRow" type="HBoxContainer" parent="Center/Panel/Margin/Items"]
 theme_override_constants/separation = 12
 

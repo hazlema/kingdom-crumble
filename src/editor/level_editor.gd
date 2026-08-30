@@ -62,7 +62,9 @@ func _on_exit() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func _on_test() -> void:
-	pass  # Task 10 fills this in
+	Level.next_layout = current
+	Level.return_to_editor = true
+	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 func _on_background_picked(id: String) -> void:
 	current.background = id

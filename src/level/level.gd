@@ -12,6 +12,10 @@ const RESOLVE_MAX := 6.0
 # Set this before changing to the level scene to play any layout —
 # built-in, or a player-made file from user://levels/.
 static var next_layout_path := ""
+# Set to a LevelLayout to bypass the path entirely (cleared in _ready).
+static var next_layout: LevelLayout = null
+# When true the level returns to the editor on end/pause rather than reloading.
+static var return_to_editor := false
 
 var layout: LevelLayout
 var state := State.AIMING
@@ -21,6 +25,7 @@ var _ledger := LeanLedger.new()
 var _active_stone: Stone
 var _backdrop := BackdropMode.new()
 var _checking := false
+var _pristine: LevelLayout = null
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -29,10 +34,15 @@ var _checking := false
 func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
-	var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
-	layout = LevelStore.load_level(path)
-	if layout == null:
-		layout = LevelStore.load_level(DEFAULT_LAYOUT)
+	if next_layout != null:
+		layout = next_layout
+		_pristine = next_layout
+		next_layout = null
+	else:
+		var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
+		layout = LevelStore.load_level(path)
+		if layout == null:
+			layout = LevelStore.load_level(DEFAULT_LAYOUT)
 	_spawn_crates()
 	shots_left = layout.shots if layout.shots > 0 \
 		else Settings.preset.shots_per_level
@@ -48,6 +58,8 @@ func _ready() -> void:
 		$PauseMenu.quit_requested.connect(
 			func() -> void: get_tree().change_scene_to_file(
 				"res://scenes/main_menu.tscn"))
+		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
+		$PauseMenu.set_editor_mode(Level.return_to_editor)
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
@@ -70,7 +82,10 @@ func _physics_process(delta: float) -> void:
 			pass
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
-				get_tree().reload_current_scene()
+				if Level.return_to_editor:
+					_back_to_editor()
+				else:
+					get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
 	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
@@ -107,6 +122,12 @@ func _settle() -> void:
 	else:
 		trebuchet.recock()  # ammo remains: reset the arm and reload
 		state = State.AIMING
+
+func _back_to_editor() -> void:
+	LevelEditor.resume_layout = _pristine
+	Level.return_to_editor = false
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/editor.tscn")
 
 func _award_leans() -> void:
 	for crate in _crates():
