@@ -1,6 +1,45 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="1"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/stone.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/gear.png" id="3"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/heart.png" id="4"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/bomb.png" id="5"]
+
+[sub_resource type="StyleBoxFlat" id="bar_track"]
+bg_color = Color(0.18, 0.12, 0.09, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.965, 0.933, 0.855, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="bar_fill"]
+bg_color = Color(0.91, 0.28, 0.25, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="gear_btn"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.96, 0.77, 0.26, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 6
+border_color = Color(0.29, 0.2, 0.145, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="Hud" type="CanvasLayer"]
 script = ExtResource("1")
@@ -9,7 +48,16 @@ script = ExtResource("1")
 offset_left = 20.0
 offset_top = 16.0
 
-[node name="Shots" type="Label" parent="StonesChip"]
+[node name="StonesRow" type="HBoxContainer" parent="StonesChip"]
+theme_override_constants/separation = 10
+
+[node name="StoneIcon" type="TextureRect" parent="StonesChip/StonesRow"]
+custom_minimum_size = Vector2(34, 34)
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("2")
+
+[node name="Shots" type="Label" parent="StonesChip/StonesRow"]
 unique_name_in_owner = true
 theme_override_font_sizes/font_size = 26
 text = "STONES: 0"
@@ -18,27 +66,58 @@ text = "STONES: 0"
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -128.0
+offset_left = -86.0
 offset_top = 16.0
 offset_right = -20.0
-text = "MENU"
+offset_bottom = 82.0
+theme_override_styles/normal = SubResource("gear_btn")
+theme_override_styles/hover = SubResource("gear_btn")
+theme_override_styles/pressed = SubResource("gear_btn")
+icon = ExtResource("3")
+expand_icon = true
 
-[node name="PowerBack" type="ColorRect" parent="."]
+[node name="PowerHeart" type="TextureRect" parent="."]
 unique_name_in_owner = true
 visible = false
-offset_left = 20.0
-offset_top = 84.0
-offset_right = 324.0
-offset_bottom = 106.0
-color = Color(0.29, 0.2, 0.145, 0.85)
+offset_left = 18.0
+offset_top = 80.0
+offset_right = 66.0
+offset_bottom = 128.0
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("4")
 
-[node name="PowerFill" type="ColorRect" parent="PowerBack"]
+[node name="PowerBack" type="Panel" parent="."]
 unique_name_in_owner = true
-offset_left = 4.0
-offset_top = 4.0
-offset_right = 4.0
-offset_bottom = 18.0
-color = Color(0.94, 0.54, 0.24, 1)
+visible = false
+offset_left = 44.0
+offset_top = 88.0
+offset_right = 352.0
+offset_bottom = 120.0
+theme_override_styles/panel = SubResource("bar_track")
+
+[node name="PowerFill" type="Panel" parent="PowerBack"]
+unique_name_in_owner = true
+offset_left = 7.0
+offset_top = 7.0
+offset_right = 7.0
+offset_bottom = 25.0
+theme_override_styles/panel = SubResource("bar_fill")
+
+[node name="FireButton" type="Button" parent="."]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -100.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_font_sizes/font_size = 30
+text = "FIRE!"
+icon = ExtResource("5")
+expand_icon = true
 
 [node name="BannerCenter" type="CenterContainer" parent="."]
 unique_name_in_owner = true
