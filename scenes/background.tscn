@@ -16,38 +16,38 @@ fill_to = Vector2(0, 1)
 [sub_resource type="ShaderMaterial" id="hills_far"]
 shader = ExtResource("1")
 shader_parameter/fill = Color(0.55, 0.79, 0.47, 1)
-shader_parameter/base_frac = 0.3
+shader_parameter/base_frac = 0.1663
 shader_parameter/amp1_px = 90.0
 shader_parameter/cycles1 = 2.0
 shader_parameter/phase1 = 0.7
 shader_parameter/amp2_px = 30.0
 shader_parameter/cycles2 = 5.0
 shader_parameter/phase2 = 2.4
-shader_parameter/rect_h_px = 970.0
+shader_parameter/rect_h_px = 1750.0
 
 [sub_resource type="ShaderMaterial" id="hills_mid"]
 shader = ExtResource("1")
 shader_parameter/fill = Color(0.31, 0.66, 0.37, 1)
-shader_parameter/base_frac = 0.4
+shader_parameter/base_frac = 0.2109
 shader_parameter/amp1_px = 80.0
 shader_parameter/cycles1 = 3.0
 shader_parameter/phase1 = 0.0
 shader_parameter/amp2_px = 26.0
 shader_parameter/cycles2 = 7.0
 shader_parameter/phase2 = 1.7
-shader_parameter/rect_h_px = 870.0
+shader_parameter/rect_h_px = 1650.0
 
 [sub_resource type="ShaderMaterial" id="hills_near"]
 shader = ExtResource("1")
 shader_parameter/fill = Color(0.18, 0.49, 0.31, 1)
-shader_parameter/base_frac = 0.52
+shader_parameter/base_frac = 0.2583
 shader_parameter/amp1_px = 60.0
 shader_parameter/cycles1 = 4.0
 shader_parameter/phase1 = 3.9
 shader_parameter/amp2_px = 20.0
 shader_parameter/cycles2 = 9.0
 shader_parameter/phase2 = 0.6
-shader_parameter/rect_h_px = 770.0
+shader_parameter/rect_h_px = 1550.0
 
 [node name="Background" type="ParallaxBackground"]
 
@@ -69,7 +69,7 @@ material = SubResource("hills_far")
 offset_left = -1000.0
 offset_top = -350.0
 offset_right = 3096.0
-offset_bottom = 620.0
+offset_bottom = 1400.0
 
 [node name="Mid" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.3, 0.08)
@@ -80,7 +80,7 @@ material = SubResource("hills_mid")
 offset_left = -1000.0
 offset_top = -250.0
 offset_right = 3096.0
-offset_bottom = 620.0
+offset_bottom = 1400.0
 
 [node name="Near" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.5, 0.12)
@@ -91,4 +91,4 @@ material = SubResource("hills_near")
 offset_left = -1000.0
 offset_top = -150.0
 offset_right = 3096.0
-offset_bottom = 620.0
+offset_bottom = 1400.0
