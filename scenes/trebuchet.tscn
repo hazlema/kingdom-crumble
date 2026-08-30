@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://bfanm43m5jn8k" path="res://art/assets/catapult/crank.png" id="5"]
 [ext_resource type="Texture2D" uid="uid://crc60xoegbidq" path="res://art/assets/catapult/axle_cap.png" id="6"]
 [ext_resource type="Texture2D" uid="uid://ovbj7mms21vj" path="res://art/assets/catapult/wheel.png" id="7"]
-[ext_resource type="Script" path="res://src/gameplay/trajectory_preview.gd" id="8"]
+[ext_resource type="Script" uid="uid://ci66o6xky2qgs" path="res://src/gameplay/trajectory_preview.gd" id="8"]
 
 [node name="Trebuchet" type="Node2D" unique_id=272224376]
 script = ExtResource("1")

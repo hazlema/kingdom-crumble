@@ -10,8 +10,8 @@ const DT := 0.07
 const CYCLE_SEC := 1.1     # one grow cycle
 const HOLD_FRACTION := 0.2 # portion of the cycle spent fully drawn
 
-const CORE := Color(1.0, 1.0, 1.0, 0.95)
-const RIM := Color(0.1, 0.1, 0.12, 0.6)
+const CORE := Color(1.0, 1.0, 1.0, 0.4)
+const RIM := Color(0.1, 0.1, 0.12, 0.3)
 
 var velocity := Vector2.ZERO:
 	set(v):
@@ -49,9 +49,12 @@ func _draw() -> void:
 	if path.size() < 2:
 		return
 
-	# Reveal fraction: grow, then hold fully drawn briefly
+	# Reveal fraction: grow, then hold fully drawn briefly. Never
+	# shorter than a stub — a zero-length arrow is an invisible frame
+	# (the flicker at every cycle restart).
 	var reveal := minf(_cycle / (1.0 - HOLD_FRACTION), 1.0)
 	reveal = ease(reveal, 0.6)  # fast start, soft landing
+	reveal = lerpf(0.15, 1.0, reveal)
 	var end_f := 1.0 + reveal * float(path.size() - 1)
 	var shown := PackedVector2Array()
 	for i in range(int(end_f)):
