@@ -7,6 +7,8 @@ const AIM_MIN_DEG := 20.0
 const AIM_MAX_DEG := 80.0
 const AIM_SPEED_DEG := 30.0
 
+@export var arm_swing_degrees := 75.0  # negative to swing the other way
+
 var aim_angle_deg := 45.0
 var charge := 0.0
 var _charging := false
@@ -62,7 +64,7 @@ func _swing_arm() -> void:
 	var arm: Sprite2D = $Body/Arm
 	var rest := arm.rotation
 	var tw := create_tween()
-	tw.tween_property(arm, "rotation", rest + deg_to_rad(75.0), 0.1) \
+	tw.tween_property(arm, "rotation", rest + deg_to_rad(arm_swing_degrees), 0.1) \
 		.set_ease(Tween.EASE_OUT)
 	tw.tween_interval(0.15)
 	tw.tween_property(arm, "rotation", rest, 0.6) \
