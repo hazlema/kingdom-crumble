@@ -24,11 +24,21 @@ func process_aim(delta: float) -> void:
 	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta,
 		AIM_MIN_DEG, AIM_MAX_DEG)
 	if Input.is_action_pressed("fire"):
+		if not _charging:
+			_play_if_present("crank")
 		_charging = true
 		var t: float = Settings.preset.charge_time if Settings.preset else 1.5
 		charge = minf(1.0, charge + delta / t)
 	elif _charging:
 		_fire()
+
+# Owner-authored animations are optional: the game runs without them
+# and picks them up the moment they exist on our own AnimationPlayer.
+func _play_if_present(anim: String) -> void:
+	if has_node("AnimationPlayer"):
+		var player: AnimationPlayer = $AnimationPlayer
+		if player.has_animation(anim):
+			player.play(anim)
 
 func _fire() -> void:
 	_charging = false
@@ -37,6 +47,8 @@ func _fire() -> void:
 		p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
 	var kick := 10.0 + 12.0 * charge
 	charge = 0.0
+	if has_node("AnimationPlayer") and $AnimationPlayer.is_playing():
+		$AnimationPlayer.stop()
 	if has_node("Soldier/AnimationPlayer"):
 		$Soldier/AnimationPlayer.play("fire")
 	_recoil(kick)
