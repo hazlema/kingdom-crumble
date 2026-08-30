@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://src/gameplay/trebuchet.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/soldier.tscn" id="2"]
 
 [node name="Trebuchet" type="Node2D"]
 script = ExtResource("1")
@@ -20,3 +21,7 @@ position = Vector2(0, -90)
 width = 6.0
 default_color = Color(1, 0.83, 0.29, 0.9)
 points = PackedVector2Array(0, 0, 90, 0)
+
+[node name="Soldier" parent="." instance=ExtResource("2")]
+position = Vector2(-75, -42)
+scale = Vector2(0.15, 0.15)
