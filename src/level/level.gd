@@ -56,6 +56,8 @@ func _on_fired(velocity: Vector2) -> void:
 	var stone: Stone = STONE_SCENE.instantiate()
 	add_child(stone)
 	stone.launch(trebuchet.get_node("LaunchPoint").global_position, velocity)
+	if trebuchet.loaded_texture and stone.has_node("Visual"):
+		stone.get_node("Visual").texture = trebuchet.loaded_texture
 	_active_stone = stone
 	cam.follow_target = stone
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))

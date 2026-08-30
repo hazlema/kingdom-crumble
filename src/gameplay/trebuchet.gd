@@ -11,12 +11,23 @@ const AIM_SPEED_DEG := 30.0
 
 var aim_angle_deg := 45.0
 var charge := 0.0
+var loaded_texture: Texture2D
 var _charging := false
 var _arm_rest := 0.0
 
 func _ready() -> void:
 	if has_node("Body/Arm"):
 		_arm_rest = $Body/Arm.rotation
+	_load_stone()
+
+# Drop the next stone into the cup; it rides the arm for free.
+func _load_stone() -> void:
+	if not has_node("Body/Arm/LoadedStone"):
+		return
+	loaded_texture = Stone.VARIANTS[randi() % Stone.VARIANTS.size()]
+	var preview: Sprite2D = $Body/Arm/LoadedStone
+	preview.texture = loaded_texture
+	preview.visible = true
 
 func _process(_delta: float) -> void:
 	if has_node("AimIndicator"):
@@ -55,6 +66,8 @@ func _fire() -> void:
 		p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
 	var kick := 10.0 + 12.0 * charge
 	charge = 0.0
+	if has_node("Body/Arm/LoadedStone"):
+		$Body/Arm/LoadedStone.visible = false
 	if has_node("AnimationPlayer") and $AnimationPlayer.is_playing():
 		$AnimationPlayer.stop()
 	if has_node("Soldier/AnimationPlayer"):
@@ -74,7 +87,8 @@ func _swing_arm() -> void:
 		_arm_rest + deg_to_rad(arm_swing_degrees), 0.1) \
 		.set_ease(Tween.EASE_OUT)
 
-# Cranking winds the arm back down to its cocked rest pose.
+# Cranking winds the arm back down to its cocked rest pose and loads
+# the next stone into the cup.
 func _recock_arm() -> void:
 	if not has_node("Body/Arm"):
 		return
@@ -84,6 +98,7 @@ func _recock_arm() -> void:
 	var tw := create_tween()
 	tw.tween_property(arm, "rotation", _arm_rest, 0.5) \
 		.set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(_load_stone)
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
