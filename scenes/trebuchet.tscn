@@ -50,6 +50,7 @@ texture = ExtResource("6")
 position = Vector2(10, -280)
 
 [node name="TrajectoryPreview" type="Node2D" parent="." unique_id=1080917398]
+visible = false
 position = Vector2(10, -280)
 script = ExtResource("8")
 

@@ -66,6 +66,8 @@ func process_aim(delta: float) -> void:
 		if not _charging:
 			_play_if_present("crank")
 			recock()
+			if has_node("TrajectoryPreview"):
+				$TrajectoryPreview.visible = true
 		_charging = true
 		var t: float = Settings.preset.charge_time if Settings.preset else 1.5
 		charge = minf(1.0, charge + delta / t)
@@ -123,8 +125,6 @@ func recock() -> void:
 	tw.tween_property(arm, "rotation", _arm_rest, 0.5) \
 		.set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(_load_stone)
-	if has_node("TrajectoryPreview"):
-		$TrajectoryPreview.visible = true
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
