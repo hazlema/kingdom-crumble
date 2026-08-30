@@ -51,6 +51,7 @@ position = Vector2(10, -280)
 
 [node name="TrajectoryPreview" type="Node2D" parent="." unique_id=1080917398]
 visible = false
+modulate = Color(1, 1, 1, 0.7)
 position = Vector2(10, -280)
 script = ExtResource("8")
 
