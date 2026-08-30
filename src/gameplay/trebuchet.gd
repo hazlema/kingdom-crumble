@@ -51,8 +51,22 @@ func _fire() -> void:
 		$AnimationPlayer.stop()
 	if has_node("Soldier/AnimationPlayer"):
 		$Soldier/AnimationPlayer.play("fire")
+	_swing_arm()
 	_recoil(kick)
 	fired.emit(v)
+
+# The throwing arm snaps from cocked to thrown, then eases back.
+func _swing_arm() -> void:
+	if not has_node("Body/Arm"):
+		return
+	var arm: Sprite2D = $Body/Arm
+	var rest := arm.rotation
+	var tw := create_tween()
+	tw.tween_property(arm, "rotation", rest + deg_to_rad(75.0), 0.1) \
+		.set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.15)
+	tw.tween_property(arm, "rotation", rest, 0.6) \
+		.set_ease(Tween.EASE_IN_OUT)
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
