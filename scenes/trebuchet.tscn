@@ -1,59 +1,58 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://dlyvvat2i7oqh"]
 
-[ext_resource type="Script" path="res://src/gameplay/trebuchet.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/soldier.tscn" id="2"]
-[ext_resource type="Texture2D" path="res://art/assets/catapult/base.png" id="3"]
-[ext_resource type="Texture2D" path="res://art/assets/catapult/arm_frames/frame0.png" id="4"]
-[ext_resource type="Texture2D" path="res://art/assets/catapult/crank.png" id="5"]
-[ext_resource type="Texture2D" path="res://art/assets/catapult/axle_cap.png" id="6"]
-[ext_resource type="Texture2D" path="res://art/assets/catapult/wheel.png" id="7"]
+[ext_resource type="Script" uid="uid://beeekyyxcymsc" path="res://src/gameplay/trebuchet.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://bqgknl8tthbgp" path="res://scenes/soldier.tscn" id="2"]
+[ext_resource type="Texture2D" uid="uid://c6s2suekwq5gr" path="res://art/assets/catapult/base.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://c55sbfpijwor1" path="res://art/assets/catapult/arm_frames/frame0.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://bfanm43m5jn8k" path="res://art/assets/catapult/crank.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://crc60xoegbidq" path="res://art/assets/catapult/axle_cap.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://ovbj7mms21vj" path="res://art/assets/catapult/wheel.png" id="7"]
+[ext_resource type="Script" path="res://src/gameplay/trajectory_preview.gd" id="8"]
 
-[node name="Trebuchet" type="Node2D"]
+[node name="Trebuchet" type="Node2D" unique_id=272224376]
 script = ExtResource("1")
 arm_swing_degrees = 90.0
 
-[node name="Body" type="Sprite2D" parent="."]
+[node name="Body" type="Sprite2D" parent="." unique_id=1869537416]
 position = Vector2(0, -87)
 scale = Vector2(0.4, 0.4)
 texture = ExtResource("3")
 
-[node name="WheelBack" type="Sprite2D" parent="Body"]
+[node name="WheelBack" type="Sprite2D" parent="Body" unique_id=1910570466]
 position = Vector2(-185, 145)
 texture = ExtResource("7")
 
-[node name="WheelFront" type="Sprite2D" parent="Body"]
+[node name="WheelFront" type="Sprite2D" parent="Body" unique_id=120513522]
 position = Vector2(185, 145)
 texture = ExtResource("7")
 
-[node name="Arm" type="Sprite2D" parent="Body"]
+[node name="Arm" type="Sprite2D" parent="Body" unique_id=1502364995]
+show_behind_parent = true
 position = Vector2(0, -170)
+texture = ExtResource("4")
 centered = false
 offset = Vector2(-400, -430)
-texture = ExtResource("4")
-show_behind_parent = true
 
-[node name="LoadedStone" type="Sprite2D" parent="Body/Arm"]
+[node name="LoadedStone" type="Sprite2D" parent="Body/Arm" unique_id=2011745258]
 position = Vector2(-332, -34)
 scale = Vector2(1.5, 1.5)
 
-[node name="Crank" type="Sprite2D" parent="Body"]
+[node name="Crank" type="Sprite2D" parent="Body" unique_id=162416882]
 position = Vector2(95, 110)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("5")
 
-[node name="AxleCap" type="Sprite2D" parent="Body"]
+[node name="AxleCap" type="Sprite2D" parent="Body" unique_id=554142785]
 position = Vector2(0, -170)
 texture = ExtResource("6")
 
-[node name="LaunchPoint" type="Marker2D" parent="."]
+[node name="LaunchPoint" type="Marker2D" parent="." unique_id=1871221312]
 position = Vector2(10, -280)
 
-[node name="AimIndicator" type="Line2D" parent="."]
+[node name="TrajectoryPreview" type="Node2D" parent="." unique_id=1080917398]
 position = Vector2(10, -280)
-width = 6.0
-default_color = Color(1, 0.83, 0.29, 0.9)
-points = PackedVector2Array(0, 0, 90, 0)
+script = ExtResource("8")
 
-[node name="Soldier" parent="." instance=ExtResource("2")]
+[node name="Soldier" parent="." unique_id=1371647188 instance=ExtResource("2")]
 position = Vector2(-115, -42)
 scale = Vector2(0.15, 0.15)

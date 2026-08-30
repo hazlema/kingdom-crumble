@@ -36,12 +36,12 @@ func _load_stone() -> void:
 	preview.visible = true
 
 func _process(_delta: float) -> void:
-	if has_node("AimIndicator"):
-		var indicator: Line2D = $AimIndicator
-		indicator.rotation = -deg_to_rad(aim_angle_deg)
-		var pt: Vector2 = indicator.points[1]
-		pt.x = 90.0 + charge * 60.0
-		indicator.set_point_position(1, pt)
+	if has_node("TrajectoryPreview"):
+		var p := Settings.preset
+		var tp: TrajectoryPreview = $TrajectoryPreview
+		tp.gravity = ProjectSettings.get_setting("physics/2d/default_gravity", 980.0)
+		tp.velocity = launch_velocity(aim_angle_deg, charge,
+			p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
 
 func process_aim(delta: float) -> void:
 	var dir := Input.get_axis("aim_left", "aim_right")
@@ -74,6 +74,8 @@ func _fire() -> void:
 	charge = 0.0
 	if has_node("Body/Arm/LoadedStone"):
 		$Body/Arm/LoadedStone.visible = false
+	if has_node("TrajectoryPreview"):
+		$TrajectoryPreview.visible = false
 	if has_node("AnimationPlayer") and $AnimationPlayer.is_playing():
 		$AnimationPlayer.stop()
 	if has_node("Soldier/AnimationPlayer"):
@@ -106,6 +108,8 @@ func recock() -> void:
 	tw.tween_property(arm, "rotation", _arm_rest, 0.5) \
 		.set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(_load_stone)
+	if has_node("TrajectoryPreview"):
+		$TrajectoryPreview.visible = true
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
