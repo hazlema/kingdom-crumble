@@ -8,7 +8,7 @@ func _ready() -> void:
 
 func _start(tier: String) -> void:
 	Settings.load_tier(tier)
-	get_tree().change_scene_to_file("res://scenes/level_01.tscn")
+	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 func _quit() -> void:
 	get_tree().quit()

@@ -5,15 +5,23 @@ extends Node2D
 enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
+const CRATE_SCENE := preload("res://scenes/crate.tscn")
+const DEFAULT_LAYOUT := "res://levels/meadow.tres"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
 
+# Set this before changing to the level scene to play any layout —
+# built-in, or a player-made file from user://levels/.
+static var next_layout_path := ""
+
+var layout: LevelLayout
 var state := State.AIMING
 var shots_left := 0
 var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
 var _active_stone: Stone
 var _backdrop := BackdropMode.new()
+var _checking := false
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -22,7 +30,13 @@ var _backdrop := BackdropMode.new()
 func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
-	shots_left = Settings.preset.shots_per_level
+	var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
+	layout = LevelStore.load_layout(path)
+	if layout == null:
+		layout = LevelStore.load_layout(DEFAULT_LAYOUT)
+	_spawn_crates()
+	shots_left = layout.shots_override if layout.shots_override > 0 \
+		else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
 	trebuchet.fired.connect(_on_fired)
@@ -39,6 +53,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
 		_apply_backdrop_alpha(_backdrop.toggle())
+	_update_crate_check()
 	match state:
 		State.AIMING:
 			trebuchet.process_aim(delta)
@@ -57,6 +72,13 @@ func _physics_process(delta: float) -> void:
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
 				get_tree().reload_current_scene()
+
+func _spawn_crates() -> void:
+	for pos in layout.crates:
+		var crate: Crate = CRATE_SCENE.instantiate()
+		crate.position = pos
+		crate.add_to_group("crates")
+		add_child(crate)
 
 func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
@@ -99,6 +121,21 @@ func _award_leans() -> void:
 				hud.banner("LEAN BONUS!", "")
 				await get_tree().create_timer(1.2).timeout
 				hud.clear_banner()
+
+# Hold H: standing crates glow green, fallen ones red — what's left
+# to hit at a glance. Preserves backdrop-mode alpha.
+func _update_crate_check() -> void:
+	var want := Input.is_action_pressed("check")
+	if want == _checking:
+		return
+	_checking = want
+	for crate in _crates():
+		var a: float = crate.modulate.a
+		var c := Color.WHITE
+		if _checking:
+			c = Color(0.55, 1.0, 0.55) if crate.is_standing() else Color(1.0, 0.45, 0.45)
+		c.a = a
+		crate.modulate = c
 
 func _apply_backdrop_alpha(alpha: float) -> void:
 	var targets: Array = [trebuchet]

@@ -1,8 +1,7 @@
-[gd_scene format=3 uid="uid://oecensh677nb"]
+[gd_scene format=3 uid="uid://generic1evel1"]
 
 [ext_resource type="Script" uid="uid://cc3vgthsekso7" path="res://src/level/level.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://dlyvvat2i7oqh" path="res://scenes/trebuchet.tscn" id="2"]
-[ext_resource type="PackedScene" uid="uid://bk81fht7me64c" path="res://scenes/crate.tscn" id="3"]
 [ext_resource type="Script" uid="uid://g3anjwx2773" path="res://src/camera/camera_director.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/background.tscn" id="6"]
@@ -43,15 +42,6 @@ shape = SubResource("ground_shape")
 
 [node name="Trebuchet" parent="." unique_id=1781874464 instance=ExtResource("2")]
 position = Vector2(200, 600)
-
-[node name="Crate1" parent="." unique_id=637987339 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 572)
-
-[node name="Crate2" parent="." unique_id=1562248210 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 516)
-
-[node name="Crate3" parent="." unique_id=702777028 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 460)
 
 [node name="CameraDirector" type="Camera2D" parent="." unique_id=1862764469]
 position = Vector2(800, 160)
