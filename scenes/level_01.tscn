@@ -1,50 +1,50 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://oecensh677nb"]
 
-[ext_resource type="Script" path="res://src/level/level.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/trebuchet.tscn" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/crate.tscn" id="3"]
-[ext_resource type="Script" path="res://src/camera/camera_director.gd" id="4"]
+[ext_resource type="Script" uid="uid://cc3vgthsekso7" path="res://src/level/level.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://dlyvvat2i7oqh" path="res://scenes/trebuchet.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://bk81fht7me64c" path="res://scenes/crate.tscn" id="3"]
+[ext_resource type="Script" uid="uid://g3anjwx2773" path="res://src/camera/camera_director.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
 
 [sub_resource type="WorldBoundaryShape2D" id="ground_shape"]
 
-[node name="Level" type="Node2D"]
+[node name="Level" type="Node2D" unique_id=429232250]
 script = ExtResource("1")
 
-[node name="Sky" type="ColorRect" parent="."]
+[node name="Sky" type="ColorRect" parent="." unique_id=1387565514]
 offset_left = -2000.0
 offset_top = -1200.0
 offset_right = 4000.0
 offset_bottom = 600.0
 color = Color(0.53, 0.7, 0.9, 1)
 
-[node name="GroundVisual" type="ColorRect" parent="."]
+[node name="GroundVisual" type="ColorRect" parent="." unique_id=625341596]
 offset_left = -2000.0
 offset_top = 600.0
 offset_right = 4000.0
 offset_bottom = 1200.0
 color = Color(0.42, 0.56, 0.3, 1)
 
-[node name="Ground" type="StaticBody2D" parent="."]
+[node name="Ground" type="StaticBody2D" parent="." unique_id=1747476027]
 position = Vector2(0, 600)
 
-[node name="Shape" type="CollisionShape2D" parent="Ground"]
+[node name="Shape" type="CollisionShape2D" parent="Ground" unique_id=1461618730]
 shape = SubResource("ground_shape")
 
-[node name="Trebuchet" parent="." instance=ExtResource("2")]
+[node name="Trebuchet" parent="." unique_id=1781874464 instance=ExtResource("2")]
 position = Vector2(200, 600)
 
-[node name="Crate1" parent="." groups=["crates"] instance=ExtResource("3")]
+[node name="Crate1" parent="." unique_id=637987339 groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 568)
 
-[node name="Crate2" parent="." groups=["crates"] instance=ExtResource("3")]
+[node name="Crate2" parent="." unique_id=1562248210 groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 502)
 
-[node name="Crate3" parent="." groups=["crates"] instance=ExtResource("3")]
+[node name="Crate3" parent="." unique_id=702777028 groups=["crates"] instance=ExtResource("3")]
 position = Vector2(1400, 436)
 
-[node name="CameraDirector" type="Camera2D" parent="."]
+[node name="CameraDirector" type="Camera2D" parent="." unique_id=1862764469]
 position = Vector2(800, 400)
 script = ExtResource("4")
 
-[node name="Hud" parent="." instance=ExtResource("5")]
+[node name="Hud" parent="." unique_id=1637513669 instance=ExtResource("5")]

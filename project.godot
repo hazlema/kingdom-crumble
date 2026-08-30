@@ -21,6 +21,11 @@ Settings="*res://src/settings/settings.gd"
 GameInput="*res://src/settings/game_input.gd"
 Music="*res://src/audio/music_director.gd"
 
+[display]
+
+window/size/mode=3
+window/energy_saving/keep_screen_on=false
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
