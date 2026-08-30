@@ -5,7 +5,6 @@ extends Node2D
 enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
-const CRATE_SCENE := preload("res://scenes/crate.tscn")
 const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
@@ -74,11 +73,11 @@ func _physics_process(delta: float) -> void:
 				get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
-	for c in layout.crates:
-		var crate: Crate = CRATE_SCENE.instantiate()
-		crate.position = Vector2(c["x"], c["y"])
-		crate.add_to_group("crates")
-		add_child(crate)
+	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
+
+# Task 4 swaps this to the EditorAssets registry lookup.
+func _crate_texture(_id: String) -> Texture2D:
+	return null
 
 func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1

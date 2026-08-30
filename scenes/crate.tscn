@@ -26,3 +26,5 @@ color = Color(0.72, 0.5, 0.25, 1)
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=140294759]
 sprite_frames = ExtResource("2_dwt0d")
+
+[node name="Skin" type="Sprite2D" parent="."]
