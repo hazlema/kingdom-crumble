@@ -22,6 +22,7 @@ func apply_type(id: String, tex: Texture2D) -> void:
 	if tex == null:
 		return
 	if has_node("Skin"):
+		$Skin.visible = true
 		$Skin.texture = tex
 	if has_node("AnimatedSprite2D"):
 		$AnimatedSprite2D.visible = false
