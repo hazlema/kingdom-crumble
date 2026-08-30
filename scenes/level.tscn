@@ -4,41 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://dlyvvat2i7oqh" path="res://scenes/trebuchet.tscn" id="2"]
 [ext_resource type="Script" uid="uid://g3anjwx2773" path="res://src/camera/camera_director.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
-[ext_resource type="PackedScene" path="res://scenes/background.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="9"]
-[ext_resource type="Shader" path="res://art/shaders/grass.gdshader" id="7"]
-
-[sub_resource type="ShaderMaterial" id="grass_mat"]
-shader = ExtResource("7")
-shader_parameter/rect_width_px = 6000.0
-shader_parameter/rect_height_px = 600.0
-shader_parameter/blade_width_px = 3.5
-shader_parameter/sway_px = 4.0
-shader_parameter/blade_color = Color(0.22, 0.55, 0.31, 1)
-shader_parameter/tip_color = Color(0.38, 0.7, 0.38, 1)
-shader_parameter/body_top_color = Color(0.34, 0.65, 0.36, 1)
-shader_parameter/body_bottom_color = Color(0.16, 0.4, 0.25, 1)
-
-[sub_resource type="WorldBoundaryShape2D" id="ground_shape"]
+[ext_resource type="PackedScene" uid="uid://benv5ronm3k9r" path="res://scenes/environment.tscn" id="10"]
 
 [node name="Level" type="Node2D" unique_id=429232250]
 script = ExtResource("1")
 
-[node name="Background" parent="." instance=ExtResource("6")]
-
-[node name="GroundVisual" type="ColorRect" parent="." unique_id=625341596]
-material = SubResource("grass_mat")
-offset_left = -2000.0
-offset_top = 600.0
-offset_right = 4000.0
-offset_bottom = 1200.0
-color = Color(0.42, 0.56, 0.3, 1)
-
-[node name="Ground" type="StaticBody2D" parent="." unique_id=1747476027]
-position = Vector2(0, 600)
-
-[node name="Shape" type="CollisionShape2D" parent="Ground" unique_id=1461618730]
-shape = SubResource("ground_shape")
+[node name="Environment" parent="." instance=ExtResource("10")]
 
 [node name="Trebuchet" parent="." unique_id=1781874464 instance=ExtResource("2")]
 position = Vector2(200, 600)
