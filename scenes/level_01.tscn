@@ -40,7 +40,7 @@ position = Vector2(1400, 502)
 position = Vector2(1400, 436)
 
 [node name="CameraDirector" type="Camera2D" parent="." unique_id=1862764469]
-position = Vector2(800, 400)
+position = Vector2(800, 160)
 script = ExtResource("4")
 
 [node name="Hud" parent="." unique_id=1637513669 instance=ExtResource("5")]
