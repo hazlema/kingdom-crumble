@@ -19,6 +19,12 @@ func _ready() -> void:
 	if has_node("Body/Arm"):
 		_arm_rest = $Body/Arm.rotation
 	_load_stone()
+	# The soldier returns to his idle bob after any one-shot animation.
+	if has_node("Soldier/AnimationPlayer"):
+		var sp: AnimationPlayer = $Soldier/AnimationPlayer
+		sp.animation_finished.connect(func(_anim: StringName) -> void:
+			if sp.has_animation("idle"):
+				sp.play("idle"))
 
 # Drop the next stone into the cup; it rides the arm for free.
 func _load_stone() -> void:
@@ -44,7 +50,7 @@ func process_aim(delta: float) -> void:
 	if Input.is_action_pressed("fire"):
 		if not _charging:
 			_play_if_present("crank")
-			_recock_arm()
+			recock()
 		_charging = true
 		var t: float = Settings.preset.charge_time if Settings.preset else 1.5
 		charge = minf(1.0, charge + delta / t)
@@ -87,9 +93,10 @@ func _swing_arm() -> void:
 		_arm_rest + deg_to_rad(arm_swing_degrees), 0.1) \
 		.set_ease(Tween.EASE_OUT)
 
-# Cranking winds the arm back down to its cocked rest pose and loads
-# the next stone into the cup.
-func _recock_arm() -> void:
+# Winds the arm back down to its cocked rest pose and loads the next
+# stone. Called when cranking starts, and by the level after a shot
+# settles with ammo remaining.
+func recock() -> void:
 	if not has_node("Body/Arm"):
 		return
 	var arm: Sprite2D = $Body/Arm

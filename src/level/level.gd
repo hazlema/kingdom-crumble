@@ -76,6 +76,7 @@ func _settle() -> void:
 		state = State.FAILED
 		hud.banner("OUT OF STONES", "press ENTER to retry")
 	else:
+		trebuchet.recock()  # ammo remains: reset the arm and reload
 		state = State.AIMING
 
 func _award_leans() -> void:

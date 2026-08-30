@@ -19,6 +19,15 @@ func set_mode(m: int) -> void:
 	if m == Mode.AIM:
 		follow_target = null
 
+# Hold the right mouse button and drag to scout the level by hand.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion \
+			and event.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		if mode == Mode.AIM:
+			set_mode(next_mode(mode, "scout_input"))
+		if mode == Mode.SCOUT:
+			global_position -= event.relative / zoom
+
 func _physics_process(delta: float) -> void:
 	match mode:
 		Mode.AIM:
