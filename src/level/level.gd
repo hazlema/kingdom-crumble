@@ -116,6 +116,12 @@ func _settle() -> void:
 	if standing == 0:
 		state = State.CLEARED
 		hud.banner("KINGDOM CRUMBLED!", "press ENTER to play again")
+		var effects: Array = layout.triggers.get("on_all_cleared", [])
+		if not effects.is_empty():
+			var center := Vector2(1400, 400)
+			if not _crates().is_empty():
+				center = _crates()[0].global_position
+			Effects.fire_all(effects, self, center)
 	elif shots_left <= 0:
 		state = State.FAILED
 		hud.banner("OUT OF STONES", "press ENTER to retry")
