@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/editor/editor_palette.gd" id="1"]
+
+[node name="EditorPalette" type="PanelContainer"]
+offset_left = 24.0
+offset_top = 140.0
+offset_right = 344.0
+script = ExtResource("1")
+
+[node name="Box" type="VBoxContainer" parent="."]
+
+[node name="TitleBar" type="Label" parent="Box"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+text = "CRATES"
+mouse_filter = 0
+
+[node name="Grid" type="GridContainer" parent="Box"]
+unique_name_in_owner = true
+columns = 4
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
