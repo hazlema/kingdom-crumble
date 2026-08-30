@@ -12,6 +12,11 @@ const AIM_SPEED_DEG := 30.0
 var aim_angle_deg := 45.0
 var charge := 0.0
 var _charging := false
+var _arm_rest := 0.0
+
+func _ready() -> void:
+	if has_node("Body/Arm"):
+		_arm_rest = $Body/Arm.rotation
 
 func _process(_delta: float) -> void:
 	if has_node("AimIndicator"):
@@ -58,30 +63,27 @@ func _fire() -> void:
 	_recoil(kick)
 	fired.emit(v)
 
-# The throwing arm snaps from cocked to thrown. Frame-based arms hold
-# the thrown pose until the next crank; rotation-based arms ease back.
+# The throwing arm snaps from cocked to thrown and holds there,
+# spent, until the next crank re-cocks it.
 func _swing_arm() -> void:
 	if not has_node("Body/Arm"):
 		return
-	var arm := $Body/Arm
-	if arm is AnimatedSprite2D:
-		arm.play("launch")
-		return
-	var rest: float = arm.rotation
+	var arm: Sprite2D = $Body/Arm
 	var tw := create_tween()
-	tw.tween_property(arm, "rotation", rest + deg_to_rad(arm_swing_degrees), 0.1) \
+	tw.tween_property(arm, "rotation",
+		_arm_rest + deg_to_rad(arm_swing_degrees), 0.1) \
 		.set_ease(Tween.EASE_OUT)
-	tw.tween_interval(0.15)
-	tw.tween_property(arm, "rotation", rest, 0.6) \
-		.set_ease(Tween.EASE_IN_OUT)
 
-# Cranking re-cocks a frame-based arm to its resting frame.
+# Cranking winds the arm back down to its cocked rest pose.
 func _recock_arm() -> void:
-	if has_node("Body/Arm") and $Body/Arm is AnimatedSprite2D:
-		var arm: AnimatedSprite2D = $Body/Arm
-		arm.stop()
-		arm.animation = &"launch"
-		arm.frame = 0
+	if not has_node("Body/Arm"):
+		return
+	var arm: Sprite2D = $Body/Arm
+	if is_equal_approx(arm.rotation, _arm_rest):
+		return
+	var tw := create_tween()
+	tw.tween_property(arm, "rotation", _arm_rest, 0.5) \
+		.set_ease(Tween.EASE_IN_OUT)
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
