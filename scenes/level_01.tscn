@@ -12,6 +12,8 @@
 shader = ExtResource("7")
 shader_parameter/rect_width_px = 6000.0
 shader_parameter/rect_height_px = 600.0
+shader_parameter/blade_width_px = 3.5
+shader_parameter/sway_px = 4.0
 
 [sub_resource type="WorldBoundaryShape2D" id="ground_shape"]
 
