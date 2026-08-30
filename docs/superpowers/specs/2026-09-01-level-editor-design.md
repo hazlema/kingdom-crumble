@@ -51,8 +51,8 @@ Locations:
   prefixes. Display names always come from `title` inside the file.
 - Player levels: `user://levels/*.json`, listed by name; no manifest.
 - Sharing v1 = file copy ("Open Levels Folder" button in the editor).
-- Migration: existing `levels/meadow.tres` converts to `demo.json` (or
-  similar); the `LevelLayout` .tres save format retires. `LevelLayout`
+- Migration: existing `levels/meadow.tres` converts to `demo.json`;
+  the `LevelLayout` .tres save format retires. `LevelLayout`
   remains as the in-memory data class, constructed from parsed JSON.
 
 ## 2. Editor asset registry (folder = behavior)
