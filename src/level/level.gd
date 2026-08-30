@@ -6,7 +6,7 @@ enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
 const CRATE_SCENE := preload("res://scenes/crate.tscn")
-const DEFAULT_LAYOUT := "res://levels/meadow.tres"
+const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
 
@@ -31,11 +31,11 @@ func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
 	var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
-	layout = LevelStore.load_layout(path)
+	layout = LevelStore.load_level(path)
 	if layout == null:
-		layout = LevelStore.load_layout(DEFAULT_LAYOUT)
+		layout = LevelStore.load_level(DEFAULT_LAYOUT)
 	_spawn_crates()
-	shots_left = layout.shots_override if layout.shots_override > 0 \
+	shots_left = layout.shots if layout.shots > 0 \
 		else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
@@ -74,9 +74,9 @@ func _physics_process(delta: float) -> void:
 				get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
-	for pos in layout.crates:
+	for c in layout.crates:
 		var crate: Crate = CRATE_SCENE.instantiate()
-		crate.position = pos
+		crate.position = Vector2(c["x"], c["y"])
 		crate.add_to_group("crates")
 		add_child(crate)
 
