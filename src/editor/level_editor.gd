@@ -18,6 +18,7 @@ func _ready() -> void:
 	EditorAssets.scan()
 	palette.asset_picked.connect(func(id: String) -> void:
 		carrying = id
+		moving_from = Vector2i(-1, -1)
 		overlay.selected_cell = Vector2i(-1, -1))
 	if resume_layout != null:
 		current = resume_layout
