@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://art/backgrounds/castle.png" id="1"]
+
+[sub_resource type="Gradient" id="sky_gradient"]
+offsets = PackedFloat32Array(0, 0.65, 1)
+colors = PackedColorArray(0.23, 0.42, 0.72, 1, 0.62, 0.78, 0.92, 1, 0.96, 0.9, 0.78, 1)
+
+[sub_resource type="GradientTexture2D" id="sky_tex"]
+gradient = SubResource("sky_gradient")
+width = 64
+height = 256
+fill_from = Vector2(0, 0)
+fill_to = Vector2(0, 1)
+
+[node name="Background" type="ParallaxBackground"]
+
+[node name="Sky" type="ParallaxLayer" parent="."]
+motion_scale = Vector2(0, 0)
+
+[node name="Gradient" type="Sprite2D" parent="Sky"]
+position = Vector2(-400, -400)
+scale = Vector2(31, 6)
+centered = false
+texture = SubResource("sky_tex")
+
+[node name="Far" type="ParallaxLayer" parent="."]
+motion_scale = Vector2(0.25, 0.1)
+motion_mirroring = Vector2(2721, 0)
+
+[node name="Panorama" type="Sprite2D" parent="Far"]
+position = Vector2(0, -109)
+scale = Vector2(1.42, 1.42)
+centered = false
+texture = ExtResource("1")

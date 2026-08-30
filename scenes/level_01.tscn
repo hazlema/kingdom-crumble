@@ -5,18 +5,14 @@
 [ext_resource type="PackedScene" uid="uid://bk81fht7me64c" path="res://scenes/crate.tscn" id="3"]
 [ext_resource type="Script" uid="uid://g3anjwx2773" path="res://src/camera/camera_director.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/background.tscn" id="6"]
 
 [sub_resource type="WorldBoundaryShape2D" id="ground_shape"]
 
 [node name="Level" type="Node2D" unique_id=429232250]
 script = ExtResource("1")
 
-[node name="Sky" type="ColorRect" parent="." unique_id=1387565514]
-offset_left = -2000.0
-offset_top = -1200.0
-offset_right = 4000.0
-offset_bottom = 600.0
-color = Color(0.53, 0.7, 0.9, 1)
+[node name="Background" parent="." instance=ExtResource("6")]
 
 [node name="GroundVisual" type="ColorRect" parent="." unique_id=625341596]
 offset_left = -2000.0
