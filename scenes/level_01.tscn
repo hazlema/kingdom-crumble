@@ -31,13 +31,13 @@ shape = SubResource("ground_shape")
 position = Vector2(200, 600)
 
 [node name="Crate1" parent="." unique_id=637987339 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 568)
+position = Vector2(1400, 572)
 
 [node name="Crate2" parent="." unique_id=1562248210 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 502)
+position = Vector2(1400, 516)
 
 [node name="Crate3" parent="." unique_id=702777028 groups=["crates"] instance=ExtResource("3")]
-position = Vector2(1400, 436)
+position = Vector2(1400, 460)
 
 [node name="CameraDirector" type="Camera2D" parent="." unique_id=1862764469]
 position = Vector2(800, 160)
