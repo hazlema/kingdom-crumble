@@ -15,9 +15,24 @@ var loaded_texture: Texture2D
 var _charging := false
 var _arm_rest := 0.0
 
+# Distance from the arm's pivot boss to the cup center, in arm-canvas
+# pixels (measured on frame0 during registration).
+const CUP_OFFSET_PX := 333.0
+
 func _ready() -> void:
 	if has_node("Body/Arm"):
 		_arm_rest = $Body/Arm.rotation
+		# Release happens with the arm vertical: the cup sits one
+		# arm-length above the pivot. Seat the launch point and the
+		# trajectory preview there, derived from the live rig so
+		# editor rearrangements stay honest.
+		var body: Sprite2D = $Body
+		var apex: Vector2 = body.position \
+			+ body.scale * ($Body/Arm.position + Vector2(0, -CUP_OFFSET_PX))
+		if has_node("LaunchPoint"):
+			$LaunchPoint.position = apex
+		if has_node("TrajectoryPreview"):
+			$TrajectoryPreview.position = apex
 	_load_stone()
 	# The soldier returns to his idle bob after any one-shot animation.
 	if has_node("Soldier/AnimationPlayer"):
