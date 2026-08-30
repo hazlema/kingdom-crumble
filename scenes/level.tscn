@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://generic1evel1"]
+[gd_scene format=3 uid="uid://ci8i6gfrtoiua"]
 
 [ext_resource type="Script" uid="uid://cc3vgthsekso7" path="res://src/level/level.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://dlyvvat2i7oqh" path="res://scenes/trebuchet.tscn" id="2"]

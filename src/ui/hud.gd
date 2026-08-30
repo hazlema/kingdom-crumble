@@ -15,10 +15,8 @@ func set_shots(n: int) -> void:
 	%Shots.text = "STONES: %d" % n
 
 func set_power(ratio: float) -> void:
-	var show := ratio > 0.0
-	%PowerBack.visible = show
-	%PowerHeart.visible = show
-	%PowerFill.offset_right = 7.0 + 294.0 * clampf(ratio, 0.0, 1.0)
+	%PowerBar.visible = ratio > 0.0
+	%PowerBar.value = ratio
 
 func banner(title: String, sub: String) -> void:
 	%Banner.text = title
