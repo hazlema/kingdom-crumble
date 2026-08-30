@@ -29,6 +29,10 @@ window/size/mode=3
 window/energy_saving/keep_screen_on=false
 window/stretch/mode="canvas_items"
 
+[gui]
+
+theme/custom="res://resources/ui/kingdom_theme.tres"
+
 [physics]
 
 common/physics_jitter_fix=0.816

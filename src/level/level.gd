@@ -26,6 +26,9 @@ func _ready() -> void:
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
 	trebuchet.fired.connect(_on_fired)
+	hud.menu_pressed.connect(func() -> void:
+		if has_node("PauseMenu"):
+			$PauseMenu.open())
 	if has_node("PauseMenu"):
 		$PauseMenu.restart_requested.connect(
 			func() -> void: get_tree().reload_current_scene())
