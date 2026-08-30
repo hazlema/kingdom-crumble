@@ -35,10 +35,24 @@ func _fire() -> void:
 	var p := Settings.preset
 	var v := launch_velocity(aim_angle_deg, charge,
 		p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
+	var kick := 10.0 + 12.0 * charge
 	charge = 0.0
 	if has_node("Soldier/AnimationPlayer"):
 		$Soldier/AnimationPlayer.play("fire")
+	_recoil(kick)
 	fired.emit(v)
+
+# The catapult lurches back on its wheels, then wobbles home.
+func _recoil(kick: float) -> void:
+	if not has_node("Body"):
+		return
+	var body: Sprite2D = $Body
+	var home := body.position.x
+	var tw := create_tween()
+	tw.tween_property(body, "position:x", home - kick, 0.07) \
+		.set_ease(Tween.EASE_OUT)
+	tw.tween_property(body, "position:x", home, 0.55) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 static func launch_velocity(angle_deg: float, charge_amount: float,
 		min_speed: float, max_speed: float) -> Vector2:
