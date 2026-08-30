@@ -26,6 +26,12 @@ func _ready() -> void:
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
 	trebuchet.fired.connect(_on_fired)
+	if has_node("PauseMenu"):
+		$PauseMenu.restart_requested.connect(
+			func() -> void: get_tree().reload_current_scene())
+		$PauseMenu.quit_requested.connect(
+			func() -> void: get_tree().change_scene_to_file(
+				"res://scenes/main_menu.tscn"))
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):

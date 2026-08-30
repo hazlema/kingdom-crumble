@@ -6,11 +6,21 @@ const EXTENSIONS := ["ogg", "mp3", "wav"]
 var _player := AudioStreamPlayer.new()
 var _current_track := ""
 var _tier := ""
+var _volume := 1.0
 
 func _ready() -> void:
+	# keep the soundtrack alive while the tree is paused (ESC menu)
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_player.bus = "Music" if AudioServer.get_bus_index("Music") != -1 else "Master"
 	add_child(_player)
 	_player.finished.connect(_on_track_finished)
+
+func set_volume_linear(v: float) -> void:
+	_volume = clampf(v, 0.0, 1.0)
+	_player.volume_db = linear_to_db(maxf(_volume, 0.0001))
+
+func get_volume_linear() -> float:
+	return _volume
 
 func play_tier(tier: String) -> void:
 	_tier = tier

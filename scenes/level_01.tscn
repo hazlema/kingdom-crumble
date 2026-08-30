@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://g3anjwx2773" path="res://src/camera/camera_director.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/background.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="9"]
 [ext_resource type="Shader" path="res://art/shaders/grass.gdshader" id="7"]
 
 [sub_resource type="ShaderMaterial" id="grass_mat"]
@@ -57,3 +58,5 @@ limit_bottom = 700
 script = ExtResource("4")
 
 [node name="Hud" parent="." unique_id=1637513669 instance=ExtResource("5")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("9")]

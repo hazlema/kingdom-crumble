@@ -20,3 +20,13 @@ func test_list_pool_finds_chill_tracks():
 
 func test_list_pool_of_missing_tier_dir_is_empty():
 	assert_eq(MusicDirector.list_pool("polka"), [])
+
+func test_volume_clamps_high():
+	Music.set_volume_linear(1.5)
+	assert_eq(Music.get_volume_linear(), 1.0)
+	Music.set_volume_linear(1.0)
+
+func test_volume_clamps_low():
+	Music.set_volume_linear(-0.2)
+	assert_eq(Music.get_volume_linear(), 0.0)
+	Music.set_volume_linear(1.0)
