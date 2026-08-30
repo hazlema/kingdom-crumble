@@ -43,6 +43,9 @@ func _pick(sig: Signal) -> void:
 	%Panel.visible = false
 	sig.emit()
 
+func open_save_as() -> void:
+	%SaveAsDialog.popup_centered()
+
 func _open_load() -> void:
 	%Panel.visible = false
 	%LevelList.clear()

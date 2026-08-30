@@ -36,11 +36,7 @@ func _ready() -> void:
 
 func _on_save() -> void:
 	if save_path == "":
-		# No stem — we can't auto-save; treat as Save As with current title
-		# (If title is still Untitled the user must use Save As explicitly.)
-		if current.title != "Untitled":
-			save_path = LevelStore.save_user(current, current.title)
-		# else: silently do nothing — panel already closed; user must use Save As
+		menu.open_save_as()
 	else:
 		var stem := save_path.get_file().get_basename()
 		LevelStore.save_user(current, stem)
