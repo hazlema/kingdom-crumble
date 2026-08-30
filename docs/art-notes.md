@@ -10,3 +10,7 @@
 
 - Leg bones simplified and renamed: **Hip/FrontLeg** and **Hip/BackLeg**
   (redundant thigh leaf bones removed). Rotate those for leg animation.
+- Head art has a permanently open mouth — make closed-mouth (and blink?)
+  head variant PNGs; animate via Sprite2D texture keyframes, not bones.
+- Idle's watch-check gesture wants an elbow joint on FrontArm — the one
+  approved rig upgrade (split arm art at the elbow, add one Bone2D).
