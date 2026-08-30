@@ -75,9 +75,8 @@ func _physics_process(delta: float) -> void:
 func _spawn_crates() -> void:
 	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
 
-# Task 4 swaps this to the EditorAssets registry lookup.
-func _crate_texture(_id: String) -> Texture2D:
-	return null
+func _crate_texture(id: String) -> Texture2D:
+	return EditorAssets.texture_for(id)
 
 func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
