@@ -273,6 +273,11 @@ func _on_crate_knocked(crate: Crate) -> void:
 func _floaty(text: String, world_pos: Vector2) -> void:
 	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()
 	fx.text = text
+	# louder than the control's defaults: pickups happen mid-mayhem and
+	# a 1-second whisper gets lost under collapsing towers
+	fx.scale = Vector2(1.6, 1.6)
+	fx.duration = 1.8
+	fx.rise = 90.0
 	# position BEFORE add_child: the rise tween bakes its destination
 	# from position at _ready time
 	fx.position = get_viewport_transform() * world_pos

@@ -61,15 +61,15 @@ func _boom_visual() -> void:
 	var p := CPUParticles2D.new()
 	p.emitting = true
 	p.one_shot = true
-	p.amount = 60
-	p.lifetime = 0.7
+	p.amount = 120
+	p.lifetime = 0.9
 	p.explosiveness = 1.0
 	p.spread = 180.0
 	p.gravity = Vector2(0, 300)
-	p.initial_velocity_min = 200.0
-	p.initial_velocity_max = 500.0
-	p.scale_amount_min = 4.0
-	p.scale_amount_max = 8.0
+	p.initial_velocity_min = 250.0
+	p.initial_velocity_max = 700.0
+	p.scale_amount_min = 6.0
+	p.scale_amount_max = 13.0
 	p.color = Color(1.0, 0.6, 0.15)
 	get_parent().add_child(p)
 	p.global_position = global_position
