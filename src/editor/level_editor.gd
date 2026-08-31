@@ -11,6 +11,7 @@ var occupancy := {}           # Vector2i -> Crate
 var carrying := ""            # asset id while placing, "" = none
 var moving_from := Vector2i(-1, -1)
 var save_path := ""           # last saved path, "" = unsaved
+var _spawned: Array[Crate] = []
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -49,6 +50,7 @@ func _on_save_as(stem: String) -> void:
 func _on_load(path: String) -> void:
 	var loaded := LevelStore.load_level(path)
 	if loaded == null:
+		menu.show_load_error()
 		return
 	current = loaded
 	save_path = path
@@ -70,12 +72,24 @@ func _on_background_picked(id: String) -> void:
 	current.background = id
 
 func _rebuild() -> void:
-	for c in occupancy.values():
-		c.queue_free()
+	for c in _spawned:
+		if is_instance_valid(c):
+			c.queue_free()
+	_spawned.clear()
 	occupancy.clear()
-	var spawned := LevelBuilder.spawn_crates(self, current, true,
-		EditorAssets.texture_for)
-	for crate in spawned:
+	# Snap all coords to cell centres and drop duplicates.
+	var seen_cells: Array[Vector2i] = []
+	var snapped: Array[Dictionary] = []
+	for c in current.crates:
+		var cell := EditorGrid.world_to_cell(Vector2(c["x"], c["y"]))
+		var snapped_pos := EditorGrid.cell_to_world(cell)
+		if seen_cells.has(cell):
+			continue
+		seen_cells.append(cell)
+		snapped.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
+	current.crates = snapped
+	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
+	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
 	overlay.refresh()
 
