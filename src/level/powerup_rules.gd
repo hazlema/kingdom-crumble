@@ -4,7 +4,7 @@ extends RefCounted
 # Pure routing for crate collections (spec §1-§4). No scene access, no
 # state — Level supplies the RNG and the skunk-unlocked bit.
 
-const SKUNK_CHANCE := 0.125
+const SKUNK_CHANCE := 0.25  # owner call: people should actually find him
 const POOL: Array[StringName] = [&"free_shot", &"exploding", &"multishot", &"super_bounce"]
 const BUFF_LABELS := {
 	&"exploding": "+Exploding Shot",

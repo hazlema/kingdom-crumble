@@ -29,6 +29,13 @@ func _ready() -> void:
 		contact_monitor = true
 		max_contacts_reported = 8
 		body_entered.connect(_on_contact)
+	# An enchanted stone should LOOK enchanted — no HUD required.
+	if exploding and super_bounce:
+		$Visual.modulate = Color(1.0, 0.85, 0.35)  # hot gold: boom + bounce
+	elif exploding:
+		$Visual.modulate = Color(1.0, 0.55, 0.35)  # ember red
+	elif super_bounce:
+		$Visual.modulate = Color(0.6, 1.0, 0.6)    # springy green
 
 func launch(from: Vector2, velocity: Vector2) -> void:
 	global_position = from
