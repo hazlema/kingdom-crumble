@@ -10,9 +10,16 @@ func test_finds_six_crates_sorted():
 	assert_not_null(list[0]["texture"])
 
 func test_sidecar_descriptions():
+	var found_descriptions := {}
 	for e in EditorAssets.crates():
-		if e["id"] == "crate-gold":
-			assert_string_contains(e["description"], "golden")
+		found_descriptions[e["id"]] = e["description"]
+
+	assert_string_contains(found_descriptions.get("crate-wood", ""), "Plain wooden")
+	assert_string_contains(found_descriptions.get("crate-gold", ""), "refunded")
+	assert_string_contains(found_descriptions.get("crate-blue", ""), "three stones")
+	assert_string_contains(found_descriptions.get("crate-green", ""), "bounces")
+	assert_string_contains(found_descriptions.get("crate-ghost", ""), "mystery")
+	assert_string_contains(found_descriptions.get("skull", ""), "explodes")
 
 func test_texture_for():
 	assert_not_null(EditorAssets.texture_for("crate-wood"))
