@@ -254,5 +254,7 @@ func _on_crate_knocked(crate: Crate) -> void:
 func _floaty(text: String, world_pos: Vector2) -> void:
 	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()
 	fx.text = text
-	hud.add_child(fx)
+	# position BEFORE add_child: the rise tween bakes its destination
+	# from position at _ready time
 	fx.position = get_viewport_transform() * world_pos
+	hud.add_child(fx)
