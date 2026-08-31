@@ -35,9 +35,11 @@ theme/custom="res://resources/ui/kingdom_theme.tres"
 
 [physics]
 
-common/physics_interpolation=true
 common/physics_jitter_fix=0.0
+2d/sleep_threshold_linear=6.0
+2d/time_before_sleep=0.3
 3d/physics_engine="Jolt Physics"
+common/physics_interpolation=true
 
 [rendering]
 

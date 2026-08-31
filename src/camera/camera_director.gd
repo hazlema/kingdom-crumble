@@ -13,6 +13,9 @@ func _ready() -> void:
 	home_position = global_position
 	position_smoothing_enabled = true
 	position_smoothing_speed = 6.0
+	# physics interpolation forces cameras to physics ticks anyway;
+	# set it explicitly so the engine doesn't log an override notice
+	process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 
 func set_mode(m: Mode) -> void:
 	mode = m
