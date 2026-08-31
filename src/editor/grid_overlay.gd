@@ -13,9 +13,9 @@ func _draw() -> void:
 	for cx in range(EditorGrid.cols() + 1):
 		var x := EditorGrid.MIN_X + cx * EditorGrid.CELL
 		draw_line(Vector2(x, EditorGrid.FLOOR_Y),
-			Vector2(x, EditorGrid.FLOOR_Y - EditorGrid.MAX_ROWS * EditorGrid.CELL), col, 2)
+			Vector2(x, EditorGrid.FLOOR_Y - EditorGrid.MAX_ROWS * EditorGrid.ROW_H), col, 2)
 	for ry in range(EditorGrid.MAX_ROWS + 1):
-		var y := EditorGrid.FLOOR_Y - ry * EditorGrid.CELL
+		var y := EditorGrid.FLOOR_Y - ry * EditorGrid.ROW_H
 		draw_line(Vector2(EditorGrid.MIN_X, y), Vector2(EditorGrid.MAX_X, y), col, 2)
 	if ghost_cell.x >= 0 and ghost_tex:
 		var p := EditorGrid.cell_to_world(ghost_cell)
