@@ -22,7 +22,8 @@ var state := State.AIMING
 var shots_left := 0
 var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
-var _active_stone: Stone
+var _active_stones: Array[Stone] = []
+var pending_buffs: Array[StringName] = []
 var _backdrop := BackdropMode.new()
 var _checking := false
 var _pristine: LevelLayout = null
@@ -103,13 +104,25 @@ func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
 	hud.set_shots(shots_left)
 	hud.set_power(0.0)
-	var stone: Stone = STONE_SCENE.instantiate()
-	add_child(stone)
-	stone.launch(trebuchet.get_node("LaunchPoint").global_position, velocity)
-	if trebuchet.loaded_texture and stone.has_node("Visual"):
-		stone.get_node("Visual").texture = trebuchet.loaded_texture
-	_active_stone = stone
-	cam.follow_target = stone
+	var d := PowerupRules.drain(pending_buffs)
+	pending_buffs = d["remaining"]
+	hud.set_buffs(pending_buffs)
+	var consumed: Array[StringName] = d["consumed"]
+	var velocities: Array[Vector2] = [velocity]
+	if consumed.has(&"multishot"):
+		velocities = [velocity, velocity.rotated(deg_to_rad(2.5)),
+			velocity.rotated(deg_to_rad(-2.5))]
+	_active_stones.clear()
+	for v in velocities:
+		var stone: Stone = STONE_SCENE.instantiate()
+		stone.exploding = consumed.has(&"exploding")
+		stone.super_bounce = consumed.has(&"super_bounce")
+		add_child(stone)
+		stone.launch(trebuchet.get_node("LaunchPoint").global_position, v)
+		if trebuchet.loaded_texture and stone.has_node("Visual"):
+			stone.get_node("Visual").texture = trebuchet.loaded_texture
+		_active_stones.append(stone)
+	cam.follow_target = _active_stones[0]
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))
 	_resolve_clock = 0.0
 	state = State.FLIGHT
@@ -175,8 +188,9 @@ func _update_crate_check() -> void:
 func _apply_backdrop_alpha(alpha: float) -> void:
 	var targets: Array = [trebuchet]
 	targets.append_array(_crates())
-	if is_instance_valid(_active_stone):
-		targets.append(_active_stone)
+	for stone in _active_stones:
+		if is_instance_valid(stone):
+			targets.append(stone)
 	var tween := create_tween().set_parallel(true)
 	for target in targets:
 		tween.tween_property(target, "modulate:a", alpha, 0.25)
@@ -185,11 +199,12 @@ func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
 
 func _stone_is_done() -> bool:
-	if not is_instance_valid(_active_stone):
-		return true
-	if _active_stone.global_position.y > 2000.0:
-		return true
-	return _active_stone.sleeping
+	for stone in _active_stones:
+		if not is_instance_valid(stone):
+			continue
+		if stone.global_position.y <= 2000.0 and not stone.sleeping:
+			return false
+	return true
 
 func _all_sleeping() -> bool:
 	if not _stone_is_done():
