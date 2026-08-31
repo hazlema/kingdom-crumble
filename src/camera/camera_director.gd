@@ -4,10 +4,15 @@ extends Camera2D
 enum Mode { AIM, FOLLOW, SCOUT }
 
 const SCOUT_SPEED := 900.0
+# Keep the aim focus at least this far inside the viewport edge.
+const AIM_EDGE_MARGIN := 160.0
 
 var mode := Mode.AIM
 var follow_target: Node2D
 var home_position := Vector2.ZERO
+# While charging a shot: the world point (arrow end) that must stay in
+# frame. Vector2.INF = no focus, sit at home.
+var aim_focus := Vector2.INF
 
 func _ready() -> void:
 	home_position = global_position
@@ -34,13 +39,28 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	match mode:
 		Mode.AIM:
-			global_position = home_position
+			global_position = _aim_position()
 		Mode.FOLLOW:
 			if is_instance_valid(follow_target):
 				global_position = follow_target.global_position
 		Mode.SCOUT:
 			var dir := Input.get_axis("scout_left", "scout_right")
 			global_position.x += dir * SCOUT_SPEED * delta
+
+# Split the view between the catapult and the arrow's end, but never
+# let the end leave the frame — the tip wins over the midpoint.
+func _aim_position() -> Vector2:
+	if not aim_focus.is_finite():
+		return home_position
+	var half := get_viewport_rect().size * 0.5 / zoom
+	var target := (home_position + aim_focus) * 0.5
+	target.x = clampf(target.x,
+		aim_focus.x - (half.x - AIM_EDGE_MARGIN),
+		aim_focus.x + (half.x - AIM_EDGE_MARGIN))
+	target.y = clampf(target.y,
+		aim_focus.y - (half.y - AIM_EDGE_MARGIN),
+		aim_focus.y + (half.y - AIM_EDGE_MARGIN))
+	return target
 
 static func next_mode(current: Mode, event: String) -> Mode:
 	match event:

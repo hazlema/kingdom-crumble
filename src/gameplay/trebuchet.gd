@@ -58,6 +58,13 @@ func _process(_delta: float) -> void:
 		tp.velocity = launch_velocity(aim_angle_deg, charge,
 			p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
 
+# Where the aiming arrow ends (world space), or INF when not charging —
+# the camera uses this to keep the whole shot preview in frame.
+func preview_end_global() -> Vector2:
+	if _charging and has_node("TrajectoryPreview") and $TrajectoryPreview.visible:
+		return $TrajectoryPreview.end_global()
+	return Vector2.INF
+
 func process_aim(delta: float) -> void:
 	var dir := Input.get_axis("aim_left", "aim_right")
 	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta,

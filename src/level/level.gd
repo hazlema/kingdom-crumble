@@ -86,6 +86,7 @@ func _physics_process(delta: float) -> void:
 		State.AIMING:
 			trebuchet.process_aim(delta)
 			hud.set_power(trebuchet.charge)
+			cam.aim_focus = trebuchet.preview_end_global()
 			if Input.get_axis("scout_left", "scout_right") != 0.0:
 				cam.set_mode(CameraDirector.next_mode(cam.mode, "scout_input"))
 			elif Input.get_axis("aim_left", "aim_right") != 0.0 \

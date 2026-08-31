@@ -34,18 +34,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if velocity == Vector2.ZERO:
 		return
-	# Full path, clipped at the grass line
-	var floor_local := world_floor_y - global_position.y
-	var path := PackedVector2Array()
-	for i in range(STEPS + 1):
-		var t := i * DT
-		var p := velocity * t + Vector2(0, 0.5 * gravity * t * t)
-		if p.y > floor_local and not path.is_empty():
-			var prev := path[path.size() - 1]
-			var k := (floor_local - prev.y) / (p.y - prev.y)
-			path.append(prev.lerp(p, k))
-			break
-		path.append(p)
+	var path := _build_path()
 	if path.size() < 2:
 		return
 
@@ -72,6 +61,31 @@ func _draw() -> void:
 	draw_polyline(shown, CORE, 7.0, true)
 	_draw_head(tip, dir, 30.0, RIM)
 	_draw_head(tip, dir, 24.0, CORE)
+
+# Full arc from launch to the grass line, in local space.
+func _build_path() -> PackedVector2Array:
+	var floor_local := world_floor_y - global_position.y
+	var path := PackedVector2Array()
+	for i in range(STEPS + 1):
+		var t := i * DT
+		var p := velocity * t + Vector2(0, 0.5 * gravity * t * t)
+		if p.y > floor_local and not path.is_empty():
+			var prev := path[path.size() - 1]
+			var k := (floor_local - prev.y) / (p.y - prev.y)
+			path.append(prev.lerp(p, k))
+			break
+		path.append(p)
+	return path
+
+# World position of the arrow's end (the predicted landing spot) —
+# what the camera keeps in frame while the shot charges.
+func end_global() -> Vector2:
+	if velocity == Vector2.ZERO:
+		return global_position
+	var path := _build_path()
+	if path.is_empty():
+		return global_position
+	return global_position + path[path.size() - 1]
 
 func _draw_head(tip: Vector2, dir: Vector2, size: float, color: Color) -> void:
 	var side := dir.orthogonal()
