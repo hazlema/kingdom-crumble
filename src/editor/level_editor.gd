@@ -47,6 +47,7 @@ func _process(_delta: float) -> void:
 	var mouse := get_viewport().get_mouse_position()
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		$Camera.position -= mouse - _last_mouse
+		_clamp_camera()
 	_last_mouse = mouse
 
 	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
@@ -156,6 +157,17 @@ func _mouse_cell() -> Vector2i:
 
 func _mouse_over_ui(p: Vector2) -> bool:
 	return palette.get_global_rect().has_point(p) or menu.covers_point(p)
+
+# Clamp pan POSITION to the camera limits — past the bounds the display
+# pins while position drifts on, and panning back drags through the
+# invisible overshoot ("scrolling stopped working").
+func _clamp_camera() -> void:
+	var cam: Camera2D = $Camera
+	var half := get_viewport_rect().size * 0.5 / cam.zoom
+	cam.position.x = clampf(cam.position.x,
+		cam.limit_left + half.x, cam.limit_right - half.x)
+	cam.position.y = clampf(cam.position.y,
+		cam.limit_top + half.y, cam.limit_bottom - half.y)
 
 func _update_ghost() -> void:
 	var id := carrying

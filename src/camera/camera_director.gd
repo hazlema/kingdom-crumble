@@ -35,6 +35,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_mode(next_mode(mode, "scout_input"))
 		if mode == Mode.SCOUT:
 			global_position -= event.relative / zoom
+			_clamp_to_limits()
 
 func _physics_process(delta: float) -> void:
 	match mode:
@@ -46,6 +47,17 @@ func _physics_process(delta: float) -> void:
 		Mode.SCOUT:
 			var dir := Input.get_axis("scout_left", "scout_right")
 			global_position.x += dir * SCOUT_SPEED * delta
+			_clamp_to_limits()
+
+# Free-pan must clamp POSITION, not just the display: past the level
+# bounds the display pins while position keeps travelling, and panning
+# back drags through invisible overshoot — "scrolling stopped working".
+func _clamp_to_limits() -> void:
+	var half := get_viewport_rect().size * 0.5 / zoom
+	global_position.x = clampf(global_position.x,
+		limit_left + half.x, limit_right - half.x)
+	global_position.y = clampf(global_position.y,
+		limit_top + half.y, limit_bottom - half.y)
 
 # Split the view between the catapult and the arrow's end, but never
 # let the end leave the frame — the tip wins over the midpoint.

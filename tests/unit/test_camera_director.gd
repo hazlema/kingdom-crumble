@@ -44,3 +44,21 @@ func test_aim_midpoint_for_short_shots():
 	c.aim_focus = Vector2(1400, 600)
 	c._physics_process(0.016)
 	assert_almost_eq(c.global_position.x, (960.0 + 1400.0) * 0.5, 1.0)
+
+func test_scout_overshoot_is_clamped():
+	# pan position must never drift past the limits — the display pins
+	# and panning back through invisible overshoot feels like a dead cam
+	var c := _cam()
+	c.limit_left = -400
+	c.limit_top = -1400
+	c.limit_right = 3400
+	c.limit_bottom = 700
+	c.global_position = Vector2(99999, 99999)
+	c._clamp_to_limits()
+	var half: Vector2 = c.get_viewport_rect().size * 0.5
+	assert_almost_eq(c.global_position.x, 3400.0 - half.x, 1.0)
+	assert_almost_eq(c.global_position.y, 700.0 - half.y, 1.0)
+	c.global_position = Vector2(-99999, -99999)
+	c._clamp_to_limits()
+	assert_almost_eq(c.global_position.x, -400.0 + half.x, 1.0)
+	assert_almost_eq(c.global_position.y, -1400.0 + half.y, 1.0)
