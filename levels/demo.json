@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "title": "Demo",
+  "author": "Kingdom Crumble",
+  "background": "meadow",
+  "shots": 0,
+  "crates": [
+    { "x": 1400, "y": 572, "type": "crate-wood" },
+    { "x": 1400, "y": 516, "type": "crate-wood" },
+    { "x": 1400, "y": 460, "type": "crate-wood" }
+  ],
+  "triggers": { "on_all_cleared": ["confetti"] }
+}

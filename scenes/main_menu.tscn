@@ -48,6 +48,10 @@ text = "🔥  Heart-Pumper"
 layout_mode = 2
 text = "💀  Hardcore"
 
+[node name="Editor" type="Button" parent="Buttons"]
+layout_mode = 2
+text = "EDITOR"
+
 [node name="Quit" type="Button" parent="Buttons" unique_id=665082779]
 layout_mode = 2
 text = "Quit"

@@ -1,12 +1,14 @@
 class_name LevelLayout
 extends Resource
 
-# A level as pure data — the generic level scene builds itself from
-# one of these. Built-ins ship in res://levels/; player-made levels
-# save to user://levels/ so they can be shared as single files.
-# (Future: crate types, critters, decorations.)
+# In-memory level data. Persisted as JSON via LevelJson (spec 2026-09-01);
+# the old .tres save format is retired.
 
 @export var title := "Untitled"
 @export var author := ""
-@export var shots_override := 0  # 0 = use the difficulty preset
-@export var crates: Array[Vector2] = []
+@export var background := "meadow"
+@export var shots := 0  # 0 = difficulty preset decides
+# Each entry: { "x": float, "y": float, "type": String }
+@export var crates: Array[Dictionary] = []
+# event name -> Array[String] of curated effect ids
+@export var triggers := {}

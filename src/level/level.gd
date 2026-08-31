@@ -5,14 +5,17 @@ extends Node2D
 enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
-const CRATE_SCENE := preload("res://scenes/crate.tscn")
-const DEFAULT_LAYOUT := "res://levels/meadow.tres"
+const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
 
 # Set this before changing to the level scene to play any layout —
 # built-in, or a player-made file from user://levels/.
 static var next_layout_path := ""
+# Set to a LevelLayout to bypass the path entirely (cleared in _ready).
+static var next_layout: LevelLayout = null
+# When true the level returns to the editor on end/pause rather than reloading.
+static var return_to_editor := false
 
 var layout: LevelLayout
 var state := State.AIMING
@@ -22,6 +25,8 @@ var _ledger := LeanLedger.new()
 var _active_stone: Stone
 var _backdrop := BackdropMode.new()
 var _checking := false
+var _pristine: LevelLayout = null
+var _editor_session := false
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -30,12 +35,19 @@ var _checking := false
 func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
-	var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
-	layout = LevelStore.load_layout(path)
-	if layout == null:
-		layout = LevelStore.load_layout(DEFAULT_LAYOUT)
+	_editor_session = Level.return_to_editor
+	Level.return_to_editor = false
+	if next_layout != null:
+		layout = next_layout
+		_pristine = next_layout
+		next_layout = null
+	else:
+		var path := next_layout_path if next_layout_path != "" else DEFAULT_LAYOUT
+		layout = LevelStore.load_level(path)
+		if layout == null:
+			layout = LevelStore.load_level(DEFAULT_LAYOUT)
 	_spawn_crates()
-	shots_left = layout.shots_override if layout.shots_override > 0 \
+	shots_left = layout.shots if layout.shots > 0 \
 		else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
@@ -44,11 +56,16 @@ func _ready() -> void:
 		if has_node("PauseMenu"):
 			$PauseMenu.open())
 	if has_node("PauseMenu"):
-		$PauseMenu.restart_requested.connect(
-			func() -> void: get_tree().reload_current_scene())
+		$PauseMenu.restart_requested.connect(func() -> void:
+			if _editor_session:
+				Level.next_layout = _pristine
+				Level.return_to_editor = true
+			get_tree().reload_current_scene())
 		$PauseMenu.quit_requested.connect(
 			func() -> void: get_tree().change_scene_to_file(
 				"res://scenes/main_menu.tscn"))
+		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
+		$PauseMenu.set_editor_mode(_editor_session)
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
@@ -71,14 +88,16 @@ func _physics_process(delta: float) -> void:
 			pass
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
-				get_tree().reload_current_scene()
+				if _editor_session:
+					_back_to_editor()
+				else:
+					get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
-	for pos in layout.crates:
-		var crate: Crate = CRATE_SCENE.instantiate()
-		crate.position = pos
-		crate.add_to_group("crates")
-		add_child(crate)
+	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
+
+func _crate_texture(id: String) -> Texture2D:
+	return EditorAssets.texture_for(id)
 
 func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
@@ -102,13 +121,29 @@ func _settle() -> void:
 	var standing := count_standing(_crates())
 	if standing == 0:
 		state = State.CLEARED
-		hud.banner("KINGDOM CRUMBLED!", "press ENTER to play again")
+		var _cleared_sub := "press ENTER to return to editor" if _editor_session \
+				else "press ENTER to play again"
+		hud.banner("KINGDOM CRUMBLED!", _cleared_sub)
+		var effects: Array = layout.triggers.get("on_all_cleared", [])
+		if not effects.is_empty():
+			var center := Vector2(1400, 400)
+			if not _crates().is_empty():
+				center = _crates()[0].global_position
+			Effects.fire_all(effects, self, center)
 	elif shots_left <= 0:
 		state = State.FAILED
-		hud.banner("OUT OF STONES", "press ENTER to retry")
+		var _failed_sub := "press ENTER to return to editor" if _editor_session \
+				else "press ENTER to retry"
+		hud.banner("OUT OF STONES", _failed_sub)
 	else:
 		trebuchet.recock()  # ammo remains: reset the arm and reload
 		state = State.AIMING
+
+func _back_to_editor() -> void:
+	LevelEditor.resume_layout = _pristine
+	Level.return_to_editor = false
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/editor.tscn")
 
 func _award_leans() -> void:
 	for crate in _crates():

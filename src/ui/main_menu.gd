@@ -4,6 +4,8 @@ func _ready() -> void:
 	$Buttons/Chill.pressed.connect(_start.bind("chill"))
 	$Buttons/HeartPumper.pressed.connect(_start.bind("heartpumper"))
 	$Buttons/Hardcore.pressed.connect(_start.bind("hardcore"))
+	$Buttons/Editor.pressed.connect(func() -> void:
+		get_tree().change_scene_to_file("res://scenes/editor.tscn"))
 	$Buttons/Quit.pressed.connect(_quit)
 
 func _start(tier: String) -> void:
