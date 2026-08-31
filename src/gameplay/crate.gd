@@ -7,7 +7,8 @@ const STANDING_MAX_DEG := 45.0
 # hit, lower = they slosh and rock longer. Bounce stays the per-tier
 # gameplay dial (resources/difficulty/*.tres).
 const LINEAR_DAMP := 0.7
-const ANGULAR_DAMP := 6.0
+# const ANGULAR_DAMP := 6.0
+const ANGULAR_DAMP := 2.0
 # Restitution is speed-gated: below MIN a touch is inert (a slow
 # boulder kissing the tower must not detonate it), above MAX the full
 # per-tier bounce applies. Linear ramp in between.
@@ -29,8 +30,11 @@ func _ready() -> void:
 	_full_bounce = Settings.preset.crate_natural_bounce if Settings.preset else 0.5
 	_mat.bounce = 0.0
 	physics_material_override = _mat
-	linear_damp = LINEAR_DAMP
-	angular_damp = ANGULAR_DAMP
+	var p := Settings.preset
+	linear_damp = p.crate_linear_damp if p and p.crate_linear_damp >= 0.0 \
+		else LINEAR_DAMP
+	angular_damp = p.crate_angular_damp if p and p.crate_angular_damp >= 0.0 \
+		else ANGULAR_DAMP
 
 func _physics_process(_delta: float) -> void:
 	if sleeping:

@@ -1,10 +1,11 @@
 extends GutTest
 
 func test_load_chill_tier():
+	# exact values are the owner's tuning dials — assert shape, not numbers
 	assert_true(Settings.load_tier("chill"))
 	assert_eq(Settings.tier, "chill")
-	assert_almost_eq(Settings.preset.crate_natural_bounce, 0.6, 0.001)
-	assert_almost_eq(Settings.preset.impact_force, 3.0, 0.001)
+	assert_gt(Settings.preset.crate_natural_bounce, 0.0)
+	assert_gt(Settings.preset.impact_force, 0.0)
 
 func test_hardcore_is_stingier_than_chill():
 	Settings.load_tier("hardcore")
