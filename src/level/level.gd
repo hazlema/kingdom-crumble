@@ -26,6 +26,7 @@ var _active_stone: Stone
 var _backdrop := BackdropMode.new()
 var _checking := false
 var _pristine: LevelLayout = null
+var _editor_session := false
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -34,6 +35,8 @@ var _pristine: LevelLayout = null
 func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
+	_editor_session = Level.return_to_editor
+	Level.return_to_editor = false
 	if next_layout != null:
 		layout = next_layout
 		_pristine = next_layout
@@ -53,13 +56,16 @@ func _ready() -> void:
 		if has_node("PauseMenu"):
 			$PauseMenu.open())
 	if has_node("PauseMenu"):
-		$PauseMenu.restart_requested.connect(
-			func() -> void: get_tree().reload_current_scene())
+		$PauseMenu.restart_requested.connect(func() -> void:
+			if _editor_session:
+				Level.next_layout = _pristine
+				Level.return_to_editor = true
+			get_tree().reload_current_scene())
 		$PauseMenu.quit_requested.connect(
 			func() -> void: get_tree().change_scene_to_file(
 				"res://scenes/main_menu.tscn"))
 		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
-		$PauseMenu.set_editor_mode(Level.return_to_editor)
+		$PauseMenu.set_editor_mode(_editor_session)
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
@@ -82,7 +88,7 @@ func _physics_process(delta: float) -> void:
 			pass
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
-				if Level.return_to_editor:
+				if _editor_session:
 					_back_to_editor()
 				else:
 					get_tree().reload_current_scene()
@@ -115,7 +121,9 @@ func _settle() -> void:
 	var standing := count_standing(_crates())
 	if standing == 0:
 		state = State.CLEARED
-		hud.banner("KINGDOM CRUMBLED!", "press ENTER to play again")
+		var _cleared_sub := "press ENTER to return to editor" if _editor_session \
+				else "press ENTER to play again"
+		hud.banner("KINGDOM CRUMBLED!", _cleared_sub)
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
 		if not effects.is_empty():
 			var center := Vector2(1400, 400)
@@ -124,7 +132,9 @@ func _settle() -> void:
 			Effects.fire_all(effects, self, center)
 	elif shots_left <= 0:
 		state = State.FAILED
-		hud.banner("OUT OF STONES", "press ENTER to retry")
+		var _failed_sub := "press ENTER to return to editor" if _editor_session \
+				else "press ENTER to retry"
+		hud.banner("OUT OF STONES", _failed_sub)
 	else:
 		trebuchet.recock()  # ammo remains: reset the arm and reload
 		state = State.AIMING
