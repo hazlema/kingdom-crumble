@@ -6,7 +6,7 @@ const STANDING_MAX_DEG := 45.0
 # Post-impact settle feel: higher = crates calm down faster after a
 # hit, lower = they slosh and rock longer. Bounce stays the per-tier
 # gameplay dial (resources/difficulty/*.tres).
-const LINEAR_DAMP := 0.8
+const LINEAR_DAMP := 0.7
 const ANGULAR_DAMP := 6.0
 # Restitution is speed-gated: below MIN a touch is inert (a slow
 # boulder kissing the tower must not detonate it), above MAX the full
