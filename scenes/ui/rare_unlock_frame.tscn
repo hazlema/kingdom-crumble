@@ -1,0 +1,58 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/ui/rare_unlock_frame.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="gold_frame"]
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.13, 0.1, 0.05, 0.92)
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.96, 0.77, 0.26, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="RareUnlockFrame" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("gold_frame")
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.96, 0.77, 0.26, 1)
+horizontal_alignment = 1
+text = "Rare Unlock"
+
+[node name="Stage" type="Control" parent="Center/Panel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 240)
+
+[node name="Anim" type="AnimatedSprite2D" parent="Center/Panel/VBox/Stage"]
+unique_name_in_owner = true
+position = Vector2(120, 120)
