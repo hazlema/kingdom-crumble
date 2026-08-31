@@ -18,6 +18,9 @@ static var next_layout_path := ""
 static var next_layout: LevelLayout = null
 # When true the level returns to the editor on end/pause rather than reloading.
 static var return_to_editor := false
+# Unspent buffs riding into the next level after a CLEAR (spec §5).
+# Consume-and-clear in _ready, like every Level static.
+static var carry_buffs: Array[StringName] = []
 
 var layout: LevelLayout
 var state := State.AIMING
@@ -42,6 +45,9 @@ func _ready() -> void:
 		Settings.load_tier("chill")
 	_editor_session = Level.return_to_editor
 	Level.return_to_editor = false
+	pending_buffs = Level.carry_buffs
+	Level.carry_buffs = []
+	hud.set_buffs.call_deferred(pending_buffs)
 	if next_layout != null:
 		layout = next_layout
 		_pristine = next_layout
@@ -96,6 +102,8 @@ func _physics_process(delta: float) -> void:
 				if _editor_session:
 					_back_to_editor()
 				else:
+					if state == State.CLEARED:
+						Level.carry_buffs = pending_buffs.duplicate()
 					get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
