@@ -34,7 +34,10 @@ func clear_banner() -> void:
 	%BannerCenter.visible = false
 
 func set_buffs(buffs: Array[StringName]) -> void:
+	# remove_child before queue_free: chain collections call this twice
+	# in one physics frame and stale icons must not be double-counted
 	for c in $BuffRow.get_children():
+		$BuffRow.remove_child(c)
 		c.queue_free()
 	for b in buffs:
 		var icon := TextureRect.new()
