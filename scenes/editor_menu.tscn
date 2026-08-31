@@ -120,3 +120,9 @@ unique_name_in_owner = true
 title = "Clear Level"
 dialog_text = "Clear the whole level?"
 size = Vector2i(300, 100)
+
+[node name="LoadError" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "Load Error"
+dialog_text = "Couldn't load that level file."
+size = Vector2i(320, 100)
