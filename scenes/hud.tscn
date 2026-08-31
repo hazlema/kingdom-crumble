@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="1"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/stone.png" id="2"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/gear.png" id="3"]
-[ext_resource type="Texture2D" path="res://art/assets/ui/heart.png" id="4"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/catapult.png" id="4"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/bomb.png" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/ui/stat_bar.tscn" id="6"]
 
