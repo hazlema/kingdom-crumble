@@ -1,6 +1,8 @@
 class_name Crate
 extends RigidBody2D
 
+signal knocked_out(crate: Crate)
+
 const STANDING_MAX_DEG := 45.0
 
 # Post-impact settle feel: higher = crates calm down faster after a
@@ -22,6 +24,8 @@ const KNOCKED_OUT_DISTANCE := 48.0
 var type_id := "crate-wood"
 var home := Vector2.ZERO  # spawn position, captured in _ready
 
+var _knock_reported := false
+
 var _full_bounce := 0.5
 var _mat := PhysicsMaterial.new()
 
@@ -37,6 +41,9 @@ func _ready() -> void:
 		else ANGULAR_DAMP
 
 func _physics_process(_delta: float) -> void:
+	if not _knock_reported and not freeze and not is_standing():
+		_knock_reported = true
+		knocked_out.emit(self)
 	if sleeping:
 		return
 	var ramp := clampf((linear_velocity.length() - BOUNCE_MIN_SPEED) \
