@@ -68,6 +68,19 @@ func test_drag_onto_occupied_cell_does_not_move() -> void:
 	assert_true(ed.occupancy.has(Vector2i(2, 0)))
 	assert_true(ed.occupancy.has(Vector2i(4, 0)))
 
+func test_no_dialog_open_by_default() -> void:
+	assert_false(ed.menu.any_dialog_open())
+
+func test_menu_chrome_covers_its_button_but_not_the_field() -> void:
+	var btn: Control = ed.menu.get_node("MenuBtn")
+	assert_true(ed.menu.covers_point(btn.get_global_rect().get_center()))
+	assert_false(ed.menu.covers_point(Vector2(-999.0, -999.0)))
+
+func test_field_point_is_not_over_ui() -> void:
+	var palette_center: Vector2 = ed.palette.get_global_rect().get_center()
+	assert_true(ed._mouse_over_ui(palette_center))
+	assert_false(ed._mouse_over_ui(Vector2(-999.0, -999.0)))
+
 func test_delete_removes_selected_crate() -> void:
 	ed.carrying = "crate-wood"
 	ed._press(Vector2i(2, 0))

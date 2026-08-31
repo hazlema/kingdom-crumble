@@ -50,7 +50,10 @@ func _process(_delta: float) -> void:
 	_last_mouse = mouse
 
 	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var over_ui := get_viewport().gui_get_hovered_control() != null
+	# Geometry, not gui_get_hovered_control(): during a drag that began
+	# on a palette Button the Control keeps mouse capture, so the hover
+	# API still reports UI at release and would veto the drop.
+	var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
 	if lmb and not _lmb_down and not over_ui:
 		_press(_mouse_cell())
 	elif not lmb and _lmb_down:
@@ -150,6 +153,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _mouse_cell() -> Vector2i:
 	return EditorGrid.world_to_cell(get_global_mouse_position())
+
+func _mouse_over_ui(p: Vector2) -> bool:
+	return palette.get_global_rect().has_point(p) or menu.covers_point(p)
 
 func _update_ghost() -> void:
 	var id := carrying

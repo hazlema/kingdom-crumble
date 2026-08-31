@@ -43,6 +43,19 @@ func _pick(sig: Signal) -> void:
 	%Panel.visible = false
 	sig.emit()
 
+# True while any modal dialog is up — the editor pauses field
+# interaction so clicks aimed at a dialog can't edit the level.
+func any_dialog_open() -> bool:
+	return %SaveAsDialog.visible or %LoadDialog.visible \
+		or %ClearConfirm.visible or %LoadError.visible
+
+# Geometry test for the polled interaction layer: is this viewport
+# point over the menu's visible chrome?
+func covers_point(p: Vector2) -> bool:
+	if %MenuBtn.get_global_rect().has_point(p):
+		return true
+	return %Panel.visible and %Panel.get_global_rect().has_point(p)
+
 func open_save_as() -> void:
 	%SaveAsDialog.popup_centered()
 
