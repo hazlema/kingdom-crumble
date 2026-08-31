@@ -25,7 +25,7 @@ Music="*res://src/audio/music_director.gd"
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/size/mode=3
+window/size/mode=2
 window/energy_saving/keep_screen_on=false
 window/stretch/mode="canvas_items"
 
@@ -36,7 +36,6 @@ theme/custom="res://resources/ui/kingdom_theme.tres"
 [physics]
 
 common/physics_jitter_fix=0.816
-2d/physics_engine="GodotPhysics2D"
 3d/physics_engine="Jolt Physics"
 
 [rendering]
