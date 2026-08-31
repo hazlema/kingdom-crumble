@@ -14,3 +14,9 @@ func test_traversal_sound_ids_rejected():
 	var host: Node2D = add_child_autofree(Node2D.new())
 	assert_eq(Effects.fire_all(["sound:../../escape"], host, Vector2.ZERO), 0)
 	assert_eq(Effects.fire_all(["sound:../evil"], host, Vector2.ZERO), 0)
+
+func test_is_known_rejects_traversal_sound_ids():
+	assert_false(Effects.is_known("sound:../../evil"))
+	assert_false(Effects.is_known("sound:foo/bar"))
+	assert_false(Effects.is_known("sound:a\\b"))
+	assert_false(Effects.is_known("sound:a..b"))

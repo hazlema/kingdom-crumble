@@ -7,7 +7,14 @@ extends RefCounted
 const SFX_DIR := "res://assets/sfx"
 
 static func is_known(id: String) -> bool:
-	return id == "confetti" or id.begins_with("sound:")
+	if id == "confetti":
+		return true
+	if id.begins_with("sound:"):
+		var name := id.trim_prefix("sound:")
+		if name.contains("/") or name.contains("\\") or name.contains(".."):
+			return false
+		return true
+	return false
 
 static func fire_all(ids: Array, host: Node2D, at: Vector2) -> int:
 	var fired := 0
