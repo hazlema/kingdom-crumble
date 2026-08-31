@@ -5,6 +5,8 @@ extends Node2D
 enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
+const HIT_TEXT_SCENE := preload("res://src/effects/HitTextEffect.tscn")
+const UNLOCK_FRAME_SCENE := preload("res://scenes/ui/rare_unlock_frame.tscn")
 const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
@@ -16,13 +18,19 @@ static var next_layout_path := ""
 static var next_layout: LevelLayout = null
 # When true the level returns to the editor on end/pause rather than reloading.
 static var return_to_editor := false
+# Unspent buffs riding into the next level after a CLEAR (spec §5).
+# Consume-and-clear in _ready, like every Level static.
+static var carry_buffs: Array[StringName] = []
 
 var layout: LevelLayout
 var state := State.AIMING
 var shots_left := 0
 var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
-var _active_stone: Stone
+var _active_stones: Array[Stone] = []
+var pending_buffs: Array[StringName] = []
+# Injectable for tests; production uses randf.
+var _ghost_roll: Callable = func() -> float: return randf()
 var _backdrop := BackdropMode.new()
 var _checking := false
 var _pristine: LevelLayout = null
@@ -37,6 +45,9 @@ func _ready() -> void:
 		Settings.load_tier("chill")
 	_editor_session = Level.return_to_editor
 	Level.return_to_editor = false
+	pending_buffs = Level.carry_buffs
+	Level.carry_buffs = []
+	hud.set_buffs.call_deferred(pending_buffs.duplicate())
 	if next_layout != null:
 		layout = next_layout
 		_pristine = next_layout
@@ -91,10 +102,13 @@ func _physics_process(delta: float) -> void:
 				if _editor_session:
 					_back_to_editor()
 				else:
+					if state == State.CLEARED:
+						Level.carry_buffs = pending_buffs.duplicate()
 					get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
-	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
+	for crate in LevelBuilder.spawn_crates(self, layout, false, _crate_texture):
+		crate.knocked_out.connect(_on_crate_knocked)
 
 func _crate_texture(id: String) -> Texture2D:
 	return EditorAssets.texture_for(id)
@@ -103,13 +117,30 @@ func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
 	hud.set_shots(shots_left)
 	hud.set_power(0.0)
-	var stone: Stone = STONE_SCENE.instantiate()
-	add_child(stone)
-	stone.launch(trebuchet.get_node("LaunchPoint").global_position, velocity)
-	if trebuchet.loaded_texture and stone.has_node("Visual"):
-		stone.get_node("Visual").texture = trebuchet.loaded_texture
-	_active_stone = stone
-	cam.follow_target = stone
+	var d := PowerupRules.drain(pending_buffs)
+	pending_buffs = d["remaining"]
+	hud.set_buffs(pending_buffs)
+	var consumed: Array[StringName] = d["consumed"]
+	var velocities: Array[Vector2] = [velocity]
+	if consumed.has(&"multishot"):
+		velocities = [velocity, velocity.rotated(deg_to_rad(2.5)),
+			velocity.rotated(deg_to_rad(-2.5))]
+	_active_stones.clear()
+	for v in velocities:
+		var stone: Stone = STONE_SCENE.instantiate()
+		stone.exploding = consumed.has(&"exploding")
+		stone.super_bounce = consumed.has(&"super_bounce")
+		add_child(stone)
+		stone.launch(trebuchet.get_node("LaunchPoint").global_position, v)
+		if trebuchet.loaded_texture and stone.has_node("Visual"):
+			stone.get_node("Visual").texture = trebuchet.loaded_texture
+		_active_stones.append(stone)
+	# Exempt every sibling pair from physical perturbation so the fan
+	# trajectory is not disturbed by stone-on-stone collisions at launch.
+	for i in _active_stones.size():
+		for j in range(i + 1, _active_stones.size()):
+			_active_stones[i].add_collision_exception_with(_active_stones[j])
+	cam.follow_target = _active_stones[0]
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))
 	_resolve_clock = 0.0
 	state = State.FLIGHT
@@ -175,8 +206,9 @@ func _update_crate_check() -> void:
 func _apply_backdrop_alpha(alpha: float) -> void:
 	var targets: Array = [trebuchet]
 	targets.append_array(_crates())
-	if is_instance_valid(_active_stone):
-		targets.append(_active_stone)
+	for stone in _active_stones:
+		if is_instance_valid(stone):
+			targets.append(stone)
 	var tween := create_tween().set_parallel(true)
 	for target in targets:
 		tween.tween_property(target, "modulate:a", alpha, 0.25)
@@ -185,11 +217,12 @@ func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
 
 func _stone_is_done() -> bool:
-	if not is_instance_valid(_active_stone):
-		return true
-	if _active_stone.global_position.y > 2000.0:
-		return true
-	return _active_stone.sleeping
+	for stone in _active_stones:
+		if not is_instance_valid(stone):
+			continue
+		if stone.global_position.y <= 2000.0 and not stone.sleeping:
+			return false
+	return true
 
 func _all_sleeping() -> bool:
 	if not _stone_is_done():
@@ -212,3 +245,35 @@ static func count_standing_rotations(rotations: Array) -> int:
 		if Crate.is_standing_rotation(r):
 			n += 1
 	return n
+
+func _on_crate_knocked(crate: Crate) -> void:
+	# During editor playtests the skunk is treated as already unlocked so
+	# the once-ever ceremony never fires — the plain pool rolls instead.
+	var verdict := PowerupRules.route(crate.type_id,
+		Unlocks.has_flag("skunk") or _editor_session, _ghost_roll)
+	match verdict["kind"]:
+		"refund":
+			# Ignore late chain-topple refunds once the level has ended —
+			# a gold crate falling after FAILED/CLEARED must not alter shots_left.
+			if state == State.CLEARED or state == State.FAILED:
+				return
+			shots_left += 1
+			hud.set_shots(shots_left)
+			_floaty(verdict["label"], crate.global_position)
+		"buff":
+			pending_buffs.append(verdict["buff"])
+			hud.set_buffs(pending_buffs)
+			_floaty(verdict["label"], crate.global_position)
+		"skunk":
+			Unlocks.set_flag("skunk")
+			var frame: RareUnlockFrame = UNLOCK_FRAME_SCENE.instantiate()
+			hud.add_child(frame)
+			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
+
+func _floaty(text: String, world_pos: Vector2) -> void:
+	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()
+	fx.text = text
+	# position BEFORE add_child: the rise tween bakes its destination
+	# from position at _ready time
+	fx.position = get_viewport_transform() * world_pos
+	hud.add_child(fx)
