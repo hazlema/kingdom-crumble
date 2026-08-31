@@ -63,3 +63,30 @@ func test_ghost_skunk_event_sets_flag_once() -> void:
 	await wait_physics_frames(3)
 	assert_true(Unlocks.has_flag("skunk"))
 	assert_eq(l.pending_buffs.size(), 0, "the skunk IS the payout")
+
+func test_refund_ignored_in_failed_state() -> void:
+	# I1 regression: a late gold-crate topple after FAILED must not
+	# increment shots_left or update the HUD.
+	var l := _level_with("crate-gold")
+	await wait_seconds(0.4)
+	var before := l.shots_left
+	l.state = Level.State.FAILED
+	_knock_first(l)
+	await wait_physics_frames(3)
+	assert_eq(l.shots_left, before, "refund landed in FAILED state — I1 bug")
+
+func test_editor_skunk_not_triggered() -> void:
+	# M1 regression: the once-ever skunk ceremony must never fire during
+	# editor playtests (_editor_session=true forces the plain pool).
+	var l := _level_with("crate-ghost")
+	l._ghost_roll = func() -> float: return 0.0  # would trigger skunk in production
+	l._editor_session = true
+	await wait_seconds(0.4)
+	var before := l.shots_left
+	_knock_first(l)
+	await wait_physics_frames(3)
+	assert_false(Unlocks.has_flag("skunk"),
+		"skunk flag set during editor session — M1 bug")
+	# roll=0.0 → POOL[0] = free_shot → refund; confirm pool actually ran.
+	assert_eq(l.shots_left, before + 1,
+		"editor session crate-ghost plain pool did not grant free_shot refund")
