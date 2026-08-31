@@ -27,3 +27,9 @@ func test_load_missing_or_invalid_is_null():
 func test_sanitize_stem():
 	assert_eq(LevelStore.sanitize_stem("My Cool Level!"), "my_cool_level")
 	assert_eq(LevelStore.sanitize_stem("../../evil"), "evil")
+
+func test_save_user_empty_stem_returns_empty():
+	var l := LevelLayout.new()
+	l.title = "Junk"
+	var path := LevelStore.save_user(l, "!!!")
+	assert_eq(path, "")

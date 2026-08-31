@@ -32,8 +32,11 @@ static func load_level(path: String) -> LevelLayout:
 	return null if text == "" else LevelJson.parse(text)
 
 static func save_user(layout: LevelLayout, stem: String) -> String:
+	var safe := sanitize_stem(stem)
+	if safe == "":
+		return ""
 	DirAccess.make_dir_recursive_absolute(USER_DIR)
-	var path := "%s/%s.json" % [USER_DIR, sanitize_stem(stem)]
+	var path := "%s/%s.json" % [USER_DIR, safe]
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return ""
