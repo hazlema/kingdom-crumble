@@ -35,6 +35,10 @@ func launch(from: Vector2, velocity: Vector2) -> void:
 	linear_velocity = velocity
 
 func _on_contact(_body: Node) -> void:
+	# Stones never detonate on other stones — prevents multishot+exploding
+	# volleys from instantly self-detonating on sibling contact.
+	if _body is Stone:
+		return
 	_boom()
 
 func _boom() -> void:

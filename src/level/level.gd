@@ -47,7 +47,7 @@ func _ready() -> void:
 	Level.return_to_editor = false
 	pending_buffs = Level.carry_buffs
 	Level.carry_buffs = []
-	hud.set_buffs.call_deferred(pending_buffs)
+	hud.set_buffs.call_deferred(pending_buffs.duplicate())
 	if next_layout != null:
 		layout = next_layout
 		_pristine = next_layout
@@ -135,6 +135,11 @@ func _on_fired(velocity: Vector2) -> void:
 		if trebuchet.loaded_texture and stone.has_node("Visual"):
 			stone.get_node("Visual").texture = trebuchet.loaded_texture
 		_active_stones.append(stone)
+	# Exempt every sibling pair from physical perturbation so the fan
+	# trajectory is not disturbed by stone-on-stone collisions at launch.
+	for i in _active_stones.size():
+		for j in range(i + 1, _active_stones.size()):
+			_active_stones[i].add_collision_exception_with(_active_stones[j])
 	cam.follow_target = _active_stones[0]
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))
 	_resolve_clock = 0.0
@@ -242,10 +247,16 @@ static func count_standing_rotations(rotations: Array) -> int:
 	return n
 
 func _on_crate_knocked(crate: Crate) -> void:
+	# During editor playtests the skunk is treated as already unlocked so
+	# the once-ever ceremony never fires — the plain pool rolls instead.
 	var verdict := PowerupRules.route(crate.type_id,
-		Unlocks.has_flag("skunk"), _ghost_roll)
+		Unlocks.has_flag("skunk") or _editor_session, _ghost_roll)
 	match verdict["kind"]:
 		"refund":
+			# Ignore late chain-topple refunds once the level has ended —
+			# a gold crate falling after FAILED/CLEARED must not alter shots_left.
+			if state == State.CLEARED or state == State.FAILED:
+				return
 			shots_left += 1
 			hud.set_shots(shots_left)
 			_floaty(verdict["label"], crate.global_position)

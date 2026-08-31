@@ -1,5 +1,14 @@
 extends GutTest
 
+func before_all() -> void:
+	# Warm up the Camera2D so its one-time physics-interpolation engine
+	# message doesn't land inside a physics-stepped test and fail it.
+	Level.next_layout = LevelLayout.new()
+	var warm = load("res://scenes/level.tscn").instantiate()
+	add_child(warm)
+	await get_tree().physics_frame
+	warm.queue_free()
+
 func _level() -> Level:
 	Level.next_layout = LevelLayout.new()  # empty field
 	var l: Level = load("res://scenes/level.tscn").instantiate()
@@ -32,3 +41,24 @@ func test_combo_applies_to_every_stone() -> void:
 	assert_eq(l._active_stones.size(), 3)
 	for s in l._active_stones:
 		assert_true(s.exploding and s.super_bounce)
+
+func test_multishot_exploding_volley_does_not_self_detonate() -> void:
+	# C1 regression: multishot+exploding volley must not immediately
+	# self-detonate when the three stones spawn at the same launch point.
+	var l := _level()
+	l.pending_buffs = [&"multishot", &"exploding"] as Array[StringName]
+	l._on_fired(Vector2(900, -300))
+	assert_eq(l._active_stones.size(), 3)
+	# Step physics to let any spurious contact signals fire.
+	await wait_physics_frames(15)
+	# At least one stone must still exist (not freed by self-detonation).
+	var alive := 0
+	for s in l._active_stones:
+		if is_instance_valid(s):
+			alive += 1
+	assert_gt(alive, 0, "all volley stones detonated at launch — C1 self-detonate bug")
+	# The lead stone must have travelled more than 150 px from the launch point.
+	var lead: Stone = l._active_stones[0]
+	if is_instance_valid(lead):
+		assert_gt(lead.global_position.x, 150.0,
+			"lead stone has not advanced — launched but did not travel")
