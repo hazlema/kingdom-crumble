@@ -16,6 +16,8 @@ const BOOM_MIN_SPEED := 300.0
 var exploding := false
 var super_bounce := false
 
+var _boomed := false
+
 func _ready() -> void:
 	mass = 2.0 * (Settings.preset.impact_force if Settings.preset else 1.0)
 	$Visual.texture = VARIANTS[randi() % VARIANTS.size()]
@@ -36,6 +38,9 @@ func _on_contact(_body: Node) -> void:
 	_boom()
 
 func _boom() -> void:
+	if _boomed and not super_bounce:
+		return  # two contacts in one frame must not double the one boom
+	_boomed = true
 	var power := mass * maxf(linear_velocity.length(), BOOM_MIN_SPEED)
 	for c in get_tree().get_nodes_in_group("crates"):
 		if c.freeze:
@@ -50,7 +55,6 @@ func _boom() -> void:
 
 func _boom_visual() -> void:
 	var p := CPUParticles2D.new()
-	p.position = global_position
 	p.emitting = true
 	p.one_shot = true
 	p.amount = 60
@@ -64,4 +68,5 @@ func _boom_visual() -> void:
 	p.scale_amount_max = 8.0
 	p.color = Color(1.0, 0.6, 0.15)
 	get_parent().add_child(p)
+	p.global_position = global_position
 	get_tree().create_timer(2.0).timeout.connect(p.queue_free)
