@@ -8,4 +8,3 @@ crate_natural_bounce = 0.9
 crate_linear_damp = 0.92
 crate_angular_damp = 0.2
 impact_force = 9.5
-shots_per_level = 4
