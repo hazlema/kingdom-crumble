@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dkb7i0pe0hvv0"
+path="res://.godot/imported/Travesty of the Fem.mp3-b845ca32024a1c7f62c70c9c1a310734.mp3str"
+
+[deps]
+
+source_file="res://music/heartpumper/Travesty of the Fem.mp3"
+dest_files=["res://.godot/imported/Travesty of the Fem.mp3-b845ca32024a1c7f62c70c9c1a310734.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
