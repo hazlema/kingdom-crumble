@@ -1,12 +1,11 @@
-[gd_resource type="Resource" script_class="DifficultyPreset" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="DifficultyPreset" format=3 uid="uid://d16o3en3sjufy"]
 
-[ext_resource type="Script" path="res://src/settings/difficulty_preset.gd" id="1"]
+[ext_resource type="Script" uid="uid://tn3vbwu4ieu4" path="res://src/settings/difficulty_preset.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-crate_natural_bounce = 0.45
-impact_force = 2.0
+crate_natural_bounce = 0.9
+crate_linear_damp = 0.92
+crate_angular_damp = 0.2
+impact_force = 9.5
 shots_per_level = 4
-charge_time = 1.5
-min_launch_speed = 400.0
-max_launch_speed = 1400.0

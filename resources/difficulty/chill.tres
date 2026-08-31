@@ -4,4 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-impact_force = 5.0
+crate_natural_bounce = 0.9
+crate_linear_damp = 0.9
+crate_angular_damp = 2.0
+impact_force = 10.0
