@@ -46,3 +46,23 @@ func test_roundtrip():
 	assert_eq(l2.title, l.title)
 	assert_eq(l2.crates, l.crates)
 	assert_eq(l2.triggers, l.triggers)
+
+func test_format_object_is_null():
+	assert_null(LevelJson.parse('{"format":{},"title":"T","crates":[]}'))
+
+func test_format_array_is_null():
+	assert_null(LevelJson.parse('{"format":[1],"title":"T","crates":[]}'))
+
+func test_shots_object_is_null():
+	assert_null(LevelJson.parse('{"format":1,"title":"T","crates":[],"shots":{}}'))
+
+func test_non_string_trigger_ids_dropped():
+	var l := LevelJson.parse('{"format":1,"title":"T","crates":[],"triggers":{"on_all_cleared":[5,{},"confetti"]}}')
+	assert_not_null(l)
+	assert_eq(l.triggers, {"on_all_cleared": ["confetti"]})
+
+func test_too_many_trigger_ids_is_null():
+	var ids := '["confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti","confetti"]'
+	# 17 entries
+	var json_str := '{"format":1,"title":"T","crates":[],"triggers":{"on_all_cleared":' + ids + '}}'
+	assert_null(LevelJson.parse(json_str))

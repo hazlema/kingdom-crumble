@@ -31,13 +31,17 @@ static func parse(text: String) -> LevelLayout:
 		for event in trig:
 			var ids: Variant = trig[event]
 			if ids is Array:
-				l.triggers[String(event)] = ids.map(
-					func(i: Variant) -> String: return String(i))
+				var str_ids: Array[String] = []
+				for i in ids:
+					if i is String:
+						str_ids.append(i)
+				l.triggers[String(event)] = str_ids
 	return l
 
 static func validate(d: Dictionary) -> String:
-	if not d.has("format") or int(d.get("format", -1)) > FORMAT \
-			or int(d.get("format", -1)) < 1:
+	var _fmt: Variant = d.get("format", null)
+	if not (_fmt is int or _fmt is float) \
+			or int(_fmt) > FORMAT or int(_fmt) < 1:
 		return "unsupported or missing format"
 	if not d.get("title", "") is String or d.get("title", "") == "":
 		return "missing title"
@@ -54,6 +58,15 @@ static func validate(d: Dictionary) -> String:
 			return "bad crate coords"
 		if absf(float(c["x"])) > MAX_COORD or absf(float(c["y"])) > MAX_COORD:
 			return "crate out of bounds"
+	var _shots: Variant = d.get("shots", 0)
+	if not (_shots is int or _shots is float):
+		return "bad shots"
+	var _trig: Variant = d.get("triggers", {})
+	if _trig is Dictionary:
+		for _event in _trig:
+			var _ids: Variant = _trig[_event]
+			if _ids is Array and (_ids as Array).size() > 16:
+				return "too many effects"
 	return ""
 
 static func serialize(layout: LevelLayout) -> String:
