@@ -14,7 +14,7 @@ func _ready() -> void:
 	position_smoothing_enabled = true
 	position_smoothing_speed = 6.0
 
-func set_mode(m: int) -> void:
+func set_mode(m: Mode) -> void:
 	mode = m
 	if m == Mode.AIM:
 		follow_target = null
@@ -39,7 +39,7 @@ func _physics_process(delta: float) -> void:
 			var dir := Input.get_axis("scout_left", "scout_right")
 			global_position.x += dir * SCOUT_SPEED * delta
 
-static func next_mode(current: int, event: String) -> int:
+static func next_mode(current: Mode, event: String) -> Mode:
 	match event:
 		"fired":
 			return Mode.FOLLOW

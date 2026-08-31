@@ -58,8 +58,8 @@ static func list_pool(tier: String) -> Array:
 		return out
 	for file in dir.get_files():
 		# exported builds list "track.ogg.remap"; strip and re-check
-		var name := file.trim_suffix(".remap")
-		if name.get_extension() in EXTENSIONS:
-			out.append("res://music/%s/%s" % [tier, name])
+		var stripped := file.trim_suffix(".remap")
+		if stripped.get_extension() in EXTENSIONS:
+			out.append("res://music/%s/%s" % [tier, stripped])
 	out.sort()
 	return out

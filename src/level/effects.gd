@@ -10,8 +10,8 @@ static func is_known(id: String) -> bool:
 	if id == "confetti":
 		return true
 	if id.begins_with("sound:"):
-		var name := id.trim_prefix("sound:")
-		if name.contains("/") or name.contains("\\") or name.contains(".."):
+		var stem := id.trim_prefix("sound:")
+		if stem.contains("/") or stem.contains("\\") or stem.contains(".."):
 			return false
 		return true
 	return false
@@ -56,13 +56,13 @@ static func _confetti_colors() -> Gradient:
 	g.set_color(1, Color(0.55, 0.79, 0.47))
 	return g
 
-static func _sound(host: Node2D, name: String) -> bool:
-	if name.contains("/") or name.contains("\\") or name.contains(".."):
-		push_warning("Unsafe sound name rejected: %s" % name)
+static func _sound(host: Node2D, stem: String) -> bool:
+	if stem.contains("/") or stem.contains("\\") or stem.contains(".."):
+		push_warning("Unsafe sound name rejected: %s" % stem)
 		return false
-	var path := "%s/%s.ogg" % [SFX_DIR, name]
+	var path := "%s/%s.ogg" % [SFX_DIR, stem]
 	if not ResourceLoader.exists(path):
-		push_warning("No such sound effect: %s" % name)
+		push_warning("No such sound effect: %s" % stem)
 		return false
 	var player := AudioStreamPlayer.new()
 	player.stream = load(path)

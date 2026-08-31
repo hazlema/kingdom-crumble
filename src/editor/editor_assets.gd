@@ -19,11 +19,11 @@ static func scan() -> void:
 			_cache[behavior] = entries
 			continue
 		for f in dir.get_files():
-			var name := f.trim_suffix(".remap").trim_suffix(".import")
-			if name.get_extension() != "png" or _has(entries, name.get_basename()):
+			var file_name := f.trim_suffix(".remap").trim_suffix(".import")
+			if file_name.get_extension() != "png" or _has(entries, file_name.get_basename()):
 				continue
-			var id := name.get_basename()
-			var tex: Texture2D = load("%s/%s" % [dir_path, name])
+			var id := file_name.get_basename()
+			var tex: Texture2D = load("%s/%s" % [dir_path, file_name])
 			var desc := id
 			var txt_path := "%s/%s.txt" % [dir_path, id]
 			if FileAccess.file_exists(txt_path):

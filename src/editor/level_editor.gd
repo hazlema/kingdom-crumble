@@ -3,15 +3,23 @@ extends Node2D
 
 # Editing UX only — world visuals and crate spawning are the game's own
 # scenes via LevelBuilder (spec §3 hard rule).
+#
+# Mouse interaction is polled in _process rather than event-driven: a
+# drag that starts on a palette Button never delivers its motion or
+# release events to _unhandled_input (the Control captures them), so
+# drag-out-of-palette and drag-to-move only work reliably by reading
+# Input state directly each frame.
 
 static var resume_layout: LevelLayout = null
 
 var current := LevelLayout.new()
 var occupancy := {}           # Vector2i -> Crate
 var carrying := ""            # asset id while placing, "" = none
-var moving_from := Vector2i(-1, -1)
 var save_path := ""           # last saved path, "" = unsaved
 var _spawned: Array[Crate] = []
+var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
+var _lmb_down := false
+var _last_mouse := Vector2.ZERO
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -21,7 +29,7 @@ func _ready() -> void:
 	EditorAssets.scan()
 	palette.asset_picked.connect(func(id: String) -> void:
 		carrying = id
-		moving_from = Vector2i(-1, -1)
+		_drag_from = Vector2i(-1, -1)
 		overlay.selected_cell = Vector2i(-1, -1))
 	menu.save_requested.connect(_on_save)
 	menu.save_as_requested.connect(_on_save_as)
@@ -34,6 +42,46 @@ func _ready() -> void:
 		current = resume_layout
 		resume_layout = null
 	_rebuild()
+
+func _process(_delta: float) -> void:
+	var mouse := get_viewport().get_mouse_position()
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		$Camera.position -= mouse - _last_mouse
+	_last_mouse = mouse
+
+	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var over_ui := get_viewport().gui_get_hovered_control() != null
+	if lmb and not _lmb_down and not over_ui:
+		_press(_mouse_cell())
+	elif not lmb and _lmb_down:
+		_release(_mouse_cell(), over_ui)
+	_lmb_down = lmb
+	_update_ghost()
+
+func _press(cell: Vector2i) -> void:
+	if carrying != "":
+		_try_place(cell)
+		return
+	if occupancy.has(cell):
+		overlay.selected_cell = cell
+		_drag_from = cell
+	else:
+		overlay.selected_cell = Vector2i(-1, -1)
+		_drag_from = Vector2i(-1, -1)
+	overlay.refresh()
+
+func _release(cell: Vector2i, over_ui: bool) -> void:
+	if carrying != "" and not over_ui:
+		_try_place(cell)
+	elif _drag_from.x >= 0 and not over_ui and cell != _drag_from \
+			and EditorGrid.in_zone(cell) and not occupancy.has(cell):
+		_move(_drag_from, cell)
+	_drag_from = Vector2i(-1, -1)
+
+func _try_place(cell: Vector2i) -> void:
+	if EditorGrid.in_zone(cell) and not occupancy.has(cell):
+		_place(carrying, cell)
+		carrying = ""
 
 func _on_save() -> void:
 	if save_path == "":
@@ -79,72 +127,49 @@ func _rebuild() -> void:
 	occupancy.clear()
 	# Snap all coords to cell centres and drop duplicates.
 	var seen_cells: Array[Vector2i] = []
-	var snapped: Array[Dictionary] = []
+	var snapped_crates: Array[Dictionary] = []
 	for c in current.crates:
 		var cell := EditorGrid.world_to_cell(Vector2(c["x"], c["y"]))
 		var snapped_pos := EditorGrid.cell_to_world(cell)
 		if seen_cells.has(cell):
 			continue
 		seen_cells.append(cell)
-		snapped.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
-	current.crates = snapped
+		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
+	current.crates = snapped_crates
 	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
 	overlay.refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion \
-			and event.button_mask & MOUSE_BUTTON_MASK_RIGHT:
-		$Camera.global_position -= event.relative
-	elif event is InputEventMouseMotion:
-		_update_ghost()
-	elif event is InputEventMouseButton \
-			and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_on_click()
-		elif carrying != "" and _mouse_cell().x >= 0:
-			_on_click()  # drag-release placement
-	elif event is InputEventKey and event.pressed \
+	if event is InputEventKey and event.pressed \
 			and event.keycode == KEY_DELETE:
 		_delete_selected()
 	elif event.is_action_pressed("menu") and carrying != "":
 		carrying = ""
-		_update_ghost()
 
 func _mouse_cell() -> Vector2i:
 	return EditorGrid.world_to_cell(get_global_mouse_position())
 
 func _update_ghost() -> void:
-	if carrying == "":
-		overlay.ghost_cell = Vector2i(-1, -1)
-	else:
-		var cell := _mouse_cell()
-		overlay.ghost_cell = cell
-		overlay.ghost_tex = EditorAssets.texture_for(carrying)
-		overlay.ghost_ok = EditorGrid.in_zone(cell) \
-			and not occupancy.has(cell)
-	overlay.refresh()
-
-func _on_click() -> void:
+	var id := carrying
+	if id == "" and _drag_from.x >= 0 and _lmb_down:
+		var held: Crate = occupancy.get(_drag_from)
+		if held != null:
+			id = held.type_id
+	if id == "":
+		if overlay.ghost_cell != Vector2i(-1, -1):
+			overlay.ghost_cell = Vector2i(-1, -1)
+			overlay.refresh()
+		return
 	var cell := _mouse_cell()
-	if carrying != "":
-		if EditorGrid.in_zone(cell) and not occupancy.has(cell):
-			_place(carrying, cell)
-			carrying = ""
-			_update_ghost()
+	var ok := EditorGrid.in_zone(cell) \
+		and (not occupancy.has(cell) or cell == _drag_from)
+	if cell == overlay.ghost_cell and ok == overlay.ghost_ok:
 		return
-	if moving_from.x >= 0 and EditorGrid.in_zone(cell) \
-			and not occupancy.has(cell):
-		_move(moving_from, cell)
-		moving_from = Vector2i(-1, -1)
-		return
-	if occupancy.has(cell):
-		overlay.selected_cell = cell
-		moving_from = cell
-	else:
-		overlay.selected_cell = Vector2i(-1, -1)
-		moving_from = Vector2i(-1, -1)
+	overlay.ghost_cell = cell
+	overlay.ghost_tex = EditorAssets.texture_for(id)
+	overlay.ghost_ok = ok
 	overlay.refresh()
 
 func _place(id: String, cell: Vector2i) -> void:
@@ -174,5 +199,5 @@ func _delete_selected() -> void:
 			current.crates.remove_at(i)
 			break
 	overlay.selected_cell = Vector2i(-1, -1)
-	moving_from = Vector2i(-1, -1)
+	_drag_from = Vector2i(-1, -1)
 	_rebuild()
