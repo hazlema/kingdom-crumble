@@ -15,6 +15,9 @@ static func spawn_crates(parent: Node, layout: LevelLayout, frozen: bool,
 		crate.freeze = frozen
 		crate.add_to_group("crates")
 		parent.add_child(crate)
-		crate.apply_type(c["type"], tex_lookup.call(c["type"]))
+		var _tex: Texture2D = tex_lookup.call(c["type"])
+		if _tex == null and c["type"] != "crate-wood":
+			push_warning("Unknown crate type: %s" % c["type"])
+		crate.apply_type(c["type"], _tex)
 		out.append(crate)
 	return out
