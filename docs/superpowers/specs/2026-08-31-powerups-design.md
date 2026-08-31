@@ -20,6 +20,9 @@ Rules of the system:
   the same line scoring uses (`Crate.is_standing()` false: tilt > 45° or
   displaced ≥ `KNOCKED_OUT_DISTANCE` 48px from `home`). Cause is irrelevant:
   direct hit, falling neighbor, explosion shove. No graze-harvesting.
+- **"Collected" means the buff, never the crate.** Crates are NEVER removed
+  from the world by this system — a collected crate remains as rubble like
+  any knocked-out crate. (Owner-confirmed 2026-08-31.)
 - **All buffs enchant the NEXT shot** (gold's instant refund is the one
   exception — it is economy, not ammunition).
 - **Buffs stack and combine.** The next shot consumes one queued charge of
@@ -182,6 +185,8 @@ out for a free shot"). Palette tooltips update themselves.
 ## 9. Out of scope
 
 - Skunk's in-level behavior in subsequent levels (future spec).
+- Crate damage states from explosions (owner's future idea: exploded-on
+  crates become singed, or vaporize — "but not today").
 - New curated Effects ids for level authors (boom visual is internal).
 - Powerup crates in campaign level files beyond what the owner authors.
 - Any editor code changes.
