@@ -13,13 +13,19 @@ const ANGULAR_DAMP := 6.0
 # per-tier bounce applies. Linear ramp in between.
 const BOUNCE_MIN_SPEED := 60.0
 const BOUNCE_MAX_SPEED := 240.0
+# A crate also counts as knocked out when shoved this far off its spawn
+# spot — bottom-row crates slide upright along the ground and can never
+# tip past 45 degrees.
+const KNOCKED_OUT_DISTANCE := 48.0
 
 var type_id := "crate-wood"
+var home := Vector2.ZERO  # spawn position, captured in _ready
 
 var _full_bounce := 0.5
 var _mat := PhysicsMaterial.new()
 
 func _ready() -> void:
+	home = global_position
 	_full_bounce = Settings.preset.crate_natural_bounce if Settings.preset else 0.5
 	_mat.bounce = 0.0
 	physics_material_override = _mat
@@ -34,7 +40,8 @@ func _physics_process(_delta: float) -> void:
 	_mat.bounce = _full_bounce * ramp
 
 func is_standing() -> bool:
-	return is_standing_rotation(rotation)
+	return is_standing_rotation(rotation) \
+		and global_position.distance_to(home) < KNOCKED_OUT_DISTANCE
 
 static func is_standing_rotation(rotation_rad: float) -> bool:
 	var tilt := absf(rad_to_deg(wrapf(rotation_rad, -PI, PI)))

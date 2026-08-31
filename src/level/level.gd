@@ -200,8 +200,11 @@ func _all_sleeping() -> bool:
 	return true
 
 static func count_standing(crates: Array) -> int:
-	var rotations := crates.map(func(c): return c.rotation)
-	return count_standing_rotations(rotations)
+	var n := 0
+	for c in crates:
+		if c.is_standing():
+			n += 1
+	return n
 
 static func count_standing_rotations(rotations: Array) -> int:
 	var n := 0
