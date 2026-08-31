@@ -3,6 +3,12 @@ extends CanvasLayer
 
 signal menu_pressed
 
+const BUFF_ICONS := {
+	&"exploding": "skull",
+	&"multishot": "crate-blue",
+	&"super_bounce": "crate-green",
+}
+
 func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: menu_pressed.emit())
 	%MenuButton.focus_mode = Control.FOCUS_NONE
@@ -26,3 +32,14 @@ func banner(title: String, sub: String) -> void:
 
 func clear_banner() -> void:
 	%BannerCenter.visible = false
+
+func set_buffs(buffs: Array[StringName]) -> void:
+	for c in $BuffRow.get_children():
+		c.queue_free()
+	for b in buffs:
+		var icon := TextureRect.new()
+		icon.custom_minimum_size = Vector2(32, 32)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture = EditorAssets.texture_for(BUFF_ICONS.get(b, ""))
+		$BuffRow.add_child(icon)
