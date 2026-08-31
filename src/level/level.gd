@@ -5,6 +5,8 @@ extends Node2D
 enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 
 const STONE_SCENE := preload("res://scenes/stone.tscn")
+const HIT_TEXT_SCENE := preload("res://src/effects/HitTextEffect.tscn")
+const UNLOCK_FRAME_SCENE := preload("res://scenes/ui/rare_unlock_frame.tscn")
 const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
@@ -24,6 +26,8 @@ var _resolve_clock := 0.0
 var _ledger := LeanLedger.new()
 var _active_stones: Array[Stone] = []
 var pending_buffs: Array[StringName] = []
+# Injectable for tests; production uses randf.
+var _ghost_roll: Callable = func() -> float: return randf()
 var _backdrop := BackdropMode.new()
 var _checking := false
 var _pristine: LevelLayout = null
@@ -95,7 +99,8 @@ func _physics_process(delta: float) -> void:
 					get_tree().reload_current_scene()
 
 func _spawn_crates() -> void:
-	LevelBuilder.spawn_crates(self, layout, false, _crate_texture)
+	for crate in LevelBuilder.spawn_crates(self, layout, false, _crate_texture):
+		crate.knocked_out.connect(_on_crate_knocked)
 
 func _crate_texture(id: String) -> Texture2D:
 	return EditorAssets.texture_for(id)
@@ -227,3 +232,27 @@ static func count_standing_rotations(rotations: Array) -> int:
 		if Crate.is_standing_rotation(r):
 			n += 1
 	return n
+
+func _on_crate_knocked(crate: Crate) -> void:
+	var verdict := PowerupRules.route(crate.type_id,
+		Unlocks.has_flag("skunk"), _ghost_roll)
+	match verdict["kind"]:
+		"refund":
+			shots_left += 1
+			hud.set_shots(shots_left)
+			_floaty(verdict["label"], crate.global_position)
+		"buff":
+			pending_buffs.append(verdict["buff"])
+			hud.set_buffs(pending_buffs)
+			_floaty(verdict["label"], crate.global_position)
+		"skunk":
+			Unlocks.set_flag("skunk")
+			var frame: RareUnlockFrame = UNLOCK_FRAME_SCENE.instantiate()
+			hud.add_child(frame)
+			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
+
+func _floaty(text: String, world_pos: Vector2) -> void:
+	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()
+	fx.text = text
+	hud.add_child(fx)
+	fx.position = get_viewport_transform() * world_pos
