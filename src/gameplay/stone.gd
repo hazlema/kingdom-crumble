@@ -57,20 +57,72 @@ func _boom() -> void:
 	if not super_bounce:
 		queue_free()
 
+# A real blast reads in three layers: a ballooning shockwave flash,
+# hot fire that dies fast, and smoke that lingers — not confetti.
 func _boom_visual() -> void:
-	var p := CPUParticles2D.new()
-	p.emitting = true
-	p.one_shot = true
-	p.amount = 120
-	p.lifetime = 0.9
-	p.explosiveness = 1.0
-	p.spread = 180.0
-	p.gravity = Vector2(0, 300)
-	p.initial_velocity_min = 250.0
-	p.initial_velocity_max = 700.0
-	p.scale_amount_min = 6.0
-	p.scale_amount_max = 13.0
-	p.color = Color(1.0, 0.6, 0.15)
-	get_parent().add_child(p)
-	p.global_position = global_position
-	get_tree().create_timer(2.0).timeout.connect(p.queue_free)
+	var parent := get_parent()
+	var tree := get_tree()
+
+	var wave := Sprite2D.new()
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1.0, 0.97, 0.8, 0.95))
+	grad.set_color(1, Color(1.0, 0.55, 0.15, 0.0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	tex.width = 256
+	tex.height = 256
+	wave.texture = tex
+	wave.scale = Vector2(0.3, 0.3)
+	parent.add_child(wave)
+	wave.global_position = global_position
+	var grow := BOOM_RADIUS * 2.2 / 256.0
+	var wt := wave.create_tween().set_parallel(true)
+	wt.tween_property(wave, "scale", Vector2(grow, grow), 0.22)
+	wt.tween_property(wave, "modulate:a", 0.0, 0.3)
+	tree.create_timer(0.5).timeout.connect(wave.queue_free)
+
+	var fire := CPUParticles2D.new()
+	fire.emitting = true
+	fire.one_shot = true
+	fire.amount = 120
+	fire.lifetime = 0.55
+	fire.explosiveness = 1.0
+	fire.spread = 180.0
+	fire.gravity = Vector2(0, 150)
+	fire.initial_velocity_min = 350.0
+	fire.initial_velocity_max = 900.0
+	fire.damping_min = 400.0
+	fire.damping_max = 700.0
+	fire.scale_amount_min = 5.0
+	fire.scale_amount_max = 11.0
+	fire.color_ramp = _fire_colors()
+	parent.add_child(fire)
+	fire.global_position = global_position
+	tree.create_timer(1.5).timeout.connect(fire.queue_free)
+
+	var smoke := CPUParticles2D.new()
+	smoke.emitting = true
+	smoke.one_shot = true
+	smoke.amount = 30
+	smoke.lifetime = 1.1
+	smoke.explosiveness = 0.9
+	smoke.spread = 180.0
+	smoke.gravity = Vector2(0, -120)
+	smoke.initial_velocity_min = 60.0
+	smoke.initial_velocity_max = 220.0
+	smoke.scale_amount_min = 10.0
+	smoke.scale_amount_max = 20.0
+	smoke.color = Color(0.35, 0.32, 0.3, 0.55)
+	parent.add_child(smoke)
+	smoke.global_position = global_position
+	tree.create_timer(2.5).timeout.connect(smoke.queue_free)
+
+static func _fire_colors() -> Gradient:
+	var g := Gradient.new()
+	g.set_color(0, Color(1.0, 0.95, 0.6))
+	g.add_point(0.35, Color(1.0, 0.55, 0.12))
+	g.set_color(1, Color(0.45, 0.12, 0.05, 0.0))
+	return g
