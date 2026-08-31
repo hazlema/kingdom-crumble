@@ -1,0 +1,40 @@
+[gd_scene load_steps=4 format=3 uid="uid://dekylefq1fgep"]
+
+[ext_resource type="Script" path="res://src/effects/HitTextEffect.gd" id="1_fseds"]
+[ext_resource type="LabelSettings" path="res://resources/styles/hitText.tres" id="2_h7rgg"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5qgb1"]
+bg_color = Color(0.169245, 0.169245, 0.169245, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.199535, 0.504771, 0.543865, 1)
+border_blend = true
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="HitTextEffect" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_fseds")
+
+[node name="ColorRect" type="Panel" parent="."]
+layout_mode = 0
+offset_right = 33.0
+offset_bottom = 18.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_5qgb1")
+
+[node name="Label" type="Label" parent="ColorRect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "+5"
+label_settings = ExtResource("2_h7rgg")
+horizontal_alignment = 1
+vertical_alignment = 1
