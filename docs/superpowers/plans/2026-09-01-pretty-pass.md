@@ -421,18 +421,9 @@ func test_fire_icon_tracks_queue() -> void:
 
 `scenes/hud.tscn` — restyle both buttons with scene-local styleboxes (add as sub_resources; fire-top face + 5px fire-bottom bottom-only ledge, radius 24; MENU brass-light face + brass-dark ledge, radius 24; label font Lilita via theme_override_fonts using the existing font ext_resource pattern from stat_card):
 
-FIRE (`FireButton` node keeps name/anchors/signals; adjust size for ≥48px):
+FIRE (`FireButton` keeps name/anchors/signals; size ≥48px): StyleBoxTexture using `art/assets/ui/btn_fire.png` (already committed) for normal/hover/disabled — set all four `texture_margin_*` to 24 (nine-slice corners) and content margins 20/10/20/14. Pressed state: same stylebox with `modulate_color = Color(0.85, 0.85, 0.85)`. Font Lilita 26, font color #fffaf0 (all states). `text = "FIRE!"`, `expand_icon = true`.
 
-```
-theme_override_styles/normal → StyleBoxFlat: bg #c9553a, border_width_bottom 5, border_color #a13a24, radius 24, content margins 20/10/20/12
-theme_override_styles/hover → same with bg lightened to #d4664b
-theme_override_styles/pressed → bg #a13a24, border_width_top 5 (bottom 0), border_color #7d2c1b
-theme_override_fonts/font = Lilita, font_size 26, font colors #fffaf0
-text = "FIRE!"
-expand_icon = true
-```
-
-MENU (`MenuButton`): same recipe with brass-light face `#f0d79a`, brass-dark ledge `#c39b4e`, ink text, font_size 20, `text = "☰  MENU"`, radius 24. Remove its old gear icon/stylebox if present.
+MENU (`MenuButton`): same recipe with `art/assets/ui/btn_brass.png`, ink text (#4b3b2a), font_size 20, `text = "☰  MENU"`. Remove the old gear icon/stylebox.
 
 `src/ui/hud.gd` — extend `set_buffs` (after forwarding) and preload the stone:
 

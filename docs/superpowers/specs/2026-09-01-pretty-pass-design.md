@@ -31,11 +31,12 @@ dedicated scenes transcribed 1:1 from the comp HTML:
 - Restyle in place: `scenes/ui/level_jump_dialog.tscn`, `scenes/hud.tscn`
   (FIRE/MENU), pause menu inherits theme.
 
-Gradient depth is APPROXIMATED flat (StyleBoxTexture cannot round
-corners; shaders are out of scope): button faces use the light/top
-palette stop as bg with a thick bottom-ledge border in the dark stop
-(fire-top face + fire-bottom ledge; brass-light face + brass-dark
-ledge). Reads as the comp's depth; true gradients deferred.
+Gradients are PRE-BAKED textures (owner un-banned shaders, but baked
+textures beat both options: true comp gradients, rounded corners and
+depth ledge baked in, zero runtime cost). `art/assets/ui/btn_fire.png`
+and `btn_brass.png` (generated from palette stops, committed) are used
+via StyleBoxTexture with 24px texture margins (nine-slice). World
+shaders remain untouchable per the scope wall.
 
 ## 2. StatCard — the unified HUD panel
 
