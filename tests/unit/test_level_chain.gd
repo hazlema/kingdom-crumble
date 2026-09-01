@@ -27,7 +27,7 @@ func test_entries_structure_and_order() -> void:
 	var seen_user := false
 	var prev_stem := ""
 	for e in chain:
-		assert_true(e.has("stem") and e.has("path") and e.has("title"))
+		assert_true(e.has("stem") and e.has("path") and e.has("title") and e.has("thumb"))
 		var is_user: bool = e["path"].begins_with("user://")
 		if seen_user:
 			assert_true(is_user, "built-ins never follow user levels")

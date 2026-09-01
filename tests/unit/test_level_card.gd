@@ -102,8 +102,9 @@ func test_bad_length_thumb_degrades_silently() -> void:
 
 func test_valid_base64_non_png_degrades_silently() -> void:
 	# "YWJjZGVmZ2g=" decodes to the ASCII string "abcdefgh" — valid base64 but
-	# not a PNG. load_png_from_buffer receives real garbage; this test proves
-	# whether that call emits an engine error (GUT would fail if it does).
+	# not a PNG. The magic-signature gate must reject it before the engine's
+	# PNG driver ever sees it (the driver spams engine errors on garbage —
+	# GUT would fail this test if any slipped through).
 	var card := _card()
 	var entry := {
 		"path": "user://levels/gut_no_such.json",

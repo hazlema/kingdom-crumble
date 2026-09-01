@@ -93,7 +93,10 @@ func _embedded_thumb(b64: String) -> Texture2D:
 		return null
 	# load_png_from_buffer emits engine errors on non-PNG bytes (confirmed by
 	# test — 4 errors per call, GUT treats those as failures). Guard with the
-	# 8-byte PNG magic signature before calling into the driver.
+	# 8-byte PNG magic signature before calling into the driver. Residual: a
+	# correct magic prefix on a corrupt body still reaches the driver and logs
+	# its errors — the != OK guard keeps the degrade correct, so hostile files
+	# can spam the log but never crash or mis-render.
 	const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
 	if buf.size() < PNG_MAGIC.size():
 		return null
