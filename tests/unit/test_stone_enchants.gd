@@ -1,10 +1,12 @@
 extends GutTest
 
+
 func _arena() -> Node2D:
 	var a := Node2D.new()
 	add_child_autofree(a)
 	a.add_child(load("res://scenes/environment.tscn").instantiate())
 	return a
+
 
 func _stack(arena: Node2D, col: int, rows: int) -> Array[Crate]:
 	var layout := LevelLayout.new()
@@ -12,6 +14,7 @@ func _stack(arena: Node2D, col: int, rows: int) -> Array[Crate]:
 		var p := EditorGrid.cell_to_world(Vector2i(col, row))
 		layout.crates.append({"x": p.x, "y": p.y, "type": "crate-wood"})
 	return LevelBuilder.spawn_crates(arena, layout, false, EditorAssets.texture_for)
+
 
 func test_super_bounce_stone_bounces_off_ground() -> void:
 	var arena := _arena()
@@ -27,6 +30,7 @@ func test_super_bounce_stone_bounces_off_ground() -> void:
 			break
 	assert_true(bounced, "stone should rebound upward after hitting the ground")
 
+
 func test_plain_stone_does_not_bounce() -> void:
 	var arena := _arena()
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
@@ -39,6 +43,7 @@ func test_plain_stone_does_not_bounce() -> void:
 			bounced = true
 			break
 	assert_false(bounced)
+
 
 func test_exploding_stone_shoves_crates_in_radius() -> void:
 	var arena := _arena()
@@ -56,6 +61,7 @@ func test_exploding_stone_shoves_crates_in_radius() -> void:
 			downed += 1
 	assert_gt(downed, 1, "blast should knock out more than a direct hit's worth")
 
+
 func test_boom_without_bounce_frees_the_stone() -> void:
 	var arena := _arena()
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
@@ -64,6 +70,7 @@ func test_boom_without_bounce_frees_the_stone() -> void:
 	stone.launch(Vector2(800, 500), Vector2(200, 200))
 	await wait_seconds(2.0)
 	assert_false(is_instance_valid(stone), "one boom, then gone")
+
 
 func test_bounce_explode_stone_survives_first_boom() -> void:
 	var arena := _arena()

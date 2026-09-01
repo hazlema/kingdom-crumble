@@ -19,6 +19,7 @@ var _arm_rest := 0.0
 # pixels (measured on frame0 during registration).
 const CUP_OFFSET_PX := 333.0
 
+
 func _ready() -> void:
 	if has_node("Body/Arm"):
 		_arm_rest = $Body/Arm.rotation
@@ -27,8 +28,9 @@ func _ready() -> void:
 		# trajectory preview there, derived from the live rig so
 		# editor rearrangements stay honest.
 		var body: Sprite2D = $Body
-		var apex: Vector2 = body.position \
-			+ body.scale * ($Body/Arm.position + Vector2(0, -CUP_OFFSET_PX))
+		var apex: Vector2 = (
+			body.position + body.scale * ($Body/Arm.position + Vector2(0, -CUP_OFFSET_PX))
+		)
 		if has_node("LaunchPoint"):
 			$LaunchPoint.position = apex
 		if has_node("TrajectoryPreview"):
@@ -37,9 +39,12 @@ func _ready() -> void:
 	# The soldier returns to his idle bob after any one-shot animation.
 	if has_node("Soldier/AnimationPlayer"):
 		var sp: AnimationPlayer = $Soldier/AnimationPlayer
-		sp.animation_finished.connect(func(_anim: StringName) -> void:
-			if sp.has_animation("idle"):
-				sp.play("idle"))
+		sp.animation_finished.connect(
+			func(_anim: StringName) -> void:
+				if sp.has_animation("idle"):
+					sp.play("idle")
+		)
+
 
 # Drop the next stone into the cup; it rides the arm for free.
 func _load_stone() -> void:
@@ -50,13 +55,19 @@ func _load_stone() -> void:
 	preview.texture = loaded_texture
 	preview.visible = true
 
+
 func _process(_delta: float) -> void:
 	if has_node("TrajectoryPreview"):
 		var p := Settings.preset
 		var tp: TrajectoryPreview = $TrajectoryPreview
 		tp.gravity = ProjectSettings.get_setting("physics/2d/default_gravity", 980.0)
-		tp.velocity = launch_velocity(aim_angle_deg, charge,
-			p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
+		tp.velocity = launch_velocity(
+			aim_angle_deg,
+			charge,
+			p.min_launch_speed if p else 400.0,
+			p.max_launch_speed if p else 1400.0
+		)
+
 
 # Where the aiming arrow ends (world space), or INF when not charging —
 # the camera uses this to keep the whole shot preview in frame.
@@ -65,10 +76,10 @@ func preview_end_global() -> Vector2:
 		return $TrajectoryPreview.end_global()
 	return Vector2.INF
 
+
 func process_aim(delta: float) -> void:
 	var dir := Input.get_axis("aim_left", "aim_right")
-	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta,
-		AIM_MIN_DEG, AIM_MAX_DEG)
+	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta, AIM_MIN_DEG, AIM_MAX_DEG)
 	if Input.is_action_pressed("fire"):
 		if not _charging:
 			_play_if_present("crank")
@@ -81,6 +92,7 @@ func process_aim(delta: float) -> void:
 	elif _charging:
 		_fire()
 
+
 # Owner-authored animations are optional: the game runs without them
 # and picks them up the moment they exist on our own AnimationPlayer.
 func _play_if_present(anim: String) -> void:
@@ -89,11 +101,16 @@ func _play_if_present(anim: String) -> void:
 		if player.has_animation(anim):
 			player.play(anim)
 
+
 func _fire() -> void:
 	_charging = false
 	var p := Settings.preset
-	var v := launch_velocity(aim_angle_deg, charge,
-		p.min_launch_speed if p else 400.0, p.max_launch_speed if p else 1400.0)
+	var v := launch_velocity(
+		aim_angle_deg,
+		charge,
+		p.min_launch_speed if p else 400.0,
+		p.max_launch_speed if p else 1400.0
+	)
 	var kick := 10.0 + 12.0 * charge
 	charge = 0.0
 	if has_node("Body/Arm/LoadedStone"):
@@ -108,6 +125,7 @@ func _fire() -> void:
 	_recoil(kick)
 	fired.emit(v)
 
+
 # The throwing arm snaps from cocked to thrown and holds there,
 # spent, until the next crank re-cocks it.
 func _swing_arm() -> void:
@@ -115,9 +133,10 @@ func _swing_arm() -> void:
 		return
 	var arm: Sprite2D = $Body/Arm
 	var tw := create_tween()
-	tw.tween_property(arm, "rotation",
-		_arm_rest + deg_to_rad(arm_swing_degrees), 0.1) \
-		.set_ease(Tween.EASE_OUT)
+	tw.tween_property(arm, "rotation", _arm_rest + deg_to_rad(arm_swing_degrees), 0.1).set_ease(
+		Tween.EASE_OUT
+	)
+
 
 # Winds the arm back down to its cocked rest pose and loads the next
 # stone. Called when cranking starts, and by the level after a shot
@@ -129,9 +148,9 @@ func recock() -> void:
 	if is_equal_approx(arm.rotation, _arm_rest):
 		return
 	var tw := create_tween()
-	tw.tween_property(arm, "rotation", _arm_rest, 0.5) \
-		.set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(arm, "rotation", _arm_rest, 0.5).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(_load_stone)
+
 
 # The catapult lurches back on its wheels, then wobbles home.
 func _recoil(kick: float) -> void:
@@ -140,13 +159,15 @@ func _recoil(kick: float) -> void:
 	var body: Sprite2D = $Body
 	var home := body.position.x
 	var tw := create_tween()
-	tw.tween_property(body, "position:x", home - kick, 0.07) \
-		.set_ease(Tween.EASE_OUT)
-	tw.tween_property(body, "position:x", home, 0.55) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	tw.tween_property(body, "position:x", home - kick, 0.07).set_ease(Tween.EASE_OUT)
+	tw.tween_property(body, "position:x", home, 0.55).set_ease(Tween.EASE_OUT).set_trans(
+		Tween.TRANS_ELASTIC
+	)
 
-static func launch_velocity(angle_deg: float, charge_amount: float,
-		min_speed: float, max_speed: float) -> Vector2:
+
+static func launch_velocity(
+	angle_deg: float, charge_amount: float, min_speed: float, max_speed: float
+) -> Vector2:
 	var speed := lerpf(min_speed, max_speed, clampf(charge_amount, 0.0, 1.0))
 	var rad := deg_to_rad(angle_deg)
 	return Vector2(cos(rad), -sin(rad)) * speed

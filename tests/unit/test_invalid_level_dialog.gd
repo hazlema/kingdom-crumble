@@ -3,6 +3,7 @@ extends GutTest
 # The owner's failed-load dialog: bomb, message, five-second fuse, quit.
 # (Test must finish well inside the fuse — the timer quits the process.)
 
+
 func test_dialog_assembles_with_message_and_fuse() -> void:
 	var d: Control = load("res://scenes/ui/invalid_level.tscn").instantiate()
 	add_child(d)

@@ -1,7 +1,9 @@
 extends GutTest
 
+
 func _fixed(v: float) -> Callable:
 	return func() -> float: return v
+
 
 func test_type_routing() -> void:
 	assert_eq(PowerupRules.route("crate-wood", false, _fixed(0.0))["kind"], "none")
@@ -13,10 +15,12 @@ func test_type_routing() -> void:
 	assert_eq(PowerupRules.route("crate-green", false, _fixed(0.0))["buff"], &"super_bounce")
 	assert_eq(PowerupRules.route("mystery-type", false, _fixed(0.0))["kind"], "none")
 
+
 func test_ghost_rolls_skunk_only_when_locked_and_lucky() -> void:
 	assert_eq(PowerupRules.route("crate-ghost", false, _fixed(0.0))["kind"], "skunk")
 	assert_ne(PowerupRules.route("crate-ghost", true, _fixed(0.0))["kind"], "skunk")
 	assert_ne(PowerupRules.route("crate-ghost", false, _fixed(0.9))["kind"], "skunk")
+
 
 func test_ghost_pool_reaches_all_four() -> void:
 	var kinds := {}
@@ -26,6 +30,7 @@ func test_ghost_pool_reaches_all_four() -> void:
 		kinds[key] = true
 	assert_eq(kinds.size(), 4, "four distinct outcomes across the roll range")
 
+
 func test_drain_one_charge_per_type() -> void:
 	var q: Array[StringName] = [&"exploding", &"exploding", &"multishot"]
 	var d := PowerupRules.drain(q)
@@ -33,6 +38,7 @@ func test_drain_one_charge_per_type() -> void:
 	assert_true(d["consumed"].has(&"multishot"))
 	assert_eq(d["consumed"].size(), 2)
 	assert_eq(d["remaining"], [&"exploding"] as Array[StringName])
+
 
 func test_drain_empty() -> void:
 	var d := PowerupRules.drain([] as Array[StringName])

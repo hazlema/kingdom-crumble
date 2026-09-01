@@ -29,6 +29,7 @@ var _icon_rect: TextureRect
 var _fill: Panel
 var _fill_box: StyleBoxFlat
 
+
 func _ready() -> void:
 	_icon_rect = get_node_or_null("%Icon")
 	_fill = get_node_or_null("%Fill")
@@ -41,6 +42,7 @@ func _ready() -> void:
 		_fill.add_theme_stylebox_override("panel", _fill_box)
 	resized.connect(_update_fill)
 	_update_fill()
+
 
 func _update_fill() -> void:
 	if not _fill:

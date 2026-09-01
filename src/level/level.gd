@@ -46,6 +46,7 @@ var _chain_end := false
 @onready var cam: CameraDirector = $CameraDirector
 @onready var hud: Hud = $Hud
 
+
 func _ready() -> void:
 	if Settings.preset == null:
 		Settings.load_tier("chill")
@@ -75,30 +76,36 @@ func _ready() -> void:
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
 	_spawn_crates()
-	shots_left = layout.shots if layout.shots > 0 \
-		else Settings.preset.shots_per_level
+	shots_left = layout.shots if layout.shots > 0 else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
 	trebuchet.fired.connect(_on_fired)
-	hud.menu_pressed.connect(func() -> void:
-		if has_node("PauseMenu"):
-			$PauseMenu.open())
+	hud.menu_pressed.connect(
+		func() -> void:
+			if has_node("PauseMenu"):
+				$PauseMenu.open()
+	)
 	if has_node("PauseMenu"):
-		$PauseMenu.restart_requested.connect(func() -> void:
-			if _editor_session:
-				Level.next_layout = _pristine
-				Level.return_to_editor = true
-			get_tree().reload_current_scene())
+		$PauseMenu.restart_requested.connect(
+			func() -> void:
+				if _editor_session:
+					Level.next_layout = _pristine
+					Level.return_to_editor = true
+				get_tree().reload_current_scene()
+		)
 		$PauseMenu.quit_requested.connect(
-			func() -> void: get_tree().change_scene_to_file(
-				"res://scenes/main_menu.tscn"))
+			func() -> void: get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		)
 		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
 		$PauseMenu.jump_levels_requested.connect(_open_jump)
 		$PauseMenu.set_editor_mode(_editor_session)
-	%JumpDialog.level_picked.connect(func(picked: String) -> void:
-		Level.next_layout_path = picked
-		get_tree().paused = false
-		get_tree().reload_current_scene())
+	%JumpDialog.level_picked.connect(
+		func(picked: String) -> void:
+			Level.next_layout_path = picked
+			get_tree().paused = false
+			get_tree().reload_current_scene()
+	)
+
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
@@ -113,8 +120,7 @@ func _physics_process(delta: float) -> void:
 			cam.aim_focus = trebuchet.preview_end_global()
 			if Input.get_axis("scout_left", "scout_right") != 0.0:
 				cam.set_mode(CameraDirector.next_mode(cam.mode, "scout_input"))
-			elif Input.get_axis("aim_left", "aim_right") != 0.0 \
-					or Input.is_action_pressed("fire"):
+			elif Input.get_axis("aim_left", "aim_right") != 0.0 or Input.is_action_pressed("fire"):
 				cam.set_mode(CameraDirector.next_mode(cam.mode, "aim_input"))
 		State.FLIGHT:
 			_resolve_clock += delta
@@ -129,8 +135,7 @@ func _physics_process(delta: float) -> void:
 				else:
 					if state == State.CLEARED:
 						if _chain_end:
-							get_tree().change_scene_to_file(
-								"res://scenes/main_menu.tscn")
+							get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 							return
 						var nxt := _next_path_after_clear()
 						if nxt != "":
@@ -138,13 +143,16 @@ func _physics_process(delta: float) -> void:
 						Level.carry_buffs = pending_buffs.duplicate()
 					get_tree().reload_current_scene()
 
+
 func _spawn_crates() -> void:
 	for crate in LevelBuilder.spawn_crates(self, layout, false, _crate_texture):
 		crate.knocked_out.connect(_on_crate_knocked)
 	hud.set_crates.call_deferred(layout.crates.size(), layout.crates.size())
 
+
 func _crate_texture(id: String) -> Texture2D:
 	return EditorAssets.texture_for(id)
+
 
 func _on_fired(velocity: Vector2) -> void:
 	shots_left -= 1
@@ -156,8 +164,9 @@ func _on_fired(velocity: Vector2) -> void:
 	var consumed: Array[StringName] = d["consumed"]
 	var velocities: Array[Vector2] = [velocity]
 	if consumed.has(&"multishot"):
-		velocities = [velocity, velocity.rotated(deg_to_rad(2.5)),
-			velocity.rotated(deg_to_rad(-2.5))]
+		velocities = [
+			velocity, velocity.rotated(deg_to_rad(2.5)), velocity.rotated(deg_to_rad(-2.5))
+		]
 	_active_stones.clear()
 	for v in velocities:
 		var stone: Stone = STONE_SCENE.instantiate()
@@ -177,6 +186,7 @@ func _on_fired(velocity: Vector2) -> void:
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "fired"))
 	_resolve_clock = 0.0
 	state = State.FLIGHT
+
 
 func _settle() -> void:
 	state = State.RESOLVING
@@ -201,18 +211,21 @@ func _settle() -> void:
 			Effects.fire_all(effects, self, center)
 	elif shots_left <= 0:
 		state = State.FAILED
-		var _failed_sub := "press ENTER to return to editor" if _editor_session \
-				else "press ENTER to retry"
+		var _failed_sub := (
+			"press ENTER to return to editor" if _editor_session else "press ENTER to retry"
+		)
 		hud.banner("OUT OF STONES", _failed_sub)
 	else:
 		trebuchet.recock()  # ammo remains: reset the arm and reload
 		state = State.AIMING
+
 
 func _back_to_editor() -> void:
 	LevelEditor.resume_layout = _pristine
 	Level.return_to_editor = false
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/editor.tscn")
+
 
 func _award_leans() -> void:
 	for crate in _crates():
@@ -225,6 +238,7 @@ func _award_leans() -> void:
 				hud.banner("LEAN BONUS!", "")
 				await get_tree().create_timer(1.2).timeout
 				hud.clear_banner()
+
 
 # Hold H: standing crates glow green, fallen ones red — what's left
 # to hit at a glance. Preserves backdrop-mode alpha.
@@ -241,6 +255,7 @@ func _update_crate_check() -> void:
 		c.a = a
 		crate.modulate = c
 
+
 func _apply_backdrop_alpha(alpha: float) -> void:
 	var targets: Array = [trebuchet]
 	targets.append_array(_crates())
@@ -251,8 +266,10 @@ func _apply_backdrop_alpha(alpha: float) -> void:
 	for target in targets:
 		tween.tween_property(target, "modulate:a", alpha, 0.25)
 
+
 func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
+
 
 func _stone_is_done() -> bool:
 	for stone in _active_stones:
@@ -262,6 +279,7 @@ func _stone_is_done() -> bool:
 			return false
 	return true
 
+
 func _all_sleeping() -> bool:
 	if not _stone_is_done():
 		return false
@@ -270,6 +288,7 @@ func _all_sleeping() -> bool:
 			return false
 	return true
 
+
 static func count_standing(crates: Array) -> int:
 	var n := 0
 	for c in crates:
@@ -277,19 +296,14 @@ static func count_standing(crates: Array) -> int:
 			n += 1
 	return n
 
-static func count_standing_rotations(rotations: Array) -> int:
-	var n := 0
-	for r in rotations:
-		if Crate.is_standing_rotation(r):
-			n += 1
-	return n
 
 func _on_crate_knocked(crate: Crate) -> void:
 	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
 	# the once-ever ceremony never fires — the plain pool rolls instead.
-	var verdict := PowerupRules.route(crate.type_id,
-		Unlocks.has_flag("skunk") or _editor_session, _ghost_roll)
+	var verdict := PowerupRules.route(
+		crate.type_id, Unlocks.has_flag("skunk") or _editor_session, _ghost_roll
+	)
 	match verdict["kind"]:
 		"refund":
 			# Ignore late chain-topple refunds once the level has ended —
@@ -309,8 +323,10 @@ func _on_crate_knocked(crate: Crate) -> void:
 			hud.add_child(frame)
 			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
 
+
 func _open_jump() -> void:
 	%JumpDialog.open(Settings.tier)
+
 
 # Log the clear — never from the editor sandbox, never for pathless
 # layouts (spec: testing is just testing).
@@ -319,11 +335,13 @@ func _record_clear() -> void:
 		return
 	Progress.mark_cleared(Settings.tier, current_stem)
 
+
 # "" when the chain is conquered.
 func _next_path_after_clear() -> String:
 	var chain := LevelChain.entries()
 	var nxt := LevelChain.next_index_after(chain, current_stem)
 	return "" if nxt == -1 else chain[nxt]["path"]
+
 
 func _floaty(text: String, world_pos: Vector2) -> void:
 	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()

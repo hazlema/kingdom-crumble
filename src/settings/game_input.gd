@@ -13,8 +13,10 @@ const BINDINGS := {
 	"backdrop_toggle": [KEY_B],
 }
 
+
 func _ready() -> void:
 	ensure_actions()
+
 
 static func ensure_actions() -> void:
 	for action in BINDINGS:

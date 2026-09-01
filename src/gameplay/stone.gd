@@ -18,6 +18,7 @@ var super_bounce := false
 
 var _boomed := false
 
+
 func _ready() -> void:
 	mass = 2.0 * (Settings.preset.impact_force if Settings.preset else 1.0)
 	$Visual.texture = VARIANTS[randi() % VARIANTS.size()]
@@ -35,11 +36,13 @@ func _ready() -> void:
 	elif exploding:
 		$Visual.modulate = Color(1.0, 0.55, 0.35)  # ember red
 	elif super_bounce:
-		$Visual.modulate = Color(0.6, 1.0, 0.6)    # springy green
+		$Visual.modulate = Color(0.6, 1.0, 0.6)  # springy green
+
 
 func launch(from: Vector2, velocity: Vector2) -> void:
 	global_position = from
 	linear_velocity = velocity
+
 
 func _on_contact(_body: Node) -> void:
 	# Stones never detonate on other stones — prevents multishot+exploding
@@ -47,6 +50,7 @@ func _on_contact(_body: Node) -> void:
 	if _body is Stone:
 		return
 	_boom()
+
 
 func _boom() -> void:
 	if _boomed and not super_bounce:
@@ -63,6 +67,7 @@ func _boom() -> void:
 	_boom_visual()
 	if not super_bounce:
 		queue_free()
+
 
 # A real blast reads in three layers: a ballooning shockwave flash,
 # hot fire that dies fast, and smoke that lingers — not confetti.
@@ -126,6 +131,7 @@ func _boom_visual() -> void:
 	parent.add_child(smoke)
 	smoke.global_position = global_position
 	tree.create_timer(2.5).timeout.connect(smoke.queue_free)
+
 
 static func _fire_colors() -> Gradient:
 	var g := Gradient.new()

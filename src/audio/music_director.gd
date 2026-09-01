@@ -8,6 +8,7 @@ var _current_track := ""
 var _tier := ""
 var _volume := 1.0
 
+
 func _ready() -> void:
 	# keep the soundtrack alive while the tree is paused (ESC menu)
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -15,20 +16,25 @@ func _ready() -> void:
 	add_child(_player)
 	_player.finished.connect(_on_track_finished)
 
+
 func set_volume_linear(v: float) -> void:
 	_volume = clampf(v, 0.0, 1.0)
 	_player.volume_db = linear_to_db(maxf(_volume, 0.0001))
 
+
 func get_volume_linear() -> float:
 	return _volume
+
 
 func play_tier(tier: String) -> void:
 	_tier = tier
 	_play_next()
 
+
 func stop() -> void:
 	_tier = ""
 	_player.stop()
+
 
 func _play_next() -> void:
 	var pool := list_pool(_tier)
@@ -39,9 +45,11 @@ func _play_next() -> void:
 	_player.stream = load(track)
 	_player.play()
 
+
 func _on_track_finished() -> void:
 	if _tier != "":
 		_play_next()
+
 
 static func pick_track(pool: Array, exclude: String = "") -> String:
 	if pool.is_empty():
@@ -50,6 +58,7 @@ static func pick_track(pool: Array, exclude: String = "") -> String:
 	if options.is_empty():
 		options = pool
 	return options[randi() % options.size()]
+
 
 static func list_pool(tier: String) -> Array:
 	var out: Array = []

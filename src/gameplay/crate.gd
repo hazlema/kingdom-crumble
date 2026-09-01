@@ -29,16 +29,16 @@ var _knock_reported := false
 var _full_bounce := 0.5
 var _mat := PhysicsMaterial.new()
 
+
 func _ready() -> void:
 	home = global_position
 	_full_bounce = Settings.preset.crate_natural_bounce if Settings.preset else 0.5
 	_mat.bounce = 0.0
 	physics_material_override = _mat
 	var p := Settings.preset
-	linear_damp = p.crate_linear_damp if p and p.crate_linear_damp >= 0.0 \
-		else LINEAR_DAMP
-	angular_damp = p.crate_angular_damp if p and p.crate_angular_damp >= 0.0 \
-		else ANGULAR_DAMP
+	linear_damp = p.crate_linear_damp if p and p.crate_linear_damp >= 0.0 else LINEAR_DAMP
+	angular_damp = p.crate_angular_damp if p and p.crate_angular_damp >= 0.0 else ANGULAR_DAMP
+
 
 func _physics_process(_delta: float) -> void:
 	if not _knock_reported and not freeze and not is_standing():
@@ -46,17 +46,24 @@ func _physics_process(_delta: float) -> void:
 		knocked_out.emit(self)
 	if sleeping:
 		return
-	var ramp := clampf((linear_velocity.length() - BOUNCE_MIN_SPEED) \
-		/ (BOUNCE_MAX_SPEED - BOUNCE_MIN_SPEED), 0.0, 1.0)
+	var ramp := clampf(
+		(linear_velocity.length() - BOUNCE_MIN_SPEED) / (BOUNCE_MAX_SPEED - BOUNCE_MIN_SPEED),
+		0.0,
+		1.0
+	)
 	_mat.bounce = _full_bounce * ramp
 
+
 func is_standing() -> bool:
-	return is_standing_rotation(rotation) \
-		and global_position.distance_to(home) < KNOCKED_OUT_DISTANCE
+	return (
+		is_standing_rotation(rotation) and global_position.distance_to(home) < KNOCKED_OUT_DISTANCE
+	)
+
 
 static func is_standing_rotation(rotation_rad: float) -> bool:
 	var tilt := absf(rad_to_deg(wrapf(rotation_rad, -PI, PI)))
 	return tilt < STANDING_MAX_DEG
+
 
 func apply_type(id: String, tex: Texture2D) -> void:
 	type_id = id

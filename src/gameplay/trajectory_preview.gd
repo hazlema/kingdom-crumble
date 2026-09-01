@@ -7,8 +7,8 @@ extends Node2D
 
 const STEPS := 26
 const DT := 0.07
-const CYCLE_SEC := 1.1     # one grow cycle
-const HOLD_FRACTION := 0.2 # portion of the cycle spent fully drawn
+const CYCLE_SEC := 1.1  # one grow cycle
+const HOLD_FRACTION := 0.2  # portion of the cycle spent fully drawn
 
 const CORE := Color(1.0, 1.0, 1.0, 0.4)
 const RIM := Color(0.1, 0.1, 0.12, 0.3)
@@ -25,11 +25,13 @@ var _cycle := 0.0
 # diving through the grass.
 @export var world_floor_y := 600.0
 
+
 func _process(delta: float) -> void:
 	if not visible:
 		return
 	_cycle = fmod(_cycle + delta / CYCLE_SEC, 1.0)
 	queue_redraw()
+
 
 func _draw() -> void:
 	if velocity == Vector2.ZERO:
@@ -62,6 +64,7 @@ func _draw() -> void:
 	_draw_head(tip, dir, 30.0, RIM)
 	_draw_head(tip, dir, 24.0, CORE)
 
+
 # Full arc from launch to the grass line, in local space.
 func _build_path() -> PackedVector2Array:
 	var floor_local := world_floor_y - global_position.y
@@ -77,6 +80,7 @@ func _build_path() -> PackedVector2Array:
 		path.append(p)
 	return path
 
+
 # World position of the arrow's end (the predicted landing spot) —
 # what the camera keeps in frame while the shot charges.
 func end_global() -> Vector2:
@@ -87,11 +91,14 @@ func end_global() -> Vector2:
 		return global_position
 	return global_position + path[path.size() - 1]
 
+
 func _draw_head(tip: Vector2, dir: Vector2, size: float, color: Color) -> void:
 	var side := dir.orthogonal()
-	var head := PackedVector2Array([
-		tip + dir * size,
-		tip - side * size * 0.45,
-		tip + side * size * 0.45,
-	])
+	var head := PackedVector2Array(
+		[
+			tip + dir * size,
+			tip - side * size * 0.45,
+			tip + side * size * 0.45,
+		]
+	)
 	draw_colored_polygon(head, color)

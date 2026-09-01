@@ -6,6 +6,7 @@ signal asset_picked(id: String)
 var _drag := false
 var _drag_off := Vector2.ZERO
 
+
 func _ready() -> void:
 	for entry in EditorAssets.crates():
 		var b := Button.new()
@@ -18,6 +19,7 @@ func _ready() -> void:
 		b.button_down.connect(func() -> void: asset_picked.emit(id))
 		%Grid.add_child(b)
 	%TitleBar.gui_input.connect(_on_title_input)
+
 
 func _on_title_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:

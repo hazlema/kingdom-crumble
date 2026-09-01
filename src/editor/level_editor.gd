@@ -13,9 +13,9 @@ extends Node2D
 static var resume_layout: LevelLayout = null
 
 var current := LevelLayout.new()
-var occupancy := {}           # Vector2i -> Crate
-var carrying := ""            # asset id while placing, "" = none
-var save_path := ""           # last saved path, "" = unsaved
+var occupancy := {}  # Vector2i -> Crate
+var carrying := ""  # asset id while placing, "" = none
+var save_path := ""  # last saved path, "" = unsaved
 var _spawned: Array[Crate] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false
@@ -25,12 +25,15 @@ var _last_mouse := Vector2.ZERO
 @onready var palette: EditorPalette = $Ui/Palette
 @onready var menu: EditorMenu = $Ui/EditorMenu
 
+
 func _ready() -> void:
 	EditorAssets.scan()
-	palette.asset_picked.connect(func(id: String) -> void:
-		carrying = id
-		_drag_from = Vector2i(-1, -1)
-		overlay.selected_cell = Vector2i(-1, -1))
+	palette.asset_picked.connect(
+		func(id: String) -> void:
+			carrying = id
+			_drag_from = Vector2i(-1, -1)
+			overlay.selected_cell = Vector2i(-1, -1)
+	)
 	menu.save_requested.connect(_on_save)
 	menu.save_as_requested.connect(_on_save_as)
 	menu.load_requested.connect(_on_load)
@@ -42,6 +45,7 @@ func _ready() -> void:
 		current = resume_layout
 		resume_layout = null
 	_rebuild()
+
 
 func _process(_delta: float) -> void:
 	var mouse := get_viewport().get_mouse_position()
@@ -62,6 +66,7 @@ func _process(_delta: float) -> void:
 	_lmb_down = lmb
 	_update_ghost()
 
+
 func _press(cell: Vector2i) -> void:
 	if carrying != "":
 		_try_place(cell)
@@ -74,18 +79,26 @@ func _press(cell: Vector2i) -> void:
 		_drag_from = Vector2i(-1, -1)
 	overlay.refresh()
 
+
 func _release(cell: Vector2i, over_ui: bool) -> void:
 	if carrying != "" and not over_ui:
 		_try_place(cell)
-	elif _drag_from.x >= 0 and not over_ui and cell != _drag_from \
-			and EditorGrid.in_zone(cell) and not occupancy.has(cell):
+	elif (
+		_drag_from.x >= 0
+		and not over_ui
+		and cell != _drag_from
+		and EditorGrid.in_zone(cell)
+		and not occupancy.has(cell)
+	):
 		_move(_drag_from, cell)
 	_drag_from = Vector2i(-1, -1)
+
 
 func _try_place(cell: Vector2i) -> void:
 	if EditorGrid.in_zone(cell) and not occupancy.has(cell):
 		_place(carrying, cell)
 		carrying = ""
+
 
 func _on_save() -> void:
 	if save_path == "":
@@ -94,10 +107,12 @@ func _on_save() -> void:
 		var stem := save_path.get_file().get_basename()
 		LevelStore.save_user(current, stem)
 
+
 func _on_save_as(stem: String) -> void:
 	if current.title == "Untitled":
 		current.title = stem
 	save_path = LevelStore.save_user(current, stem)
+
 
 func _on_load(path: String) -> void:
 	var loaded := LevelStore.load_level(path)
@@ -108,20 +123,25 @@ func _on_load(path: String) -> void:
 	save_path = path
 	_rebuild()
 
+
 func _on_clear() -> void:
 	current.crates.clear()
 	_rebuild()
 
+
 func _on_exit() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
 
 func _on_test() -> void:
 	Level.next_layout = current
 	Level.return_to_editor = true
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
+
 func _on_background_picked(id: String) -> void:
 	current.background = id
+
 
 func _rebuild() -> void:
 	for c in _spawned:
@@ -145,6 +165,7 @@ func _rebuild() -> void:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
 	overlay.refresh()
 
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.ctrl_pressed:
 		match event.keycode:
@@ -152,17 +173,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_test()
 			KEY_S:
 				_on_save()  # falls through to Save As when unsaved
-	elif event is InputEventKey and event.pressed \
-			and event.keycode == KEY_DELETE:
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		_delete_selected()
 	elif event.is_action_pressed("menu") and carrying != "":
 		carrying = ""
 
+
 func _mouse_cell() -> Vector2i:
 	return EditorGrid.world_to_cell(get_global_mouse_position())
 
+
 func _mouse_over_ui(p: Vector2) -> bool:
 	return palette.get_global_rect().has_point(p) or menu.covers_point(p)
+
 
 # Clamp pan POSITION to the camera limits — past the bounds the display
 # pins while position drifts on, and panning back drags through the
@@ -170,10 +193,9 @@ func _mouse_over_ui(p: Vector2) -> bool:
 func _clamp_camera() -> void:
 	var cam: Camera2D = $Camera
 	var half := get_viewport_rect().size * 0.5 / cam.zoom
-	cam.position.x = clampf(cam.position.x,
-		cam.limit_left + half.x, cam.limit_right - half.x)
-	cam.position.y = clampf(cam.position.y,
-		cam.limit_top + half.y, cam.limit_bottom - half.y)
+	cam.position.x = clampf(cam.position.x, cam.limit_left + half.x, cam.limit_right - half.x)
+	cam.position.y = clampf(cam.position.y, cam.limit_top + half.y, cam.limit_bottom - half.y)
+
 
 func _update_ghost() -> void:
 	var id := carrying
@@ -187,8 +209,7 @@ func _update_ghost() -> void:
 			overlay.refresh()
 		return
 	var cell := _mouse_cell()
-	var ok := EditorGrid.in_zone(cell) \
-		and (not occupancy.has(cell) or cell == _drag_from)
+	var ok := EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
 	if cell == overlay.ghost_cell and ok == overlay.ghost_ok:
 		return
 	overlay.ghost_cell = cell
@@ -196,10 +217,12 @@ func _update_ghost() -> void:
 	overlay.ghost_ok = ok
 	overlay.refresh()
 
+
 func _place(id: String, cell: Vector2i) -> void:
 	var w := EditorGrid.cell_to_world(cell)
 	current.crates.append({"x": w.x, "y": w.y, "type": id})
 	_rebuild()
+
 
 func _move(from: Vector2i, to: Vector2i) -> void:
 	var fw := EditorGrid.cell_to_world(from)
@@ -211,6 +234,7 @@ func _move(from: Vector2i, to: Vector2i) -> void:
 			break
 	overlay.selected_cell = to
 	_rebuild()
+
 
 func _delete_selected() -> void:
 	var cell: Vector2i = overlay.selected_cell
