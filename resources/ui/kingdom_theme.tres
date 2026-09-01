@@ -1,4 +1,13 @@
-[gd_resource type="Theme" format=3 uid="uid://jgac5b1aktvr"]
+[gd_resource type="Theme" load_steps=9 format=3 uid="uid://jgac5b1aktvr"]
+
+[ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="font_display"]
+[ext_resource type="FontFile" path="res://art/fonts/Nunito-Variable.ttf" id="font_body"]
+
+[sub_resource type="FontVariation" id="nunito_800"]
+base_font = ExtResource("font_body")
+variation_opentype = {
+2003265652: 800.0
+}
 
 [sub_resource type="StyleBoxFlat" id="btn_focus"]
 draw_center = false
@@ -88,10 +97,12 @@ Button/colors/font_focus_color = Color(0.2941, 0.2314, 0.1647, 1.0)
 Button/colors/font_hover_color = Color(0.2941, 0.2314, 0.1647, 1.0)
 Button/colors/font_pressed_color = Color(0.1804, 0.1137, 0.0627, 1.0)
 Button/font_sizes/font_size = 22
+Button/fonts/font = ExtResource("font_display")
 Button/styles/focus = SubResource("btn_focus")
 Button/styles/hover = SubResource("btn_hover")
 Button/styles/normal = SubResource("btn_normal")
 Button/styles/pressed = SubResource("btn_pressed")
 Label/colors/font_color = Color(0.2941, 0.2314, 0.1647, 1.0)
 Label/font_sizes/font_size = 20
+Label/fonts/font = SubResource("nunito_800")
 PanelContainer/styles/panel = SubResource("panel_parchment")
