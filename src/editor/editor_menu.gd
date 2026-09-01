@@ -11,53 +11,73 @@ signal background_picked(id: String)
 
 const BACKGROUNDS: Array[String] = ["meadow"]
 
+
 func _ready() -> void:
 	%MenuBtn.pressed.connect(func() -> void: %Panel.visible = not %Panel.visible)
 	%TestBtn.pressed.connect(func() -> void: _pick(test_requested))
 	%SaveBtn.pressed.connect(func() -> void: _pick(save_requested))
-	%SaveAsBtn.pressed.connect(func() -> void:
-		%Panel.visible = false
-		%SaveAsDialog.popup_centered())
+	%SaveAsBtn.pressed.connect(
+		func() -> void:
+			%Panel.visible = false
+			%SaveAsDialog.popup_centered()
+	)
 	%LoadBtn.pressed.connect(_open_load)
-	%ClearBtn.pressed.connect(func() -> void:
-		%Panel.visible = false
-		%ClearConfirm.popup_centered())
-	%FolderBtn.pressed.connect(func() -> void:
-		DirAccess.make_dir_recursive_absolute(LevelStore.USER_DIR)
-		OS.shell_open(ProjectSettings.globalize_path(LevelStore.USER_DIR)))
+	%ClearBtn.pressed.connect(
+		func() -> void:
+			%Panel.visible = false
+			%ClearConfirm.popup_centered()
+	)
+	%FolderBtn.pressed.connect(
+		func() -> void:
+			DirAccess.make_dir_recursive_absolute(LevelStore.USER_DIR)
+			OS.shell_open(ProjectSettings.globalize_path(LevelStore.USER_DIR))
+	)
 	%ExitBtn.pressed.connect(func() -> void: _pick(exit_requested))
 	for bg in BACKGROUNDS:
 		%BackgroundList.add_item(bg)
-	%BackgroundList.item_selected.connect(func(i: int) -> void:
-		background_picked.emit(%BackgroundList.get_item_text(i)))
-	%SaveAsDialog.confirmed.connect(func() -> void:
-		if %StemEdit.text.strip_edges() != "":
-			save_as_requested.emit(%StemEdit.text.strip_edges()))
-	%LoadDialog.confirmed.connect(func() -> void:
-		var sel: PackedInt32Array = %LevelList.get_selected_items()
-		if sel.size() > 0:
-			load_requested.emit(%LevelList.get_item_metadata(sel[0])))
+	%BackgroundList.item_selected.connect(
+		func(i: int) -> void: background_picked.emit(%BackgroundList.get_item_text(i))
+	)
+	%SaveAsDialog.confirmed.connect(
+		func() -> void:
+			if %StemEdit.text.strip_edges() != "":
+				save_as_requested.emit(%StemEdit.text.strip_edges())
+	)
+	%LoadDialog.confirmed.connect(
+		func() -> void:
+			var sel: PackedInt32Array = %LevelList.get_selected_items()
+			if sel.size() > 0:
+				load_requested.emit(%LevelList.get_item_metadata(sel[0]))
+	)
 	%ClearConfirm.confirmed.connect(func() -> void: clear_requested.emit())
 	# Enter in the name field submits the dialog; Esc cancels for free
 	# (dialogs close on escape by default). Field grabs focus on open.
 	%SaveAsDialog.register_text_enter(%StemEdit)
-	%SaveAsDialog.about_to_popup.connect(func() -> void:
-		%StemEdit.call_deferred("grab_focus")
-		%StemEdit.call_deferred("select_all"))
+	%SaveAsDialog.about_to_popup.connect(
+		func() -> void:
+			%StemEdit.call_deferred("grab_focus")
+			%StemEdit.call_deferred("select_all")
+	)
 	# Enter or double-click on a list entry loads it immediately.
-	%LevelList.item_activated.connect(func(i: int) -> void:
-		load_requested.emit(%LevelList.get_item_metadata(i))
-		%LoadDialog.hide())
+	%LevelList.item_activated.connect(
+		func(i: int) -> void:
+			load_requested.emit(%LevelList.get_item_metadata(i))
+			%LoadDialog.hide()
+	)
+
 
 func _pick(sig: Signal) -> void:
 	%Panel.visible = false
 	sig.emit()
 
+
 # True while any modal dialog is up — the editor pauses field
 # interaction so clicks aimed at a dialog can't edit the level.
 func any_dialog_open() -> bool:
-	return %SaveAsDialog.visible or %LoadDialog.visible \
-		or %ClearConfirm.visible or %LoadError.visible
+	return (
+		%SaveAsDialog.visible or %LoadDialog.visible or %ClearConfirm.visible or %LoadError.visible
+	)
+
 
 # Geometry test for the polled interaction layer: is this viewport
 # point over the menu's visible chrome?
@@ -66,11 +86,14 @@ func covers_point(p: Vector2) -> bool:
 		return true
 	return %Panel.visible and %Panel.get_global_rect().has_point(p)
 
+
 func open_save_as() -> void:
 	%SaveAsDialog.popup_centered()
 
+
 func show_load_error() -> void:
 	%LoadError.popup_centered()
+
 
 func _open_load() -> void:
 	%Panel.visible = false

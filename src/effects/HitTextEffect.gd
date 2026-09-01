@@ -11,7 +11,8 @@ class_name HitTextEffect extends Control
 	get:
 		return text
 @export var duration := 1.0  # seconds until fully faded and freed
-@export var rise := 50.0     # pixels drifted upward over the duration
+@export var rise := 50.0  # pixels drifted upward over the duration
+
 
 func _ready() -> void:
 	_apply_text()
@@ -21,6 +22,7 @@ func _ready() -> void:
 	effect.play()
 	await effect.finished
 	queue_free()
+
 
 func _apply_text() -> void:
 	$ColorRect/Label.text = text

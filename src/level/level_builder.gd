@@ -6,8 +6,10 @@ extends RefCounted
 
 const CRATE_SCENE := preload("res://scenes/crate.tscn")
 
-static func spawn_crates(parent: Node, layout: LevelLayout, frozen: bool,
-		tex_lookup: Callable) -> Array[Crate]:
+
+static func spawn_crates(
+	parent: Node, layout: LevelLayout, frozen: bool, tex_lookup: Callable
+) -> Array[Crate]:
 	var out: Array[Crate] = []
 	for c in layout.crates:
 		var crate: Crate = CRATE_SCENE.instantiate()
@@ -29,6 +31,7 @@ static func spawn_crates(parent: Node, layout: LevelLayout, frozen: bool,
 		crate.apply_type(c["type"], _tex)
 		out.append(crate)
 	return out
+
 
 static func _sleep_when_registered(crate: Crate, tree: SceneTree) -> void:
 	await tree.physics_frame

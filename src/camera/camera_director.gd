@@ -14,20 +14,24 @@ var home_position := Vector2.ZERO
 # frame. Vector2.INF = no focus, sit at home.
 var aim_focus := Vector2.INF
 
+
 func _init() -> void:
 	# BEFORE entering the tree: physics interpolation forces cameras to
 	# physics ticks and logs an override notice if we're late about it
 	process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+
 
 func _ready() -> void:
 	home_position = global_position
 	position_smoothing_enabled = true
 	position_smoothing_speed = 6.0
 
+
 func set_mode(m: Mode) -> void:
 	mode = m
 	if m == Mode.AIM:
 		follow_target = null
+
 
 func _physics_process(delta: float) -> void:
 	_poll_drag_pan()
@@ -42,11 +46,13 @@ func _physics_process(delta: float) -> void:
 			global_position.x += dir * SCOUT_SPEED * delta
 			_clamp_to_limits()
 
+
 # Hold the right mouse button and drag to scout the level by hand.
 # POLLED, not event-driven: on real desktops mouse-motion events get
 # captured by GUI hover before _unhandled_input ever sees them (the
 # same phantom that broke the editor's RMB pan — polling is immune).
 var _last_mouse := Vector2.INF
+
 
 func _poll_drag_pan() -> void:
 	var mouse := get_viewport().get_mouse_position()
@@ -60,15 +66,15 @@ func _poll_drag_pan() -> void:
 			_clamp_to_limits()
 	_last_mouse = mouse
 
+
 # Free-pan must clamp POSITION, not just the display: past the level
 # bounds the display pins while position keeps travelling, and panning
 # back drags through invisible overshoot — "scrolling stopped working".
 func _clamp_to_limits() -> void:
 	var half := get_viewport_rect().size * 0.5 / zoom
-	global_position.x = clampf(global_position.x,
-		limit_left + half.x, limit_right - half.x)
-	global_position.y = clampf(global_position.y,
-		limit_top + half.y, limit_bottom - half.y)
+	global_position.x = clampf(global_position.x, limit_left + half.x, limit_right - half.x)
+	global_position.y = clampf(global_position.y, limit_top + half.y, limit_bottom - half.y)
+
 
 # Split the view between the catapult and the arrow's end, but never
 # let the end leave the frame — the tip wins over the midpoint.
@@ -77,13 +83,14 @@ func _aim_position() -> Vector2:
 		return home_position
 	var half := get_viewport_rect().size * 0.5 / zoom
 	var target := (home_position + aim_focus) * 0.5
-	target.x = clampf(target.x,
-		aim_focus.x - (half.x - AIM_EDGE_MARGIN),
-		aim_focus.x + (half.x - AIM_EDGE_MARGIN))
-	target.y = clampf(target.y,
-		aim_focus.y - (half.y - AIM_EDGE_MARGIN),
-		aim_focus.y + (half.y - AIM_EDGE_MARGIN))
+	target.x = clampf(
+		target.x, aim_focus.x - (half.x - AIM_EDGE_MARGIN), aim_focus.x + (half.x - AIM_EDGE_MARGIN)
+	)
+	target.y = clampf(
+		target.y, aim_focus.y - (half.y - AIM_EDGE_MARGIN), aim_focus.y + (half.y - AIM_EDGE_MARGIN)
+	)
 	return target
+
 
 static func next_mode(current: Mode, event: String) -> Mode:
 	match event:

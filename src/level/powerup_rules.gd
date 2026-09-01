@@ -12,6 +12,7 @@ const BUFF_LABELS := {
 	&"super_bounce": "+Super Bounce",
 }
 
+
 static func route(type_id: String, skunk_unlocked: bool, roll: Callable) -> Dictionary:
 	match type_id:
 		"crate-gold":
@@ -30,6 +31,7 @@ static func route(type_id: String, skunk_unlocked: bool, roll: Callable) -> Dict
 				return {"kind": "refund", "label": "+Free Shot"}
 			return {"kind": "buff", "buff": pick, "label": BUFF_LABELS[pick]}
 	return {"kind": "none"}
+
 
 static func drain(queue: Array[StringName]) -> Dictionary:
 	var consumed: Array[StringName] = []

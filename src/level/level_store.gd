@@ -6,11 +6,14 @@ extends RefCounted
 const BUILTIN_DIR := "res://levels"
 const USER_DIR := "user://levels"
 
+
 static func list_builtin() -> Array[String]:
 	return _list_dir(BUILTIN_DIR)
 
+
 static func list_user() -> Array[String]:
 	return _list_dir(USER_DIR)
+
 
 static func _list_dir(dir_path: String) -> Array[String]:
 	var out: Array[String] = []
@@ -23,9 +26,11 @@ static func _list_dir(dir_path: String) -> Array[String]:
 	out.sort()
 	return out
 
+
 static func load_level(path: String) -> LevelLayout:
 	var text := _read(path)
 	return null if text == "" else LevelJson.parse(text)
+
 
 static func save_user(layout: LevelLayout, stem: String) -> String:
 	var safe := sanitize_stem(stem)
@@ -40,6 +45,7 @@ static func save_user(layout: LevelLayout, stem: String) -> String:
 	f.close()
 	return path
 
+
 static func sanitize_stem(s: String) -> String:
 	var out := ""
 	for ch in s.to_lower():
@@ -50,6 +56,7 @@ static func sanitize_stem(s: String) -> String:
 	while out.contains("__"):
 		out = out.replace("__", "_")
 	return out.trim_prefix("_").trim_suffix("_")
+
 
 static func _read(path: String) -> String:
 	if not FileAccess.file_exists(path):

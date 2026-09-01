@@ -9,6 +9,7 @@ const ROOT := "res://assets/editor"
 
 static var _cache := {}
 
+
 static func scan() -> void:
 	_cache = {}
 	for behavior in ["crates"]:
@@ -27,22 +28,24 @@ static func scan() -> void:
 			var desc := id
 			var txt_path := "%s/%s.txt" % [dir_path, id]
 			if FileAccess.file_exists(txt_path):
-				desc = FileAccess.open(txt_path, FileAccess.READ) \
-					.get_as_text().strip_edges()
+				desc = FileAccess.open(txt_path, FileAccess.READ).get_as_text().strip_edges()
 			entries.append({"id": id, "texture": tex, "description": desc})
 		entries.sort_custom(func(a, b): return a["id"] < b["id"])
 		_cache[behavior] = entries
+
 
 static func crates() -> Array[Dictionary]:
 	if _cache.is_empty():
 		scan()
 	return _cache.get("crates", [] as Array[Dictionary])
 
+
 static func texture_for(id: String) -> Texture2D:
 	for e in crates():
 		if e["id"] == id:
 			return e["texture"]
 	return null
+
 
 static func _has(entries: Array[Dictionary], id: String) -> bool:
 	for e in entries:

@@ -8,6 +8,7 @@ extends Control
 const SKUNK_SHEET := "res://art/characters/skunk-sprites.png"
 const LINGER := 4.0
 
+
 static func skunk_frames() -> SpriteFrames:
 	if ResourceLoader.exists("res://resources/skunk_frames.tres"):
 		return load("res://resources/skunk_frames.tres")
@@ -23,6 +24,7 @@ static func skunk_frames() -> SpriteFrames:
 		at.region = Rect2(i * h, 0, h, h)
 		frames.add_frame(&"default", at)
 	return frames
+
 
 func show_unlock(title: String, frames: SpriteFrames) -> void:
 	%Title.text = title

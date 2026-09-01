@@ -5,6 +5,7 @@ extends RefCounted
 # user levels, each block alphabetical by stem. Rebuilt fresh on every
 # call — add/delete/rename in the folders is instantly reflected.
 
+
 static func entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for path in LevelStore.list_builtin() + LevelStore.list_user():
@@ -12,12 +13,18 @@ static func entries() -> Array[Dictionary]:
 		if layout == null:
 			push_warning("Chain skips unloadable level: %s" % path)
 			continue
-		out.append({
-			"stem": path.get_file().get_basename(),
-			"path": path,
-			"title": layout.title,
-		})
+		(
+			out
+			. append(
+				{
+					"stem": path.get_file().get_basename(),
+					"path": path,
+					"title": layout.title,
+				}
+			)
+		)
 	return out
+
 
 static func is_unlocked(chain: Array, index: int, tier: String) -> bool:
 	if index < 0 or index >= chain.size():
@@ -26,12 +33,14 @@ static func is_unlocked(chain: Array, index: int, tier: String) -> bool:
 		return true
 	return Progress.is_cleared(tier, chain[index - 1]["stem"])
 
+
 # -1 for an empty chain — callers guard with is_empty() first.
 static func frontier(chain: Array, tier: String) -> int:
 	for i in chain.size():
 		if not Progress.is_cleared(tier, chain[i]["stem"]):
 			return i
 	return chain.size() - 1
+
 
 static func next_index_after(chain: Array, stem: String) -> int:
 	for i in chain.size():

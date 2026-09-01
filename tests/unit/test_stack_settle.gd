@@ -5,6 +5,7 @@ extends GutTest
 # overlaps) makes player stacks drop and rattle the moment TEST or a
 # level starts.
 
+
 func test_grid_stack_spawns_at_rest() -> void:
 	var layout := LevelLayout.new()
 	for row in 4:
@@ -21,8 +22,11 @@ func test_grid_stack_spawns_at_rest() -> void:
 	var lowest: Crate = null
 	for c in get_tree().get_nodes_in_group("crates"):
 		var drift: Vector2 = c.global_position - start[c.get_instance_id()]
-		assert_lt(drift.length(), 1.0,
-			"crate drifted %.2fpx from spawn — stack is not at rest" % drift.length())
+		assert_lt(
+			drift.length(),
+			1.0,
+			"crate drifted %.2fpx from spawn — stack is not at rest" % drift.length()
+		)
 		assert_lt(absf(rad_to_deg(c.rotation)), 0.5)
 		if lowest == null or c.global_position.y > lowest.global_position.y:
 			lowest = c
@@ -30,8 +34,10 @@ func test_grid_stack_spawns_at_rest() -> void:
 	var hit_x := lowest.global_position.x
 	lowest.apply_central_impulse(Vector2(3000, 0))
 	await wait_seconds(1.0)
-	assert_gt(lowest.global_position.x - hit_x, 5.0,
-		"impacted crate should wake and be knocked away")
+	assert_gt(
+		lowest.global_position.x - hit_x, 5.0, "impacted crate should wake and be knocked away"
+	)
+
 
 func test_gentle_tap_does_not_topple_stack() -> void:
 	# A slow boulder rolling into the tower's foot ("kissed it") must
@@ -55,5 +61,4 @@ func test_gentle_tap_does_not_topple_stack() -> void:
 	for c in get_tree().get_nodes_in_group("crates"):
 		var drift: Vector2 = c.global_position - start[c.get_instance_id()]
 		assert_true(c.is_standing(), "gentle tap toppled a crate")
-		assert_lt(drift.length(), 12.0,
-			"gentle tap scattered a crate %.1fpx" % drift.length())
+		assert_lt(drift.length(), 12.0, "gentle tap scattered a crate %.1fpx" % drift.length())

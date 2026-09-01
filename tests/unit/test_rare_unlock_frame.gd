@@ -1,9 +1,11 @@
 extends GutTest
 
+
 func test_skunk_frames_builds_from_sheet() -> void:
 	var frames := RareUnlockFrame.skunk_frames()
 	assert_not_null(frames)
 	assert_gt(frames.get_frame_count(&"default"), 0)
+
 
 func test_show_unlock_displays_then_frees() -> void:
 	var f: RareUnlockFrame = load("res://scenes/ui/rare_unlock_frame.tscn").instantiate()

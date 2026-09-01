@@ -9,6 +9,7 @@ const BUFF_ICONS := {
 	&"super_bounce": "crate-green",
 }
 
+
 func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: menu_pressed.emit())
 	%MenuButton.focus_mode = Control.FOCUS_NONE
@@ -20,19 +21,22 @@ func _ready() -> void:
 	%FireButton.button_down.connect(func() -> void: Input.action_press("fire"))
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
 
+
 # Alt-tabbing away mid-charge eats the release the same way.
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT \
-			or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		Input.action_release("fire")
+
 
 func set_shots(n: int) -> void:
 	%Shots.text = "STONES: %d" % n
+
 
 func set_crates(standing: int, total: int) -> void:
 	if %CrateIcon.texture == null:
 		%CrateIcon.texture = EditorAssets.texture_for("crate-wood")
 	%Crates.text = "CRATES: %d/%d" % [standing, total]
+
 
 func set_power(ratio: float) -> void:
 	# always on screen (owner call) — an empty bar reads "ready", and a
@@ -40,14 +44,17 @@ func set_power(ratio: float) -> void:
 	%PowerBar.visible = true
 	%PowerBar.value = ratio
 
+
 func banner(title: String, sub: String) -> void:
 	%Banner.text = title
 	%BannerSub.text = sub
 	%BannerSub.visible = sub != ""
 	%BannerCenter.visible = true
 
+
 func clear_banner() -> void:
 	%BannerCenter.visible = false
+
 
 func set_buffs(buffs: Array[StringName]) -> void:
 	# remove_child before queue_free: chain collections call this twice

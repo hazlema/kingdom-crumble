@@ -17,29 +17,45 @@ signal jump_levels_requested
 @onready var _quit: Button = %QuitToTitle
 @onready var _music_slider: HSlider = %MusicSlider
 
+
 func _ready() -> void:
 	visible = false
 	_resume.pressed.connect(close)
-	_restart.pressed.connect(func() -> void:
-		close()
-		restart_requested.emit())
-	_quit.pressed.connect(func() -> void:
-		close()
-		quit_requested.emit())
+	_restart.pressed.connect(
+		func() -> void:
+			close()
+			restart_requested.emit()
+	)
+	_quit.pressed.connect(
+		func() -> void:
+			close()
+			quit_requested.emit()
+	)
 	_music_slider.value = Music.get_volume_linear()
 	_music_slider.value_changed.connect(Music.set_volume_linear)
 	%BackToEditor.visible = false
-	%BackToEditor.pressed.connect(func(): close(); back_to_editor_requested.emit())
-	%JumpLevels.pressed.connect(func(): close(); jump_levels_requested.emit())
+	%BackToEditor.pressed.connect(
+		func():
+			close()
+			back_to_editor_requested.emit()
+	)
+	%JumpLevels.pressed.connect(
+		func():
+			close()
+			jump_levels_requested.emit()
+	)
+
 
 func set_editor_mode(on: bool) -> void:
 	%BackToEditor.visible = on
 	%JumpLevels.visible = not on  # no chain inside the editor sandbox
 
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu"):
 		close() if visible else open()
 		get_viewport().set_input_as_handled()
+
 
 func open() -> void:
 	visible = true
@@ -47,6 +63,7 @@ func open() -> void:
 	# a press with no release survives the pause and sticks forever
 	Input.action_release("fire")
 	_resume.grab_focus()
+
 
 func close() -> void:
 	visible = false

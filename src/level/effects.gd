@@ -6,6 +6,7 @@ extends RefCounted
 
 const SFX_DIR := "res://assets/sfx"
 
+
 static func is_known(id: String) -> bool:
 	if id == "confetti":
 		return true
@@ -15,6 +16,7 @@ static func is_known(id: String) -> bool:
 			return false
 		return true
 	return false
+
 
 static func fire_all(ids: Array, host: Node2D, at: Vector2) -> int:
 	var fired := 0
@@ -29,6 +31,7 @@ static func fire_all(ids: Array, host: Node2D, at: Vector2) -> int:
 		else:
 			push_warning("Unknown effect id: %s" % s)
 	return fired
+
 
 static func _confetti(host: Node2D, at: Vector2) -> void:
 	var p := CPUParticles2D.new()
@@ -48,6 +51,7 @@ static func _confetti(host: Node2D, at: Vector2) -> void:
 	host.add_child(p)
 	host.get_tree().create_timer(3.0).timeout.connect(p.queue_free)
 
+
 static func _confetti_colors() -> Gradient:
 	var g := Gradient.new()
 	g.set_color(0, Color(1.0, 0.83, 0.29))
@@ -55,6 +59,7 @@ static func _confetti_colors() -> Gradient:
 	g.add_point(0.66, Color(0.31, 0.66, 0.9))
 	g.set_color(1, Color(0.55, 0.79, 0.47))
 	return g
+
 
 static func _sound(host: Node2D, stem: String) -> bool:
 	if stem.contains("/") or stem.contains("\\") or stem.contains(".."):

@@ -7,6 +7,7 @@ extends Control
 
 signal level_picked(path: String)
 
+
 func open(tier: String) -> void:
 	for c in %List.get_children():
 		%List.remove_child(c)
@@ -24,11 +25,14 @@ func open(tier: String) -> void:
 			b.text = "🔒  %s" % title
 			b.disabled = true
 		var path: String = chain[i]["path"]
-		b.pressed.connect(func() -> void:
-			level_picked.emit(path)
-			hide())
+		b.pressed.connect(
+			func() -> void:
+				level_picked.emit(path)
+				hide()
+		)
 		%List.add_child(b)
 	show()
+
 
 func _input(event: InputEvent) -> void:
 	# _input (not unhandled) so Esc closes the dialog before the pause

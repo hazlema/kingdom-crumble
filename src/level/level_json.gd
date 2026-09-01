@@ -7,6 +7,7 @@ const FORMAT := 1
 const MAX_COORD := 100000.0
 const MAX_CRATES := 500
 
+
 static func parse(text: String) -> LevelLayout:
 	# Use JSON class to avoid console errors on invalid input
 	var json := JSON.new()
@@ -24,8 +25,7 @@ static func parse(text: String) -> LevelLayout:
 	l.background = data.get("background", "meadow")
 	l.shots = int(data.get("shots", 0))
 	for c in data["crates"]:
-		l.crates.append({"x": float(c["x"]), "y": float(c["y"]),
-			"type": String(c["type"])})
+		l.crates.append({"x": float(c["x"]), "y": float(c["y"]), "type": String(c["type"])})
 	var trig: Variant = data.get("triggers", {})
 	if trig is Dictionary:
 		for event in trig:
@@ -38,10 +38,10 @@ static func parse(text: String) -> LevelLayout:
 				l.triggers[String(event)] = str_ids
 	return l
 
+
 static func validate(d: Dictionary) -> String:
 	var _fmt: Variant = d.get("format", null)
-	if not (_fmt is int or _fmt is float) \
-			or int(_fmt) > FORMAT or int(_fmt) < 1:
+	if not (_fmt is int or _fmt is float) or int(_fmt) > FORMAT or int(_fmt) < 1:
 		return "unsupported or missing format"
 	if not d.get("title", "") is String or d.get("title", "") == "":
 		return "missing title"
@@ -50,11 +50,14 @@ static func validate(d: Dictionary) -> String:
 	if (d["crates"] as Array).size() > MAX_CRATES:
 		return "too many crates"
 	for c in d["crates"]:
-		if not c is Dictionary or not c.has("x") or not c.has("y") \
-				or not c.get("type", null) is String:
+		if (
+			not c is Dictionary
+			or not c.has("x")
+			or not c.has("y")
+			or not c.get("type", null) is String
+		):
 			return "bad crate entry"
-		if not (c["x"] is float or c["x"] is int) \
-				or not (c["y"] is float or c["y"] is int):
+		if not (c["x"] is float or c["x"] is int) or not (c["y"] is float or c["y"] is int):
 			return "bad crate coords"
 		if absf(float(c["x"])) > MAX_COORD or absf(float(c["y"])) > MAX_COORD:
 			return "crate out of bounds"
@@ -68,6 +71,7 @@ static func validate(d: Dictionary) -> String:
 			if _ids is Array and (_ids as Array).size() > 16:
 				return "too many effects"
 	return ""
+
 
 static func serialize(layout: LevelLayout) -> String:
 	var d := {

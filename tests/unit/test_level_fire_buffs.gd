@@ -1,5 +1,6 @@
 extends GutTest
 
+
 func before_all() -> void:
 	# Warm up the Camera2D so its one-time physics-interpolation engine
 	# message doesn't land inside a physics-stepped test and fail it.
@@ -9,11 +10,13 @@ func before_all() -> void:
 	await get_tree().physics_frame
 	warm.queue_free()
 
+
 func _level() -> Level:
 	Level.next_layout = LevelLayout.new()  # empty field
 	var l: Level = load("res://scenes/level.tscn").instantiate()
 	add_child_autofree(l)
 	return l
+
 
 func test_multishot_fires_three_fanned_stones() -> void:
 	var l := _level()
@@ -26,6 +29,7 @@ func test_multishot_fires_three_fanned_stones() -> void:
 	assert_eq(vels.size(), 3, "velocities drift apart")
 	assert_eq(l.pending_buffs.size(), 0)
 
+
 func test_charges_consume_one_per_type() -> void:
 	var l := _level()
 	l.pending_buffs = [&"exploding", &"exploding"] as Array[StringName]
@@ -34,6 +38,7 @@ func test_charges_consume_one_per_type() -> void:
 	assert_true(l._active_stones[0].exploding)
 	assert_eq(l.pending_buffs, [&"exploding"] as Array[StringName])
 
+
 func test_combo_applies_to_every_stone() -> void:
 	var l := _level()
 	l.pending_buffs = [&"multishot", &"super_bounce", &"exploding"] as Array[StringName]
@@ -41,6 +46,7 @@ func test_combo_applies_to_every_stone() -> void:
 	assert_eq(l._active_stones.size(), 3)
 	for s in l._active_stones:
 		assert_true(s.exploding and s.super_bounce)
+
 
 func test_multishot_exploding_volley_does_not_self_detonate() -> void:
 	# C1 regression: multishot+exploding volley must not immediately
@@ -60,5 +66,8 @@ func test_multishot_exploding_volley_does_not_self_detonate() -> void:
 	# The lead stone must have travelled more than 150 px from the launch point.
 	var lead: Stone = l._active_stones[0]
 	if is_instance_valid(lead):
-		assert_gt(lead.global_position.x, 150.0,
-			"lead stone has not advanced — launched but did not travel")
+		assert_gt(
+			lead.global_position.x,
+			150.0,
+			"lead stone has not advanced — launched but did not travel"
+		)
