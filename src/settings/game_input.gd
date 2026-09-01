@@ -8,7 +8,7 @@ const BINDINGS := {
 	"scout_left": [KEY_COMMA, KEY_Q],
 	"scout_right": [KEY_PERIOD, KEY_E],
 	"menu": [KEY_ESCAPE],
-	"jump_levels": [KEY_L],
+	"jump_levels": [KEY_L, KEY_J],
 	"check": [KEY_H],
 	"backdrop_toggle": [KEY_B],
 }
