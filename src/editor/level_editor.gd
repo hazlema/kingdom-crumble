@@ -146,7 +146,13 @@ func _rebuild() -> void:
 	overlay.refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed \
+	if event is InputEventKey and event.pressed and event.ctrl_pressed:
+		match event.keycode:
+			KEY_T:
+				_on_test()
+			KEY_S:
+				_on_save()  # falls through to Save As when unsaved
+	elif event is InputEventKey and event.pressed \
 			and event.keycode == KEY_DELETE:
 		_delete_selected()
 	elif event.is_action_pressed("menu") and carrying != "":

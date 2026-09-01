@@ -38,6 +38,16 @@ func _ready() -> void:
 		if sel.size() > 0:
 			load_requested.emit(%LevelList.get_item_metadata(sel[0])))
 	%ClearConfirm.confirmed.connect(func() -> void: clear_requested.emit())
+	# Enter in the name field submits the dialog; Esc cancels for free
+	# (dialogs close on escape by default). Field grabs focus on open.
+	%SaveAsDialog.register_text_enter(%StemEdit)
+	%SaveAsDialog.about_to_popup.connect(func() -> void:
+		%StemEdit.call_deferred("grab_focus")
+		%StemEdit.call_deferred("select_all"))
+	# Enter or double-click on a list entry loads it immediately.
+	%LevelList.item_activated.connect(func(i: int) -> void:
+		load_requested.emit(%LevelList.get_item_metadata(i))
+		%LoadDialog.hide())
 
 func _pick(sig: Signal) -> void:
 	%Panel.visible = false

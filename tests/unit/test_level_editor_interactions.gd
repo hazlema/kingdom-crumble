@@ -81,6 +81,27 @@ func test_field_point_is_not_over_ui() -> void:
 	assert_true(ed._mouse_over_ui(palette_center))
 	assert_false(ed._mouse_over_ui(Vector2(-999.0, -999.0)))
 
+func test_ctrl_s_unsaved_opens_save_as() -> void:
+	var ev := InputEventKey.new()
+	ev.pressed = true
+	ev.ctrl_pressed = true
+	ev.keycode = KEY_S
+	ed._unhandled_input(ev)
+	await wait_frames(1)
+	assert_true(ed.menu.get_node("%SaveAsDialog").visible,
+		"ctrl+S with no save path should open Save As")
+	ed.menu.get_node("%SaveAsDialog").hide()
+
+func test_load_list_item_activation_emits_load() -> void:
+	var list: ItemList = ed.menu.get_node("%LevelList")
+	list.clear()
+	var idx := list.add_item("Test Level")
+	list.set_item_metadata(idx, "user://levels/test_level.json")
+	watch_signals(ed.menu)
+	list.item_activated.emit(idx)
+	assert_signal_emitted_with_parameters(ed.menu, "load_requested",
+		["user://levels/test_level.json"])
+
 func test_delete_removes_selected_crate() -> void:
 	ed.carrying = "crate-wood"
 	ed._press(Vector2i(2, 0))
