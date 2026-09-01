@@ -54,7 +54,9 @@ func _poll_drag_pan() -> void:
 		if mode == Mode.AIM:
 			set_mode(next_mode(mode, "scout_input"))
 		if mode == Mode.SCOUT and _last_mouse.is_finite():
-			global_position -= (mouse - _last_mouse) / zoom
+			# horizontal only, matching the Q/E keyboard scout — the
+			# level is a wide strip, vertical drift just loses the ground
+			global_position.x -= (mouse.x - _last_mouse.x) / zoom.x
 			_clamp_to_limits()
 	_last_mouse = mouse
 
