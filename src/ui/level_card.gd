@@ -8,6 +8,11 @@ extends Button
 
 signal picked(path: String)
 
+# Compiled once for the class; validates base64 alphabet before decoding.
+# Marshalls.base64_to_raw emits an engine error on bad chars — untrusted data
+# must degrade silently (spec §4), so we pre-screen rather than let it through.
+static var _b64_rx := RegEx.create_from_string("^[A-Za-z0-9+/]*={0,2}$")
+
 var _path := ""
 
 
@@ -75,15 +80,26 @@ func _sibling_thumb(level_path: String) -> Texture2D:
 func _embedded_thumb(b64: String) -> Texture2D:
 	if b64 == "":
 		return null
-	# Validate before decoding: Marshalls.base64_to_raw emits an engine
-	# error on invalid input which GUT counts as a test failure.
-	var rx := RegEx.new()
-	rx.compile("^[A-Za-z0-9+/]*={0,2}$")
-	if rx.search(b64) == null:
+	# base64 encodes 3 bytes per 4 chars (with padding); any other length is
+	# invalid and Marshalls.base64_to_raw behavior is undefined — reject early.
+	if b64.length() % 4 != 0:
+		return null
+	# Alphabet check: Marshalls.base64_to_raw emits an engine error on bad
+	# chars which GUT counts as a test failure; untrusted data must not reach it.
+	if _b64_rx.search(b64) == null:
 		return null
 	var buf := Marshalls.base64_to_raw(b64)
 	if buf.is_empty():
 		return null
+	# load_png_from_buffer emits engine errors on non-PNG bytes (confirmed by
+	# test — 4 errors per call, GUT treats those as failures). Guard with the
+	# 8-byte PNG magic signature before calling into the driver.
+	const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
+	if buf.size() < PNG_MAGIC.size():
+		return null
+	for i in PNG_MAGIC.size():
+		if buf[i] != PNG_MAGIC[i]:
+			return null
 	var img := Image.new()
 	if img.load_png_from_buffer(buf) != OK:
 		return null

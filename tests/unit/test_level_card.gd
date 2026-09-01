@@ -85,6 +85,37 @@ func test_garbage_thumb_degrades_to_no_image() -> void:
 	assert_true(card.get_node("%NoImage").visible)
 
 
+func test_bad_length_thumb_degrades_silently() -> void:
+	# "abc" passes the alphabet check but length % 4 != 0 — the length gate
+	# must catch it before Marshalls is called, so no engine error is emitted.
+	var card := _card()
+	var entry := {
+		"path": "user://levels/gut_no_such.json",
+		"stem": "gut_no_such",
+		"title": "T",
+		"thumb": "abc",
+	}
+	card.setup(entry, false, true, false)
+	assert_false(card.get_node("%Thumb").visible)
+	assert_true(card.get_node("%NoImage").visible)
+
+
+func test_valid_base64_non_png_degrades_silently() -> void:
+	# "YWJjZGVmZ2g=" decodes to the ASCII string "abcdefgh" — valid base64 but
+	# not a PNG. load_png_from_buffer receives real garbage; this test proves
+	# whether that call emits an engine error (GUT would fail if it does).
+	var card := _card()
+	var entry := {
+		"path": "user://levels/gut_no_such.json",
+		"stem": "gut_no_such",
+		"title": "T",
+		"thumb": "YWJjZGVmZ2g=",
+	}
+	card.setup(entry, false, true, false)
+	assert_false(card.get_node("%Thumb").visible)
+	assert_true(card.get_node("%NoImage").visible)
+
+
 func test_embedded_thumb_beats_sibling_png() -> void:
 	var sibling := Image.create(8, 8, false, Image.FORMAT_RGBA8)
 	sibling.fill(Color.BLUE)
@@ -98,6 +129,6 @@ func test_embedded_thumb_beats_sibling_png() -> void:
 		"thumb": _tiny_png_b64(),
 	}
 	card.setup(entry, false, true, false)
+	DirAccess.remove_absolute("user://levels/gut_pref.png")
 	var tex: Texture2D = card.get_node("%Thumb").texture
 	assert_eq(tex.get_width(), 4, "embedded (4px) wins over sibling png (8px)")
-	DirAccess.remove_absolute("user://levels/gut_pref.png")
