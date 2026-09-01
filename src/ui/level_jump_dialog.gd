@@ -8,6 +8,10 @@ extends Control
 signal level_picked(path: String)
 
 
+func _ready() -> void:
+	%CloseBtn.pressed.connect(hide)
+
+
 func open(tier: String) -> void:
 	for c in %List.get_children():
 		%List.remove_child(c)
@@ -36,7 +40,8 @@ func open(tier: String) -> void:
 
 func _input(event: InputEvent) -> void:
 	# _input (not unhandled) so Esc closes the dialog before the pause
-	# menu can react to the same key
-	if visible and event.is_action_pressed("menu"):
+	# menu can react to the same key; ui_cancel covers Esc even if the
+	# "menu" action is ever rebound
+	if visible and (event.is_action_pressed("menu") or event.is_action_pressed("ui_cancel")):
 		hide()
 		get_viewport().set_input_as_handled()

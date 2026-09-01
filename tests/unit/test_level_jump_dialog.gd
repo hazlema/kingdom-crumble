@@ -46,3 +46,10 @@ func test_pick_emits_path_and_hides() -> void:
 	d.get_node("%List").get_child(0).pressed.emit()
 	assert_signal_emitted_with_parameters(d, "level_picked", [chain[0]["path"]])
 	assert_false(d.visible)
+
+func test_close_button_hides_dialog() -> void:
+	var d := _dialog()
+	d.open("chill")
+	assert_true(d.visible)
+	d.get_node("%CloseBtn").pressed.emit()
+	assert_false(d.visible)
