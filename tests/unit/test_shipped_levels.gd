@@ -16,7 +16,7 @@ func test_all_shipped_level_files_load() -> void:
 		checked += 1
 	assert_gt(checked, 0, "there should be at least one shipped level")
 
-func test_campaign_entries_all_exist_and_load() -> void:
-	for path in LevelStore.campaign():
+func test_all_listed_builtins_load() -> void:
+	for path in LevelStore.list_builtin():
 		assert_not_null(LevelStore.load_level(path),
-			"campaign references a broken or missing level: %s" % path)
+			"listed built-in failed to load: %s" % path)

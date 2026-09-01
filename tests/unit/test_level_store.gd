@@ -1,14 +1,14 @@
 extends GutTest
 
-func test_campaign_order_and_load():
-	var paths := LevelStore.campaign()
-	assert_eq(paths.size(), 1)
-	assert_true(paths[0].ends_with("demo.json"))
-	var l := LevelStore.load_level(paths[0])
-	assert_not_null(l)
-	# title and composition are authoring data — assert shape only
-	assert_gt(l.title.length(), 0)
-	assert_gt(l.crates.size(), 0)
+func test_list_builtin_alphabetical_and_loadable():
+	var paths: Array[String] = LevelStore.list_builtin()
+	assert_gt(paths.size(), 0, "there should be at least one built-in level")
+	var sorted: Array[String] = paths.duplicate()
+	sorted.sort()
+	assert_eq(paths, sorted, "built-ins list alphabetically")
+	for p in paths:
+		assert_true(p.begins_with("res://levels/"), p)
+		assert_true(p.ends_with(".json"), p)
 
 func test_user_save_load_roundtrip():
 	var l := LevelLayout.new()
