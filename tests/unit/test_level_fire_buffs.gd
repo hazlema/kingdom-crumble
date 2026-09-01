@@ -1,16 +1,6 @@
 extends GutTest
 
 
-func before_all() -> void:
-	# Warm up the Camera2D so its one-time physics-interpolation engine
-	# message doesn't land inside a physics-stepped test and fail it.
-	Level.next_layout = LevelLayout.new()
-	var warm = load("res://scenes/level.tscn").instantiate()
-	add_child(warm)
-	await get_tree().physics_frame
-	warm.queue_free()
-
-
 func _level() -> Level:
 	Level.next_layout = LevelLayout.new()  # empty field
 	var l: Level = load("res://scenes/level.tscn").instantiate()

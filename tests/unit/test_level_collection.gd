@@ -3,16 +3,6 @@ extends GutTest
 const TEST_UNLOCKS := "user://test_unlocks_collection.cfg"
 
 
-func before_all():
-	# Warm up the Camera2D so its one-time physics-interpolation engine
-	# message doesn't land inside test_gold_refunds_a_shot and fail it.
-	Level.next_layout = LevelLayout.new()
-	var warm = load("res://scenes/level.tscn").instantiate()
-	add_child(warm)
-	await get_tree().physics_frame
-	warm.queue_free()
-
-
 func before_each() -> void:
 	DirAccess.remove_absolute(TEST_UNLOCKS)
 	Unlocks.use_path(TEST_UNLOCKS)
