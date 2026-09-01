@@ -41,6 +41,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	visible = true
 	get_tree().paused = true
+	# a press with no release survives the pause and sticks forever
+	Input.action_release("fire")
 	_resume.grab_focus()
 
 func close() -> void:

@@ -12,16 +12,27 @@ const BUFF_ICONS := {
 func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: menu_pressed.emit())
 	%MenuButton.focus_mode = Control.FOCUS_NONE
-	# FIRE! is a screen-sized spacebar: hold to charge, release to loose
+	# FIRE! is a screen-sized spacebar: hold to charge, release to loose.
+	# ALWAYS so the release still lands if the tree pauses mid-press —
+	# a lost button_up left "fire" stuck down and froze the scout camera.
+	%FireButton.process_mode = Node.PROCESS_MODE_ALWAYS
 	%FireButton.focus_mode = Control.FOCUS_NONE
 	%FireButton.button_down.connect(func() -> void: Input.action_press("fire"))
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
+
+# Alt-tabbing away mid-charge eats the release the same way.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT \
+			or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		Input.action_release("fire")
 
 func set_shots(n: int) -> void:
 	%Shots.text = "STONES: %d" % n
 
 func set_power(ratio: float) -> void:
-	%PowerBar.visible = ratio > 0.0
+	# always on screen (owner call) — an empty bar reads "ready", and a
+	# bar that vanishes mid-stick was hiding the stuck-fire bug too
+	%PowerBar.visible = true
 	%PowerBar.value = ratio
 
 func banner(title: String, sub: String) -> void:
