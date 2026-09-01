@@ -9,7 +9,7 @@ func test_all_shipped_level_files_load() -> void:
 	assert_not_null(dir)
 	var checked := 0
 	for f in dir.get_files():
-		if f.get_extension() != "json" or f == "campaign.json":
+		if f.get_extension() != "json":
 			continue
 		var l := LevelStore.load_level("res://levels/" + f)
 		assert_not_null(l, "shipped level failed to load: %s" % f)
