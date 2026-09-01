@@ -29,17 +29,8 @@ func set_mode(m: Mode) -> void:
 	if m == Mode.AIM:
 		follow_target = null
 
-# Hold the right mouse button and drag to scout the level by hand.
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion \
-			and event.button_mask & MOUSE_BUTTON_MASK_RIGHT:
-		if mode == Mode.AIM:
-			set_mode(next_mode(mode, "scout_input"))
-		if mode == Mode.SCOUT:
-			global_position -= event.relative / zoom
-			_clamp_to_limits()
-
 func _physics_process(delta: float) -> void:
+	_poll_drag_pan()
 	match mode:
 		Mode.AIM:
 			global_position = _aim_position()
@@ -50,6 +41,22 @@ func _physics_process(delta: float) -> void:
 			var dir := Input.get_axis("scout_left", "scout_right")
 			global_position.x += dir * SCOUT_SPEED * delta
 			_clamp_to_limits()
+
+# Hold the right mouse button and drag to scout the level by hand.
+# POLLED, not event-driven: on real desktops mouse-motion events get
+# captured by GUI hover before _unhandled_input ever sees them (the
+# same phantom that broke the editor's RMB pan — polling is immune).
+var _last_mouse := Vector2.INF
+
+func _poll_drag_pan() -> void:
+	var mouse := get_viewport().get_mouse_position()
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		if mode == Mode.AIM:
+			set_mode(next_mode(mode, "scout_input"))
+		if mode == Mode.SCOUT and _last_mouse.is_finite():
+			global_position -= (mouse - _last_mouse) / zoom
+			_clamp_to_limits()
+	_last_mouse = mouse
 
 # Free-pan must clamp POSITION, not just the display: past the level
 # bounds the display pins while position keeps travelling, and panning
