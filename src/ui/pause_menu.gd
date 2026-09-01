@@ -10,6 +10,7 @@ extends CanvasLayer
 signal restart_requested
 signal quit_requested
 signal back_to_editor_requested
+signal jump_levels_requested
 
 @onready var _resume: Button = %Resume
 @onready var _restart: Button = %RestartLevel
@@ -29,9 +30,11 @@ func _ready() -> void:
 	_music_slider.value_changed.connect(Music.set_volume_linear)
 	%BackToEditor.visible = false
 	%BackToEditor.pressed.connect(func(): close(); back_to_editor_requested.emit())
+	%JumpLevels.pressed.connect(func(): close(); jump_levels_requested.emit())
 
 func set_editor_mode(on: bool) -> void:
 	%BackToEditor.visible = on
+	%JumpLevels.visible = not on  # no chain inside the editor sandbox
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu"):
