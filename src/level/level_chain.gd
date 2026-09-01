@@ -26,6 +26,7 @@ static func is_unlocked(chain: Array, index: int, tier: String) -> bool:
 		return true
 	return Progress.is_cleared(tier, chain[index - 1]["stem"])
 
+# -1 for an empty chain — callers guard with is_empty() first.
 static func frontier(chain: Array, tier: String) -> int:
 	for i in chain.size():
 		if not Progress.is_cleared(tier, chain[i]["stem"]):

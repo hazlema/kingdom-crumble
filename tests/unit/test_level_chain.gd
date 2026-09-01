@@ -61,3 +61,6 @@ func test_next_index_after() -> void:
 	assert_eq(LevelChain.next_index_after(chain, "apple"), 1)
 	assert_eq(LevelChain.next_index_after(chain, "watermelon"), -1, "end of chain")
 	assert_eq(LevelChain.next_index_after(chain, "durian"), -1, "unknown stem")
+
+func test_frontier_of_empty_chain_is_minus_one() -> void:
+	assert_eq(LevelChain.frontier([], "chill"), -1)
