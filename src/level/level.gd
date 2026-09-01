@@ -297,14 +297,6 @@ static func count_standing(crates: Array) -> int:
 	return n
 
 
-static func count_standing_rotations(rotations: Array) -> int:
-	var n := 0
-	for r in rotations:
-		if Crate.is_standing_rotation(r):
-			n += 1
-	return n
-
-
 func _on_crate_knocked(crate: Crate) -> void:
 	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
