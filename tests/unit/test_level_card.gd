@@ -50,3 +50,54 @@ func test_press_emits_path() -> void:
 	watch_signals(c)
 	c.pressed.emit()
 	assert_signal_emitted_with_parameters(c, "picked", ["user://levels/pick_me.json"])
+
+
+func _tiny_png_b64() -> String:
+	var img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	return Marshalls.raw_to_base64(img.save_png_to_buffer())
+
+
+func test_embedded_thumb_shows() -> void:
+	var card := _card()
+	var entry := {
+		"path": "user://levels/gut_no_such.json",
+		"stem": "gut_no_such",
+		"title": "T",
+		"thumb": _tiny_png_b64(),
+	}
+	card.setup(entry, false, true, false)
+	assert_true(card.get_node("%Thumb").visible)
+	assert_not_null(card.get_node("%Thumb").texture)
+	assert_false(card.get_node("%NoImage").visible)
+
+
+func test_garbage_thumb_degrades_to_no_image() -> void:
+	var card := _card()
+	var entry := {
+		"path": "user://levels/gut_no_such.json",
+		"stem": "gut_no_such",
+		"title": "T",
+		"thumb": "!!!not/base64@@@",
+	}
+	card.setup(entry, false, true, false)
+	assert_false(card.get_node("%Thumb").visible)
+	assert_true(card.get_node("%NoImage").visible)
+
+
+func test_embedded_thumb_beats_sibling_png() -> void:
+	var sibling := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	sibling.fill(Color.BLUE)
+	DirAccess.make_dir_recursive_absolute("user://levels")
+	sibling.save_png("user://levels/gut_pref.png")
+	var card := _card()
+	var entry := {
+		"path": "user://levels/gut_pref.json",
+		"stem": "gut_pref",
+		"title": "T",
+		"thumb": _tiny_png_b64(),
+	}
+	card.setup(entry, false, true, false)
+	var tex: Texture2D = card.get_node("%Thumb").texture
+	assert_eq(tex.get_width(), 4, "embedded (4px) wins over sibling png (8px)")
+	DirAccess.remove_absolute("user://levels/gut_pref.png")

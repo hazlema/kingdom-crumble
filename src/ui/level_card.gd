@@ -1,9 +1,10 @@
 class_name LevelCard
 extends Button
 
-# One level in the jump grid (pretty-pass spec §4). Thumb comes from
-# the level's sibling <stem>.png when it exists — the owner's two-file
-# convention; a future capture pipeline needs no changes here.
+# One level in the jump grid (pretty-pass spec §4). Thumb preference order:
+# 1. embedded base64 PNG stored in LevelLayout.thumb (written by the editor
+#    capture pipeline, spec §4); 2. sibling <stem>.png on disk (owner's
+#    two-file convention); 3. NO IMAGE placeholder.
 
 signal picked(path: String)
 
@@ -39,7 +40,9 @@ func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> vo
 		%StateIcon.remove_theme_color_override("font_color")
 	disabled = not unlocked
 	%NowBadge.visible = is_now
-	var tex := _sibling_thumb(entry["path"])
+	var tex := _embedded_thumb(entry.get("thumb", ""))
+	if tex == null:
+		tex = _sibling_thumb(entry["path"])
 	%Thumb.visible = tex != null
 	%NoImage.visible = tex == null
 	if tex != null:
@@ -65,6 +68,26 @@ func _sibling_thumb(level_path: String) -> Texture2D:
 		if img != null:
 			return ImageTexture.create_from_image(img)
 	return null
+
+
+# Hostile or corrupt blobs degrade silently to the sibling/NO IMAGE
+# fallbacks — a bad thumb can disappoint, never crash (spec §4).
+func _embedded_thumb(b64: String) -> Texture2D:
+	if b64 == "":
+		return null
+	# Validate before decoding: Marshalls.base64_to_raw emits an engine
+	# error on invalid input which GUT counts as a test failure.
+	var rx := RegEx.new()
+	rx.compile("^[A-Za-z0-9+/]*={0,2}$")
+	if rx.search(b64) == null:
+		return null
+	var buf := Marshalls.base64_to_raw(b64)
+	if buf.is_empty():
+		return null
+	var img := Image.new()
+	if img.load_png_from_buffer(buf) != OK:
+		return null
+	return ImageTexture.create_from_image(img)
 
 
 func _now_ring() -> StyleBoxFlat:
