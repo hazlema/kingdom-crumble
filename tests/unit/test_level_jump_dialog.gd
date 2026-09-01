@@ -53,3 +53,14 @@ func test_close_button_hides_dialog() -> void:
 	assert_true(d.visible)
 	d.get_node("%CloseBtn").pressed.emit()
 	assert_false(d.visible)
+
+
+func test_header_counts_cleared() -> void:
+	var d := _dialog()
+	d.open("chill")
+	var chain := LevelChain.entries()
+	var cleared := 0
+	for e in chain:
+		if Progress.is_cleared("chill", e["stem"]):
+			cleared += 1
+	assert_eq(d.get_node("%ClearCount").text, "%d OF %d CLEARED" % [cleared, chain.size()])
