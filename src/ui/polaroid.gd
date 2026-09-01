@@ -5,11 +5,11 @@ extends Control
 # becomes showmanship — the fresh portrait drops in tilted, settles,
 # holds a beat, fades. Pure presentation; ignores the mouse entirely.
 
-const DROP_TIME := 0.45
+const DROP_TIME := 0.55
 const HOLD_TIME := 1.4
 const FADE_TIME := 0.5
 const TILT_DEG := 4.0
-const DROP_FROM := -260.0
+const DROP_FROM := -520.0  # owner nit: falls in from the top row, lands center
 const SHUTTER_SFX := "res://assets/sfx/shutter.ogg"
 const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
 
