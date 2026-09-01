@@ -1,0 +1,1 @@
+@keyframes om-intro-fade-in{0%{opacity:0}to{opacity:1}}@keyframes om-intro-fade-out{0%{opacity:1}to{opacity:0}}.om-intro-fade-in{animation:1s 1s forwards om-intro-fade-in}.om-intro-fade-out{animation:.3s forwards om-intro-fade-out}

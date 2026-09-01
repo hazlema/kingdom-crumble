@@ -1,0 +1,1 @@
+.om-form-list-card>*+*{border-top:1px solid var(--om-border-subtle)}.om-form-list-card>*+[data-indented-divider]{border-top-color:#0000;position:relative}.om-form-list-card>*+[data-indented-divider]:before{content:"";background:var(--om-border-subtle);height:1px;position:absolute;top:-1px;left:20px;right:0}.om-form-list-card-tinted>*+*{border-top-color:#d9775733}

@@ -1,0 +1,97 @@
+{
+  "name": "Parchment & Brass — game UI palette",
+  "version": "1.0",
+  "notes": "UI chrome only. Level art keeps its own sprite palette; the world colors below are the observed background values the UI is tuned against.",
+  "ui": {
+    "ink": {
+      "value": "#4b3b2a",
+      "use": "Primary text, panel outer stroke, icon strokes"
+    },
+    "ink-muted": {
+      "value": "#8f7047",
+      "use": "Secondary/mono labels, inner strokes, divider dashes"
+    },
+    "brass": {
+      "value": "#d9b26a",
+      "use": "Badges, gauge fill, numeral chips"
+    },
+    "brass-light": {
+      "value": "#f0d79a",
+      "use": "Top stop of brass button gradients, metal highlight"
+    },
+    "brass-dark": {
+      "value": "#c39b4e",
+      "use": "Bottom stop of brass button gradients"
+    },
+    "parchment": {
+      "value": "#f4e7c8",
+      "use": "Panel and plaque background"
+    },
+    "parchment-light": {
+      "value": "#fffaf0",
+      "use": "Rows, cards and inset fields on parchment"
+    },
+    "danger": {
+      "value": "#b5442e",
+      "use": "Close button, current-level ring, NOW badge"
+    },
+    "fire-top": {
+      "value": "#c9553a",
+      "use": "FIRE button gradient top"
+    },
+    "fire-bottom": {
+      "value": "#a13a24",
+      "use": "FIRE button gradient bottom"
+    },
+    "success": {
+      "value": "#2e7d32",
+      "use": "Cleared / completed state"
+    },
+    "scrim": {
+      "value": "rgba(40, 30, 18, 0.5)",
+      "use": "Dim behind modals"
+    }
+  },
+  "derived": {
+    "stroke-outer": "rgba(75, 59, 42, 0.30)",
+    "stroke-inner": "rgba(143, 112, 71, 0.45)",
+    "disabled-fill": "rgba(143, 112, 71, 0.20)",
+    "disabled-text": "rgba(75, 59, 42, 0.50)",
+    "shadow-drop": "rgba(75, 59, 42, 0.40)",
+    "shadow-ambient": "rgba(0, 0, 0, 0.28)",
+    "highlight-inset": "rgba(255, 255, 255, 0.50)"
+  },
+  "world": {
+    "sky-top": "#7ecfe4",
+    "sky-bottom": "#b6e6ee",
+    "hill-far": "#8ecf6a",
+    "hill-mid": "#7cc267",
+    "hill-near": "#3f9a44",
+    "ground": "#2f7a35",
+    "grass-blade": "#4bb14e"
+  },
+  "type": {
+    "display": {
+      "family": "Lilita One",
+      "use": "Panel titles, numerals, button labels",
+      "tracking": "0.06em–0.14em"
+    },
+    "body": {
+      "family": "Nunito",
+      "weight": 800,
+      "use": "Level names, row labels"
+    },
+    "meta": {
+      "family": "IBM Plex Mono",
+      "weight": 500,
+      "use": "Small caps labels (STONES, CHAPTER I), tracking 0.16em–0.20em"
+    }
+  },
+  "rules": {
+    "panel-stroke": "3px ink-muted, then 6px ink at 25–30% opacity",
+    "button-depth": "inset 0 3px 0 highlight-inset, drop 0 5px 0 shadow-drop",
+    "radius": { "panel": 6, "card": 6, "pill": 999 },
+    "min-touch-target": 48,
+    "saturation-rule": "FIRE is the only fully saturated element on screen"
+  }
+}

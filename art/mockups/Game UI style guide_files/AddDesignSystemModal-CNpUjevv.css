@@ -1,0 +1,1 @@
+@keyframes om-ds-blink{0%,49%{opacity:1}50%,to{opacity:0}}.om-ds-cursor{animation:1s step-end infinite om-ds-blink}
