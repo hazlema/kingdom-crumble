@@ -17,8 +17,22 @@ func _ready() -> void:
 func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> void:
 	_path = entry["path"]
 	%Title.text = entry["title"]
-	%StateIcon.text = "✓" if cleared else ("🔒" if not unlocked else "")
-	%StateIcon.visible = %StateIcon.text != ""
+	# Owner icon art auto-preferred when present (art/assets/ui/
+	# state_cleared.png / state_locked.png); glyph fallback otherwise.
+	# The icon column is always reserved so titles align across cards.
+	var state_img := ""
+	if cleared:
+		state_img = "res://art/assets/ui/state_cleared.png"
+	elif not unlocked:
+		state_img = "res://art/assets/ui/state_locked.png"
+	if state_img != "" and ResourceLoader.exists(state_img):
+		%StateTex.texture = load(state_img)
+		%StateTex.visible = true
+		%StateIcon.visible = false
+	else:
+		%StateTex.visible = false
+		%StateIcon.visible = true
+		%StateIcon.text = "✓" if cleared else ("🔒" if not unlocked else "")
 	if cleared:
 		%StateIcon.add_theme_color_override("font_color", Color(0.1804, 0.4902, 0.1961, 1))
 	else:
