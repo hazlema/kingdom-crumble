@@ -11,6 +11,9 @@ const LEVEL_CARD := preload("res://scenes/ui/level_card.tscn")
 
 func _ready() -> void:
 	%CloseBtn.pressed.connect(hide)
+	get_viewport().size_changed.connect(func() -> void:
+		if visible:
+			_position_close())
 
 
 func open(tier: String) -> void:
@@ -33,6 +36,12 @@ func open(tier: String) -> void:
 			hide())
 	%ClearCount.text = "%d OF %d CLEARED" % [cleared_count, chain.size()]
 	show()
+	_position_close.call_deferred()
+
+
+func _position_close() -> void:
+	%CloseBtn.size = Vector2(44, 44)
+	%CloseBtn.global_position = %Panel.global_position + Vector2(%Panel.size.x - 22.0, -22.0)
 
 
 func _current_stem() -> String:

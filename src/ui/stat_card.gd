@@ -40,7 +40,7 @@ func set_buffs(buffs: Array[StringName]) -> void:
 		c.queue_free()
 	for b in buffs:
 		var icon := TextureRect.new()
-		icon.custom_minimum_size = Vector2(26, 26)
+		icon.custom_minimum_size = Vector2(32, 32)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.texture = EditorAssets.texture_for(BUFF_ICONS.get(b, ""))

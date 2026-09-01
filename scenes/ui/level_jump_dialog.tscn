@@ -35,6 +35,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel"]
@@ -78,23 +79,15 @@ columns = 3
 theme_override_constants/h_separation = 14
 theme_override_constants/v_separation = 14
 
-[node name="CloseBtn" type="Button" parent="Center/Panel"]
+[node name="CloseBtn" type="Button" parent="."]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 44)
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -22.0
-offset_top = -22.0
-offset_right = 22.0
-offset_bottom = 22.0
 theme_override_styles/normal = SubResource("close_bg")
 theme_override_styles/hover = SubResource("close_bg")
 theme_override_styles/pressed = SubResource("close_bg")
 theme_override_fonts/font = ExtResource("f_mono")
 theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(1, 0.9804, 0.9412, 1)
+theme_override_colors/font_color = Color(0.9569, 0.9059, 0.7843, 1)
 text = "✕"

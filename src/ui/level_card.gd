@@ -19,6 +19,10 @@ func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> vo
 	%Title.text = entry["title"]
 	%StateIcon.text = "✓" if cleared else ("🔒" if not unlocked else "")
 	%StateIcon.visible = %StateIcon.text != ""
+	if cleared:
+		%StateIcon.add_theme_color_override("font_color", Color(0.1804, 0.4902, 0.1961, 1))
+	else:
+		%StateIcon.remove_theme_color_override("font_color")
 	disabled = not unlocked
 	%NowBadge.visible = is_now
 	var tex := _sibling_thumb(entry["path"])
@@ -28,9 +32,14 @@ func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> vo
 		%Thumb.texture = tex
 	%ThumbBox.modulate = Color(1, 1, 1) if unlocked else Color(0.55, 0.55, 0.55)
 	if is_now:
-		add_theme_stylebox_override("normal", _now_ring())
+		var ring := _now_ring()
+		add_theme_stylebox_override("normal", ring)
+		add_theme_stylebox_override("hover", ring)
+		add_theme_stylebox_override("pressed", ring)
 	else:
 		remove_theme_stylebox_override("normal")
+		remove_theme_stylebox_override("hover")
+		remove_theme_stylebox_override("pressed")
 
 
 func _sibling_thumb(level_path: String) -> Texture2D:

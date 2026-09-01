@@ -94,10 +94,10 @@ theme_override_styles/pressed = SubResource("fire_pressed")
 theme_override_styles/disabled = SubResource("fire_normal")
 theme_override_fonts/font = ExtResource("f_lilita")
 theme_override_font_sizes/font_size = 26
-theme_override_colors/font_color = Color(1, 0.9804, 0.9412, 1)
-theme_override_colors/font_hover_color = Color(1, 0.9804, 0.9412, 1)
-theme_override_colors/font_pressed_color = Color(1, 0.9804, 0.9412, 1)
-theme_override_colors/font_disabled_color = Color(1, 0.9804, 0.9412, 1)
+theme_override_colors/font_color = Color(0.9569, 0.9059, 0.7843, 1)
+theme_override_colors/font_hover_color = Color(0.9569, 0.9059, 0.7843, 1)
+theme_override_colors/font_pressed_color = Color(0.9569, 0.9059, 0.7843, 1)
+theme_override_colors/font_disabled_color = Color(0.9569, 0.9059, 0.7843, 1)
 text = "FIRE!"
 expand_icon = true
 
