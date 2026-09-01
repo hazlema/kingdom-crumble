@@ -31,8 +31,11 @@ dedicated scenes transcribed 1:1 from the comp HTML:
 - Restyle in place: `scenes/ui/level_jump_dialog.tscn`, `scenes/hud.tscn`
   (FIRE/MENU), pause menu inherits theme.
 
-Gradients (FIRE red top→bottom, brass button faces) are built with
-`GradientTexture2D` inside `StyleBoxTexture` resources — no shaders.
+Gradient depth is APPROXIMATED flat (StyleBoxTexture cannot round
+corners; shaders are out of scope): button faces use the light/top
+palette stop as bg with a thick bottom-ledge border in the dark stop
+(fire-top face + fire-bottom ledge; brass-light face + brass-dark
+ledge). Reads as the comp's depth; true gradients deferred.
 
 ## 2. StatCard — the unified HUD panel
 
