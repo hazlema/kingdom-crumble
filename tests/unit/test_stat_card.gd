@@ -46,3 +46,17 @@ func test_hud_forwards_to_card() -> void:
 	assert_eq(h.get_node("%StatCard/%ShotsValue").text, "3")
 	assert_eq(h.get_node("%StatCard/%CratesValue").text, "1/4")
 	assert_eq(h.get_node("%StatCard/%Title").text, "SKULL")
+
+
+func test_fire_icon_tracks_queue() -> void:
+	var h: Hud = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(h)
+	var fire: Button = h.get_node("%FireButton")
+	h.set_buffs([] as Array[StringName])
+	var plain: Texture2D = fire.icon
+	h.set_buffs([&"exploding"] as Array[StringName])
+	assert_ne(fire.icon, plain, "exploding queue changes the FIRE icon")
+	h.set_buffs([&"exploding", &"super_bounce"] as Array[StringName])
+	assert_eq(fire.icon, EditorAssets.texture_for("crate-gold"), "2+ types = gold")
+	h.set_buffs([] as Array[StringName])
+	assert_eq(fire.icon, plain, "empty queue restores the stone")

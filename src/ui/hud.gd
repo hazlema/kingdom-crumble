@@ -3,6 +3,8 @@ extends CanvasLayer
 
 signal menu_pressed
 
+const FIRE_STONE := preload("res://art/assets/ui/stone.png")
+
 
 func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: menu_pressed.emit())
@@ -14,6 +16,7 @@ func _ready() -> void:
 	%FireButton.focus_mode = Control.FOCUS_NONE
 	%FireButton.button_down.connect(func() -> void: Input.action_press("fire"))
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
+	%FireButton.icon = FIRE_STONE
 	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
 
 
@@ -59,8 +62,24 @@ func clear_banner() -> void:
 
 func set_buffs(buffs: Array[StringName]) -> void:
 	%StatCard.set_buffs(buffs)
+	%FireButton.icon = _fire_icon_for(buffs)
 
 
 func set_level_info(title: String, number: int) -> void:
 	%StatCard.set_title(title)
 	%StatCard.set_level_no(number)
+
+
+func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
+	var kinds := {}
+	for b in buffs:
+		kinds[b] = true
+	if kinds.size() >= 2:
+		return EditorAssets.texture_for("crate-gold")
+	if kinds.has(&"exploding"):
+		return EditorAssets.texture_for("skull")
+	if kinds.has(&"super_bounce"):
+		return EditorAssets.texture_for("crate-green")
+	if kinds.has(&"multishot"):
+		return EditorAssets.texture_for("crate-blue")
+	return FIRE_STONE
