@@ -6,6 +6,7 @@ extends RefCounted
 const FORMAT := 1
 const MAX_COORD := 100000.0
 const MAX_CRATES := 500
+const MAX_THUMB_CHARS := 600_000  # ~450 KB decoded — a 416x256 PNG fits many times over
 
 
 static func parse(text: String) -> LevelLayout:
@@ -23,6 +24,7 @@ static func parse(text: String) -> LevelLayout:
 	l.title = data["title"]
 	l.author = data.get("author", "")
 	l.background = data.get("background", "meadow")
+	l.thumb = str(data.get("thumb", ""))
 	l.shots = int(data.get("shots", 0))
 	for c in data["crates"]:
 		l.crates.append({"x": float(c["x"]), "y": float(c["y"]), "type": String(c["type"])})
@@ -70,6 +72,11 @@ static func validate(d: Dictionary) -> String:
 			var _ids: Variant = _trig[_event]
 			if _ids is Array and (_ids as Array).size() > 16:
 				return "too many effects"
+	var _thumb: Variant = d.get("thumb", "")
+	if not _thumb is String:
+		return "bad thumb"
+	if (_thumb as String).length() > MAX_THUMB_CHARS:
+		return "thumb too large"
 	return ""
 
 
@@ -84,4 +91,6 @@ static func serialize(layout: LevelLayout) -> String:
 	}
 	if layout.author != "":
 		d["author"] = layout.author
+	if layout.thumb != "":
+		d["thumb"] = layout.thumb
 	return JSON.stringify(d, "  ")

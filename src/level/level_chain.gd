@@ -20,6 +20,7 @@ static func entries() -> Array[Dictionary]:
 					"stem": path.get_file().get_basename(),
 					"path": path,
 					"title": layout.title,
+					"thumb": layout.thumb,
 				}
 			)
 		)

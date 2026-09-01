@@ -103,15 +103,24 @@ func _try_place(cell: Vector2i) -> void:
 func _on_save() -> void:
 	if save_path == "":
 		menu.open_save_as()
-	else:
-		var stem := save_path.get_file().get_basename()
-		LevelStore.save_user(current, stem)
+		return
+	var stem := save_path.get_file().get_basename()
+	await _capture_thumb()
+	LevelStore.save_user(current, stem)
 
 
 func _on_save_as(stem: String) -> void:
 	if current.title == "Untitled":
 		current.title = stem
+	await _capture_thumb()
 	save_path = LevelStore.save_user(current, stem)
+
+
+# A failed camera (headless, render hiccup) never wipes a good portrait.
+func _capture_thumb() -> void:
+	var shot: String = await ThumbCapture.grab(self)
+	if shot != "":
+		current.thumb = shot
 
 
 func _on_load(path: String) -> void:

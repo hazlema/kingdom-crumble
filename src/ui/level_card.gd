@@ -1,11 +1,17 @@
 class_name LevelCard
 extends Button
 
-# One level in the jump grid (pretty-pass spec §4). Thumb comes from
-# the level's sibling <stem>.png when it exists — the owner's two-file
-# convention; a future capture pipeline needs no changes here.
+# One level in the jump grid (pretty-pass spec §4). Thumb preference order:
+# 1. embedded base64 PNG stored in LevelLayout.thumb (written by the editor
+#    capture pipeline, spec §4); 2. sibling <stem>.png on disk (owner's
+#    two-file convention); 3. NO IMAGE placeholder.
 
 signal picked(path: String)
+
+# Compiled once for the class; validates base64 alphabet before decoding.
+# Marshalls.base64_to_raw emits an engine error on bad chars — untrusted data
+# must degrade silently (spec §4), so we pre-screen rather than let it through.
+static var _b64_rx := RegEx.create_from_string("^[A-Za-z0-9+/]*={0,2}$")
 
 var _path := ""
 
@@ -39,7 +45,9 @@ func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> vo
 		%StateIcon.remove_theme_color_override("font_color")
 	disabled = not unlocked
 	%NowBadge.visible = is_now
-	var tex := _sibling_thumb(entry["path"])
+	var tex := _embedded_thumb(entry.get("thumb", ""))
+	if tex == null:
+		tex = _sibling_thumb(entry["path"])
 	%Thumb.visible = tex != null
 	%NoImage.visible = tex == null
 	if tex != null:
@@ -65,6 +73,40 @@ func _sibling_thumb(level_path: String) -> Texture2D:
 		if img != null:
 			return ImageTexture.create_from_image(img)
 	return null
+
+
+# Hostile or corrupt blobs degrade silently to the sibling/NO IMAGE
+# fallbacks — a bad thumb can disappoint, never crash (spec §4).
+func _embedded_thumb(b64: String) -> Texture2D:
+	if b64 == "":
+		return null
+	# base64 encodes 3 bytes per 4 chars (with padding); any other length is
+	# invalid and Marshalls.base64_to_raw behavior is undefined — reject early.
+	if b64.length() % 4 != 0:
+		return null
+	# Alphabet check: Marshalls.base64_to_raw emits an engine error on bad
+	# chars which GUT counts as a test failure; untrusted data must not reach it.
+	if _b64_rx.search(b64) == null:
+		return null
+	var buf := Marshalls.base64_to_raw(b64)
+	if buf.is_empty():
+		return null
+	# load_png_from_buffer emits engine errors on non-PNG bytes (confirmed by
+	# test — 4 errors per call, GUT treats those as failures). Guard with the
+	# 8-byte PNG magic signature before calling into the driver. Residual: a
+	# correct magic prefix on a corrupt body still reaches the driver and logs
+	# its errors — the != OK guard keeps the degrade correct, so hostile files
+	# can spam the log but never crash or mis-render.
+	const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
+	if buf.size() < PNG_MAGIC.size():
+		return null
+	for i in PNG_MAGIC.size():
+		if buf[i] != PNG_MAGIC[i]:
+			return null
+	var img := Image.new()
+	if img.load_png_from_buffer(buf) != OK:
+		return null
+	return ImageTexture.create_from_image(img)
 
 
 func _now_ring() -> StyleBoxFlat:

@@ -7,6 +7,8 @@ extends Resource
 @export var title := "Untitled"
 @export var author := ""
 @export var background := "meadow"
+# Base64 PNG portrait captured by the editor at save ("" = none).
+@export var thumb := ""
 @export var shots := 0  # 0 = difficulty preset decides
 # Each entry: { "x": float, "y": float, "type": String }
 @export var crates: Array[Dictionary] = []

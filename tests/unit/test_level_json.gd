@@ -75,3 +75,39 @@ func test_too_many_trigger_ids_is_null():
 	# 17 entries
 	var json_str := '{"format":1,"title":"T","crates":[],"triggers":{"on_all_cleared":' + ids + "}}"
 	assert_null(LevelJson.parse(json_str))
+
+
+func test_thumb_round_trips() -> void:
+	var l := LevelLayout.new()
+	l.title = "T"
+	l.thumb = "aGVsbG8="
+	var parsed := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(parsed)
+	assert_eq(parsed.thumb, "aGVsbG8=")
+
+
+func test_absent_thumb_stays_empty_and_unwritten() -> void:
+	var l := LevelLayout.new()
+	l.title = "T"
+	var s := LevelJson.serialize(l)
+	assert_false(s.contains("thumb"), "empty thumb is not serialized")
+	assert_eq(LevelJson.parse(s).thumb, "")
+
+
+func test_non_string_thumb_rejected() -> void:
+	var d := {"format": 1, "title": "T", "crates": [], "thumb": 7}
+	assert_ne(LevelJson.validate(d), "")
+
+
+func test_thumb_cap_is_exact() -> void:
+	var at_cap := {
+		"format": 1, "title": "T", "crates": [], "thumb": "a".repeat(LevelJson.MAX_THUMB_CHARS)
+	}
+	assert_eq(LevelJson.validate(at_cap), "")
+	var over := {
+		"format": 1,
+		"title": "T",
+		"crates": [],
+		"thumb": "a".repeat(LevelJson.MAX_THUMB_CHARS + 1),
+	}
+	assert_ne(LevelJson.validate(over), "")
