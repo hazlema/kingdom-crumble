@@ -63,7 +63,10 @@ func _ready() -> void:
 		layout = LevelStore.load_level(path)
 		if layout == null:
 			layout = LevelStore.load_level(DEFAULT_LAYOUT)
-		current_stem = path.get_file().get_basename()
+			if layout != null:
+				current_stem = DEFAULT_LAYOUT.get_file().get_basename()
+		else:
+			current_stem = path.get_file().get_basename()
 	if layout == null:
 		# even the default failed (e.g. hand-edited to invalid) — the
 		# owner's dialog tells the player, then exits; empty field
