@@ -7,6 +7,7 @@ enum State { AIMING, FLIGHT, RESOLVING, CLEARED, FAILED }
 const STONE_SCENE := preload("res://scenes/stone.tscn")
 const HIT_TEXT_SCENE := preload("res://src/effects/HitTextEffect.tscn")
 const UNLOCK_FRAME_SCENE := preload("res://scenes/ui/rare_unlock_frame.tscn")
+const INVALID_LEVEL_SCENE := preload("res://scenes/ui/invalid_level.tscn")
 const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
@@ -58,9 +59,11 @@ func _ready() -> void:
 		if layout == null:
 			layout = LevelStore.load_level(DEFAULT_LAYOUT)
 	if layout == null:
-		# even the default failed (e.g. hand-edited to invalid) — an
-		# empty field beats a crash; validation must never take the game down
-		push_warning("No loadable layout (default included) — starting empty")
+		# even the default failed (e.g. hand-edited to invalid) — the
+		# owner's dialog tells the player, then exits; empty field
+		# underneath so nothing crashes in the meantime
+		push_warning("No loadable layout (default included)")
+		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
 	_spawn_crates()
 	shots_left = layout.shots if layout.shots > 0 \
