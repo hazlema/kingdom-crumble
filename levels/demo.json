@@ -1,15 +1,109 @@
 {
-  "format": 1,
-  "title": "Demo",
-  "author": "Kingdom Crumble",
   "background": "meadow",
-  "shots": 0,
   "crates": [
-    { "x": 1408, "y": 569, "type": "crate-wood" },
-    { "x": 1408, "y": 506, "type": "crate-wood" },
-    { "x": 1408, "y": 443, "type": "crate-wood" },
-    { "x": 1152, "y": 569, "type": "crate-ghost" },
-    { "x": 1664, "y": 569, "type": "crate-ghost" }
+	{
+	  "type": "crate-wood",
+	  "x": 1024.0,
+	  "y": 569.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1024.0,
+	  "y": 506.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1024.0,
+	  "y": 443.0
+	},
+	{
+	  "type": "skull",
+	  "x": 1024.0,
+	  "y": 380.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1280.0,
+	  "y": 569.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1280.0,
+	  "y": 506.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1280.0,
+	  "y": 443.0
+	},
+	{
+	  "type": "crate-blue",
+	  "x": 1280.0,
+	  "y": 380.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1536.0,
+	  "y": 569.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1536.0,
+	  "y": 506.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1536.0,
+	  "y": 443.0
+	},
+	{
+	  "type": "crate-ghost",
+	  "x": 1536.0,
+	  "y": 380.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1792.0,
+	  "y": 569.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1792.0,
+	  "y": 506.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 1792.0,
+	  "y": 443.0
+	},
+	{
+	  "type": "crate-gold",
+	  "x": 1792.0,
+	  "y": 380.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 2048.0,
+	  "y": 569.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 2048.0,
+	  "y": 506.0
+	},
+	{
+	  "type": "crate-wood",
+	  "x": 2048.0,
+	  "y": 443.0
+	},
+	{
+	  "type": "crate-green",
+	  "x": 2048.0,
+	  "y": 380.0
+	}
   ],
-  "triggers": { "on_all_cleared": ["confetti"] }
+  "format": 1,
+  "shots": 0,
+  "title": "power-ups",
+  "triggers": {}
 }

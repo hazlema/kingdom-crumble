@@ -57,6 +57,11 @@ func _ready() -> void:
 		layout = LevelStore.load_level(path)
 		if layout == null:
 			layout = LevelStore.load_level(DEFAULT_LAYOUT)
+	if layout == null:
+		# even the default failed (e.g. hand-edited to invalid) — an
+		# empty field beats a crash; validation must never take the game down
+		push_warning("No loadable layout (default included) — starting empty")
+		layout = LevelLayout.new()
 	_spawn_crates()
 	shots_left = layout.shots if layout.shots > 0 \
 		else Settings.preset.shots_per_level
