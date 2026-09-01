@@ -37,3 +37,11 @@ func test_save_preserves_existing_thumb_when_capture_fails() -> void:
 	assert_not_null(loaded)
 	if loaded != null:
 		assert_eq(loaded.thumb, "aGVsbG8=")
+
+
+func test_headless_save_never_pops_polaroid() -> void:
+	var editor := _editor()
+	editor.current.title = "T"
+	await editor._on_save_as("gut_polaroid_probe")
+	DirAccess.remove_absolute("user://levels/gut_polaroid_probe.json")
+	assert_false(editor.get_node("%Polaroid").visible)

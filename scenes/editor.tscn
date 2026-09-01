@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://src/editor/level_editor.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://src/editor/grid_overlay.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/editor_palette.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/editor_menu.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/polaroid.tscn" id="7"]
 
 [node name="LevelEditor" type="Node2D"]
 script = ExtResource("1")
@@ -32,4 +33,7 @@ limit_bottom = 700
 unique_name_in_owner = true
 
 [node name="EditorMenu" parent="Ui" instance=ExtResource("6")]
+unique_name_in_owner = true
+
+[node name="Polaroid" parent="Ui" instance=ExtResource("7")]
 unique_name_in_owner = true

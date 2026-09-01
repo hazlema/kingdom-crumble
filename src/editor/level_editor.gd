@@ -121,6 +121,7 @@ func _capture_thumb() -> void:
 	var shot: String = await ThumbCapture.grab(self)
 	if shot != "":
 		current.thumb = shot
+		%Polaroid.show_b64(shot, current.title)
 
 
 func _on_load(path: String) -> void:
