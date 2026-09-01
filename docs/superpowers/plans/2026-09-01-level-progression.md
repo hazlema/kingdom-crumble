@@ -770,3 +770,9 @@ git commit -m "feat: progression lives — clears log per tier, ENTER walks the 
 - AFTER merge: the owner-requested cleanup pass — gdformat over src/ and tests/ (if gdtoolkit available; otherwise skip formatting), dead-code scan, modularity/simplification review with fixes. Separate commits, suite green throughout.
 - Owner will rename built-ins to control order (stems are ordering keys now); renaming a stem orphans its checkmark — owner knows.
 - Dialog visuals deliberately bare — owner mockups later (KingdomDialog family).
+
+**Cleanup safety rule (owner, binding):** the cleanup/optimize pass starts
+ONLY from a fully committed, merged, green state — and runs on its own
+branch with per-concern commits (format / dead code / refactors separate),
+so any regression is a one-command revert. Feature work and cleanup never
+share a commit.
