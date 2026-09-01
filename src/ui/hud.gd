@@ -45,6 +45,17 @@ func set_power(ratio: float) -> void:
 	%PowerBar.value = ratio
 
 
+# Short-lived level-title announcement at level start — clears itself
+# unless a real banner (lean bonus, cleared) has taken the stage since.
+func toast(text: String) -> void:
+	banner(text, "")
+	get_tree().create_timer(1.8).timeout.connect(
+		func() -> void:
+			if %Banner.text == text and not %BannerSub.visible:
+				clear_banner()
+	)
+
+
 func banner(title: String, sub: String) -> void:
 	%Banner.text = title
 	%BannerSub.text = sub

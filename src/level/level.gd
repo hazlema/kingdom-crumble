@@ -76,6 +76,8 @@ func _ready() -> void:
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
 	_spawn_crates()
+	if layout.title != "":
+		hud.toast(layout.title)
 	shots_left = layout.shots if layout.shots > 0 else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)

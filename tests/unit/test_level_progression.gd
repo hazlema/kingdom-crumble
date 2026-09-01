@@ -66,3 +66,11 @@ func test_deleted_level_falls_back_to_demo_stem() -> void:
 	add_child_autofree(l)
 	assert_eq(l.current_stem, "demo", "fallback must use demo's stem, not the ghost path")
 	assert_not_null(l.layout, "layout must not be null after fallback")
+
+func test_level_title_toast_shows_then_clears() -> void:
+	var l := _level_for_first_builtin()
+	await wait_physics_frames(2)
+	assert_eq(l.hud.get_node("%Banner").text, l.layout.title, "title toast on start")
+	assert_true(l.hud.get_node("%BannerCenter").visible)
+	await wait_seconds(2.2)
+	assert_false(l.hud.get_node("%BannerCenter").visible, "toast clears itself")
