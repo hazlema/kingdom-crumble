@@ -89,9 +89,9 @@ title "LEVELS", ScrollContainer + VBox of one Button per chain entry.
   button text `"✓  Title"` when cleared in this tier, plain `"Title"` when
   unlocked-uncleared, `"🔒  Title"` + `disabled = true` when locked.
   Current level highlighted (button `flat = false` vs others — minimal).
-- Esc closes (popup default). Not modal-paused: opened FROM the pause menu
-  the tree is already paused; opened via **L** it pauses nothing (quick
-  glance + jump).
+- Esc closes. Never modal-paused: the pause menu closes (and unpauses)
+  before the dialog opens, and **L** pauses nothing — the world keeps
+  moving behind the picker in both paths (blessed at final review).
 - Picking emits `level_picked` and hides.
 
 ## 5. Level integration
