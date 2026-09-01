@@ -64,3 +64,21 @@ func test_header_counts_cleared() -> void:
 		if Progress.is_cleared("chill", e["stem"]):
 			cleared += 1
 	assert_eq(d.get_node("%ClearCount").text, "%d OF %d CLEARED" % [cleared, chain.size()])
+
+
+func test_close_btn_positioned_and_not_covering_panel() -> void:
+	var d := _dialog()
+	d.open("chill")
+	# Two frames so deferred _position_close has run
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var btn: Button = d.get_node("%CloseBtn")
+	# Size must be close to 44x44 (containers may stretch; we just assert it's not huge)
+	assert_almost_eq(btn.size.x, 44.0, 2.0, "CloseBtn width should be ~44px")
+	assert_almost_eq(btn.size.y, 44.0, 2.0, "CloseBtn height should be ~44px")
+	# CloseBtn must NOT cover the panel center
+	var panel: PanelContainer = d.get_node("%Panel")
+	assert_false(
+		btn.get_global_rect().has_point(panel.get_global_rect().get_center()),
+		"CloseBtn must not cover the Panel center"
+	)
