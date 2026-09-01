@@ -31,6 +31,9 @@ func test_save_preserves_existing_thumb_when_capture_fails() -> void:
 	editor.current.thumb = "aGVsbG8="
 	await editor._on_save_as("gut_thumb_keeper")
 	var loaded := LevelStore.load_level("user://levels/gut_thumb_keeper.json")
-	assert_not_null(loaded)
-	assert_eq(loaded.thumb, "aGVsbG8=")
+	# Clean up before assertions so a script error on null access can't strand
+	# the file in the real user://levels directory.
 	DirAccess.remove_absolute("user://levels/gut_thumb_keeper.json")
+	assert_not_null(loaded)
+	if loaded != null:
+		assert_eq(loaded.thumb, "aGVsbG8=")

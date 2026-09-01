@@ -19,7 +19,11 @@ static func grab(editor: LevelEditor) -> String:
 	var ui: CanvasLayer = editor.get_node("Ui")
 	var rect := ThumbFraming.capture_rect(editor.current.crates)
 
+	# Freeze input too: set_process(false) alone still delivers _unhandled_input,
+	# so Ctrl+S or Ctrl+T during the awaited window would start a second grab
+	# or change scene — both leave camera and UI permanently broken.
 	editor.set_process(false)
+	editor.set_process_unhandled_input(false)
 	var was_overlay := overlay.visible
 	var was_ui := ui.visible
 	var saved_pos := cam.position
@@ -36,6 +40,9 @@ static func grab(editor: LevelEditor) -> String:
 	cam.zoom = Vector2(view_scale, view_scale)
 	cam.position = rect.get_center()
 	cam.force_update_scroll()
+	# Teleporting the camera without this may capture a mid-interpolation frame
+	# when physics_interpolation is enabled in project settings.
+	cam.reset_physics_interpolation()
 
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
@@ -61,7 +68,10 @@ static func grab(editor: LevelEditor) -> String:
 	cam.limit_top = saved_limits[1]
 	cam.limit_right = saved_limits[2]
 	cam.limit_bottom = saved_limits[3]
+	# Avoid a visible smear frame when the camera snaps back to its saved position.
+	cam.reset_physics_interpolation()
 	overlay.visible = was_overlay
 	ui.visible = was_ui
 	editor.set_process(true)
+	editor.set_process_unhandled_input(true)
 	return b64
