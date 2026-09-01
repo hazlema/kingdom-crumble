@@ -110,6 +110,7 @@ func _physics_process(delta: float) -> void:
 func _spawn_crates() -> void:
 	for crate in LevelBuilder.spawn_crates(self, layout, false, _crate_texture):
 		crate.knocked_out.connect(_on_crate_knocked)
+	hud.set_crates.call_deferred(layout.crates.size(), layout.crates.size())
 
 func _crate_texture(id: String) -> Texture2D:
 	return EditorAssets.texture_for(id)
@@ -248,6 +249,7 @@ static func count_standing_rotations(rotations: Array) -> int:
 	return n
 
 func _on_crate_knocked(crate: Crate) -> void:
+	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
 	# the once-ever ceremony never fires — the plain pool rolls instead.
 	var verdict := PowerupRules.route(crate.type_id,

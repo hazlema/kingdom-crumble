@@ -54,11 +54,30 @@ theme_override_constants/outline_size = 10
 theme_override_font_sizes/font_size = 30
 text = "STONES: 0"
 
+[node name="CratesRow" type="HBoxContainer" parent="."]
+offset_left = 24.0
+offset_top = 114.0
+theme_override_constants/separation = 8
+
+[node name="CrateIcon" type="TextureRect" parent="CratesRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(26, 26)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Crates" type="Label" parent="CratesRow"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(0.965, 0.933, 0.855, 1)
+theme_override_colors/font_outline_color = Color(0.29, 0.2, 0.145, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 20
+text = "CRATES: 0/0"
+
 [node name="BuffRow" type="HBoxContainer" parent="."]
 offset_left = 24.0
-offset_top = 116.0
+offset_top = 150.0
 offset_right = 400.0
-offset_bottom = 152.0
+offset_bottom = 186.0
 theme_override_constants/separation = 6
 
 [node name="MenuButton" type="Button" parent="."]

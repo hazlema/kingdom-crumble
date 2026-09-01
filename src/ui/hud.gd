@@ -29,6 +29,11 @@ func _notification(what: int) -> void:
 func set_shots(n: int) -> void:
 	%Shots.text = "STONES: %d" % n
 
+func set_crates(standing: int, total: int) -> void:
+	if %CrateIcon.texture == null:
+		%CrateIcon.texture = EditorAssets.texture_for("crate-wood")
+	%Crates.text = "CRATES: %d/%d" % [standing, total]
+
 func set_power(ratio: float) -> void:
 	# always on screen (owner call) — an empty bar reads "ready", and a
 	# bar that vanishes mid-stick was hiding the stuck-fire bug too
