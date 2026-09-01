@@ -14,6 +14,9 @@ const RESOLVE_MAX := 6.0
 
 # Set this before changing to the level scene to play any layout —
 # built-in, or a player-made file from user://levels/.
+# DELIBERATELY PERSISTENT (not consume-and-clear like the statics
+# below): Restart and FAILED-retry reload the current level through
+# this path. Every navigation (menu, advance, jump) sets it first.
 static var next_layout_path := ""
 # Set to a LevelLayout to bypass the path entirely (cleared in _ready).
 static var next_layout: LevelLayout = null
@@ -87,9 +90,8 @@ func _ready() -> void:
 			func() -> void: get_tree().change_scene_to_file(
 				"res://scenes/main_menu.tscn"))
 		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
-		$PauseMenu.set_editor_mode(_editor_session)
-	if has_node("PauseMenu"):
 		$PauseMenu.jump_levels_requested.connect(_open_jump)
+		$PauseMenu.set_editor_mode(_editor_session)
 	%JumpDialog.level_picked.connect(func(picked: String) -> void:
 		Level.next_layout_path = picked
 		get_tree().paused = false
