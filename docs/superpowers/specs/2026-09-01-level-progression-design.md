@@ -13,9 +13,14 @@ Owner-approved design, 2026-09-01.
 - **Per-tier progression** ("make it so"): chill/heartpumper/hardcore each
   track their own completion — `chill/pineapple` and `hardcore/pineapple`
   are separate achievements. Adds a longevity dimension.
-- **Keys are bare stems** (owner call over namespacing, eyes open): a user
-  level sharing a built-in's stem shares its checkmark. Benign in a solo
-  game; migrate to namespaced keys if/when level sharing ships.
+- **Progress is keyed by plain filename** (owner call, kept simple):
+  beating `pineapple.json` records `pineapple = true` for that tier — no
+  tracking of which folder it came from. Known quirk: if a player names
+  their own level the same as a built-in, the game can't tell them apart,
+  so beating either checkmarks both (and may unlock one level early).
+  Nothing breaks — worst case is an unearned checkmark. If level sharing
+  ever ships and name clashes get common, switch to folder-prefixed keys
+  (`user/pineapple`) — a small migration, planned for never until needed.
 - **Deletion-resilient**: progress is keyed by name; deleting a level leaves
   its entry harmless, re-adding restores its checkmark. The Pineapple rule:
   a new level inserted alphabetically between cleared levels is playable iff
