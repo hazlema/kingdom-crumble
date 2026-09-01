@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="9"]
 [ext_resource type="PackedScene" uid="uid://benv5ronm3k9r" path="res://scenes/environment.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/level_jump_dialog.tscn" id="11"]
 
 [node name="Level" type="Node2D" unique_id=429232250]
 script = ExtResource("1")
@@ -24,5 +25,8 @@ limit_bottom = 700
 script = ExtResource("4")
 
 [node name="Hud" parent="." unique_id=1637513669 instance=ExtResource("5")]
+
+[node name="JumpDialog" parent="Hud" instance=ExtResource("11")]
+unique_name_in_owner = true
 
 [node name="PauseMenu" parent="." instance=ExtResource("9")]

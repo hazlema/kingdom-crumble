@@ -36,6 +36,8 @@ var _backdrop := BackdropMode.new()
 var _checking := false
 var _pristine: LevelLayout = null
 var _editor_session := false
+var current_stem := ""
+var _chain_end := false
 
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
@@ -58,6 +60,7 @@ func _ready() -> void:
 		layout = LevelStore.load_level(path)
 		if layout == null:
 			layout = LevelStore.load_level(DEFAULT_LAYOUT)
+		current_stem = path.get_file().get_basename()
 	if layout == null:
 		# even the default failed (e.g. hand-edited to invalid) — the
 		# owner's dialog tells the player, then exits; empty field
@@ -85,10 +88,18 @@ func _ready() -> void:
 				"res://scenes/main_menu.tscn"))
 		$PauseMenu.back_to_editor_requested.connect(_back_to_editor)
 		$PauseMenu.set_editor_mode(_editor_session)
+	if has_node("PauseMenu"):
+		$PauseMenu.jump_levels_requested.connect(_open_jump)
+	%JumpDialog.level_picked.connect(func(picked: String) -> void:
+		Level.next_layout_path = picked
+		get_tree().paused = false
+		get_tree().reload_current_scene())
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("backdrop_toggle"):
 		_apply_backdrop_alpha(_backdrop.toggle())
+	if not _editor_session and Input.is_action_just_pressed("jump_levels"):
+		_open_jump()
 	_update_crate_check()
 	match state:
 		State.AIMING:
@@ -112,6 +123,13 @@ func _physics_process(delta: float) -> void:
 					_back_to_editor()
 				else:
 					if state == State.CLEARED:
+						if _chain_end:
+							get_tree().change_scene_to_file(
+								"res://scenes/main_menu.tscn")
+							return
+						var nxt := _next_path_after_clear()
+						if nxt != "":
+							Level.next_layout_path = nxt
 						Level.carry_buffs = pending_buffs.duplicate()
 					get_tree().reload_current_scene()
 
@@ -162,9 +180,14 @@ func _settle() -> void:
 	var standing := count_standing(_crates())
 	if standing == 0:
 		state = State.CLEARED
-		var _cleared_sub := "press ENTER to return to editor" if _editor_session \
-				else "press ENTER to play again"
-		hud.banner("KINGDOM CRUMBLED!", _cleared_sub)
+		_record_clear()
+		_chain_end = current_stem != "" and _next_path_after_clear() == ""
+		if _editor_session:
+			hud.banner("KINGDOM CRUMBLED!", "press ENTER to return to editor")
+		elif _chain_end:
+			hud.banner("KINGDOM CONQUERED!", "press ENTER for the throne room")
+		else:
+			hud.banner("KINGDOM CRUMBLED!", "press ENTER for the next level")
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
 		if not effects.is_empty():
 			var center := Vector2(1400, 400)
@@ -280,6 +303,22 @@ func _on_crate_knocked(crate: Crate) -> void:
 			var frame: RareUnlockFrame = UNLOCK_FRAME_SCENE.instantiate()
 			hud.add_child(frame)
 			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
+
+func _open_jump() -> void:
+	%JumpDialog.open(Settings.tier)
+
+# Log the clear — never from the editor sandbox, never for pathless
+# layouts (spec: testing is just testing).
+func _record_clear() -> void:
+	if _editor_session or current_stem == "":
+		return
+	Progress.mark_cleared(Settings.tier, current_stem)
+
+# "" when the chain is conquered.
+func _next_path_after_clear() -> String:
+	var chain := LevelChain.entries()
+	var nxt := LevelChain.next_index_after(chain, current_stem)
+	return "" if nxt == -1 else chain[nxt]["path"]
 
 func _floaty(text: String, world_pos: Vector2) -> void:
 	var fx: HitTextEffect = HIT_TEXT_SCENE.instantiate()
