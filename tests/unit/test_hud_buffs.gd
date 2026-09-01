@@ -11,14 +11,14 @@ func test_set_buffs_draws_one_icon_per_charge() -> void:
 	var h := _hud()
 	h.set_buffs([&"exploding", &"exploding", &"multishot"] as Array[StringName])
 	await wait_frames(1)
-	assert_eq(h.get_node("BuffRow").get_child_count(), 3)
+	assert_eq(h.get_node("%StatCard/%BuffRow").get_child_count(), 3)
 
 
 func test_set_crates_shows_standing_over_total() -> void:
 	var h := _hud()
 	h.set_crates(12, 15)
-	assert_eq(h.get_node("%Crates").text, "CRATES: 12/15")
-	assert_not_null(h.get_node("%CrateIcon").texture, "icon assigned on first update")
+	assert_eq(h.get_node("%StatCard/%CratesValue").text, "12/15")
+	assert_not_null(h.get_node("%StatCard/%CrateIcon").texture, "icon assigned on first update")
 
 
 func test_set_buffs_empty_clears_row() -> void:
@@ -28,7 +28,7 @@ func test_set_buffs_empty_clears_row() -> void:
 	h.set_buffs([] as Array[StringName])
 	await wait_frames(2)
 	var live := 0
-	for c in h.get_node("BuffRow").get_children():
+	for c in h.get_node("%StatCard/%BuffRow").get_children():
 		if not c.is_queued_for_deletion():
 			live += 1
 	assert_eq(live, 0)

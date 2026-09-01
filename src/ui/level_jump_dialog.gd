@@ -1,15 +1,19 @@
 class_name LevelJumpDialog
 extends Control
 
-# Bare-bones in-game level picker (progression spec §4). Deliberately
-# plain — the owner stylizes later. Rebuilt on every open so folder
-# changes and fresh checkmarks always show.
+# Pretty-pass card grid level picker (progression spec §4). Rebuilt on
+# every open so folder changes and fresh checkmarks always show.
 
 signal level_picked(path: String)
+
+const LEVEL_CARD := preload("res://scenes/ui/level_card.tscn")
 
 
 func _ready() -> void:
 	%CloseBtn.pressed.connect(hide)
+	get_viewport().size_changed.connect(func() -> void:
+		if visible:
+			_position_close())
 
 
 func open(tier: String) -> void:
@@ -17,25 +21,34 @@ func open(tier: String) -> void:
 		%List.remove_child(c)
 		c.queue_free()
 	var chain := LevelChain.entries()
+	var current := _current_stem()
+	var cleared_count := 0
 	for i in chain.size():
-		var b := Button.new()
 		var stem: String = chain[i]["stem"]
-		var title: String = chain[i]["title"]
-		if Progress.is_cleared(tier, stem):
-			b.text = "✓  %s" % title
-		elif LevelChain.is_unlocked(chain, i, tier):
-			b.text = title
-		else:
-			b.text = "🔒  %s" % title
-			b.disabled = true
-		var path: String = chain[i]["path"]
-		b.pressed.connect(
-			func() -> void:
-				level_picked.emit(path)
-				hide()
-		)
-		%List.add_child(b)
+		var cleared := Progress.is_cleared(tier, stem)
+		if cleared:
+			cleared_count += 1
+		var card: LevelCard = LEVEL_CARD.instantiate()
+		%List.add_child(card)
+		card.setup(chain[i], cleared, LevelChain.is_unlocked(chain, i, tier), stem == current)
+		card.picked.connect(func(path: String) -> void:
+			level_picked.emit(path)
+			hide())
+	%ClearCount.text = "%d OF %d CLEARED" % [cleared_count, chain.size()]
 	show()
+	_position_close.call_deferred()
+
+
+func _position_close() -> void:
+	%CloseBtn.size = Vector2(44, 44)
+	%CloseBtn.global_position = %Panel.global_position + Vector2(%Panel.size.x - 22.0, -22.0)
+
+
+func _current_stem() -> String:
+	var scene := get_tree().current_scene
+	if scene != null and "current_stem" in scene:
+		return scene.current_stem
+	return ""
 
 
 func _input(event: InputEvent) -> void:

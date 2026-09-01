@@ -78,6 +78,13 @@ func _ready() -> void:
 	_spawn_crates()
 	if layout.title != "":
 		hud.toast(layout.title)
+	var _chain := LevelChain.entries()
+	var _pos := -1
+	for i in _chain.size():
+		if _chain[i]["stem"] == current_stem and current_stem != "":
+			_pos = i + 1
+			break
+	hud.set_level_info(layout.title, _pos)
 	shots_left = layout.shots if layout.shots > 0 else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)

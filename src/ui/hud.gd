@@ -3,11 +3,7 @@ extends CanvasLayer
 
 signal menu_pressed
 
-const BUFF_ICONS := {
-	&"exploding": "skull",
-	&"multishot": "crate-blue",
-	&"super_bounce": "crate-green",
-}
+const FIRE_STONE := preload("res://art/assets/ui/stone.png")
 
 
 func _ready() -> void:
@@ -20,6 +16,8 @@ func _ready() -> void:
 	%FireButton.focus_mode = Control.FOCUS_NONE
 	%FireButton.button_down.connect(func() -> void: Input.action_press("fire"))
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
+	%FireButton.icon = FIRE_STONE
+	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
 
 
 # Alt-tabbing away mid-charge eats the release the same way.
@@ -29,20 +27,15 @@ func _notification(what: int) -> void:
 
 
 func set_shots(n: int) -> void:
-	%Shots.text = "STONES: %d" % n
+	%StatCard.set_shots(n)
 
 
 func set_crates(standing: int, total: int) -> void:
-	if %CrateIcon.texture == null:
-		%CrateIcon.texture = EditorAssets.texture_for("crate-wood")
-	%Crates.text = "CRATES: %d/%d" % [standing, total]
+	%StatCard.set_crates(standing, total)
 
 
 func set_power(ratio: float) -> void:
-	# always on screen (owner call) — an empty bar reads "ready", and a
-	# bar that vanishes mid-stick was hiding the stuck-fire bug too
-	%PowerBar.visible = true
-	%PowerBar.value = ratio
+	%StatCard.set_power(ratio)
 
 
 # Short-lived level-title announcement at level start — clears itself
@@ -68,15 +61,25 @@ func clear_banner() -> void:
 
 
 func set_buffs(buffs: Array[StringName]) -> void:
-	# remove_child before queue_free: chain collections call this twice
-	# in one physics frame and stale icons must not be double-counted
-	for c in $BuffRow.get_children():
-		$BuffRow.remove_child(c)
-		c.queue_free()
+	%StatCard.set_buffs(buffs)
+	%FireButton.icon = _fire_icon_for(buffs)
+
+
+func set_level_info(title: String, number: int) -> void:
+	%StatCard.set_title(title)
+	%StatCard.set_level_no(number)
+
+
+func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
+	var kinds := {}
 	for b in buffs:
-		var icon := TextureRect.new()
-		icon.custom_minimum_size = Vector2(32, 32)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture = EditorAssets.texture_for(BUFF_ICONS.get(b, ""))
-		$BuffRow.add_child(icon)
+		kinds[b] = true
+	if kinds.size() >= 2:
+		return EditorAssets.texture_for("crate-gold")
+	if kinds.has(&"exploding"):
+		return EditorAssets.texture_for("skull")
+	if kinds.has(&"super_bounce"):
+		return EditorAssets.texture_for("crate-green")
+	if kinds.has(&"multishot"):
+		return EditorAssets.texture_for("crate-blue")
+	return FIRE_STONE
