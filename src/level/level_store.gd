@@ -1,29 +1,25 @@
 class_name LevelStore
 extends RefCounted
 
-# Level files on disk. Built-ins ship in res://levels (ordered by
-# campaign.json); player levels live in user://levels. All JSON.
+# Built-ins ship in res://levels; player levels live in user://levels. Both list alphabetically — stems are the ordering tool.
 
 const BUILTIN_DIR := "res://levels"
 const USER_DIR := "user://levels"
 
-static func campaign() -> Array[String]:
-	var out: Array[String] = []
-	var text := _read(BUILTIN_DIR + "/campaign.json")
-	var data: Variant = JSON.parse_string(text) if text != "" else null
-	if data is Array:
-		for stem in data:
-			out.append("%s/%s.json" % [BUILTIN_DIR, String(stem)])
-	return out
+static func list_builtin() -> Array[String]:
+	return _list_dir(BUILTIN_DIR)
 
 static func list_user() -> Array[String]:
+	return _list_dir(USER_DIR)
+
+static func _list_dir(dir_path: String) -> Array[String]:
 	var out: Array[String] = []
-	var dir := DirAccess.open(USER_DIR)
+	var dir := DirAccess.open(dir_path)
 	if dir == null:
 		return out
 	for f in dir.get_files():
 		if f.get_extension() == "json":
-			out.append("%s/%s" % [USER_DIR, f])
+			out.append("%s/%s" % [dir_path, f])
 	out.sort()
 	return out
 

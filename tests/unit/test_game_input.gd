@@ -9,3 +9,7 @@ func test_ensure_actions_is_idempotent():
 	GameInput.ensure_actions()
 	GameInput.ensure_actions()
 	assert_true(InputMap.has_action("fire"))
+
+func test_jump_levels_action_registered() -> void:
+	GameInput.ensure_actions()
+	assert_true(InputMap.has_action("jump_levels"))

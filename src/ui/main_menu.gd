@@ -10,6 +10,9 @@ func _ready() -> void:
 
 func _start(tier: String) -> void:
 	Settings.load_tier(tier)
+	var chain := LevelChain.entries()
+	if not chain.is_empty():
+		Level.next_layout_path = chain[LevelChain.frontier(chain, tier)]["path"]
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 func _quit() -> void:
