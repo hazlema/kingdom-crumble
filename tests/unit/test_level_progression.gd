@@ -9,6 +9,7 @@ func before_each() -> void:
 func after_each() -> void:
 	DirAccess.remove_absolute(TEST_PATH)
 	Progress.use_path("user://progress.cfg")
+	Level.next_layout_path = ""
 
 func _level_for_first_builtin() -> Level:
 	Level.next_layout_path = LevelStore.list_builtin()[0]
@@ -49,3 +50,10 @@ func test_jump_dialog_present_and_wired() -> void:
 	var dialog: LevelJumpDialog = l.get_node("%JumpDialog")
 	assert_not_null(dialog)
 	assert_false(dialog.visible)
+
+func test_deleted_level_falls_back_to_demo_stem() -> void:
+	Level.next_layout_path = "user://levels/definitely_deleted_ghost.json"
+	var l: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(l)
+	assert_eq(l.current_stem, "demo", "fallback must use demo's stem, not the ghost path")
+	assert_not_null(l.layout, "layout must not be null after fallback")
