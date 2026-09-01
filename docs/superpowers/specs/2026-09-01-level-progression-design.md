@@ -4,8 +4,12 @@ Owner-approved design, 2026-09-01.
 
 ## 0. Canon decisions (owner)
 
-- **The chain**: campaign levels in `campaign.json` order, then user levels
-  sorted alphabetically by stem. Clear the previous level to unlock the next.
+- **The chain**: built-in levels sorted alphabetically by stem, then user
+  levels sorted alphabetically by stem. Clear the previous level to unlock
+  the next. NO manifest — `campaign.json` is deleted (owner simplification,
+  2026-09-01): the owner controls built-in order via naming, and since the
+  UI displays titles, stems are free to be ordering keys (`10_meadow` shows
+  as "Meadow Meltdown"). Caveat: renaming a stem orphans its checkmark.
 - **Per-tier progression** ("make it so"): chill/heartpumper/hardcore each
   track their own completion — `chill/pineapple` and `hardcore/pineapple`
   are separate achievements. Adds a longevity dimension.
@@ -34,8 +38,10 @@ folder changes are instantly reflected.
 
 - `static func entries() -> Array[Dictionary]` — ordered chain:
   `[{ "stem": String, "path": String, "title": String }]`.
-  Campaign first (from `LevelStore.campaign()`, stem = file basename),
-  then `LevelStore.list_user()` sorted by stem. Unloadable files are
+  Built-ins first (`LevelStore.list_builtin()`, alphabetical by stem —
+  NEW function replacing `campaign()`, same directory-listing shape as
+  `list_user()`; `campaign()` and `levels/campaign.json` are deleted),
+  then `LevelStore.list_user()` alphabetical. Unloadable files are
   skipped with a `push_warning` (a broken user file must not break the
   chain). Titles read from the parsed layout.
 - `static func is_unlocked(chain: Array, index: int, tier: String) -> bool`
@@ -125,4 +131,5 @@ title "LEVELS", ScrollContainer + VBox of one Button per chain entry.
   level_picked emits path, rebuild-on-open reflects a changed folder.
 - Level: clearing writes the right tier+stem; editor session does not;
   ENTER advances to next path; end-of-chain goes to menu; jump drops buffs.
-- Shipped-levels test already guards chain inputs.
+- Shipped-levels test guards chain inputs; its campaign-manifest test is
+  replaced by a list_builtin() coverage test (every listed built-in loads).
