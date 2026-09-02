@@ -7,6 +7,7 @@ const FORMAT := 1
 const MAX_COORD := 100000.0
 const MAX_CRATES := 500
 const MAX_THUMB_CHARS := 600_000  # ~450 KB decoded — a 416x256 PNG fits many times over
+const MAX_INTRO_CHARS := 600  # a hearty paragraph; hard wall for blobs
 
 
 static func parse(text: String) -> LevelLayout:
@@ -25,6 +26,7 @@ static func parse(text: String) -> LevelLayout:
 	l.author = data.get("author", "")
 	l.background = data.get("background", "meadow")
 	l.thumb = str(data.get("thumb", ""))
+	l.intro = str(data.get("intro", ""))
 	l.shots = int(data.get("shots", 0))
 	for c in data["crates"]:
 		l.crates.append({"x": float(c["x"]), "y": float(c["y"]), "type": String(c["type"])})
@@ -77,6 +79,11 @@ static func validate(d: Dictionary) -> String:
 		return "bad thumb"
 	if (_thumb as String).length() > MAX_THUMB_CHARS:
 		return "thumb too large"
+	var _intro: Variant = d.get("intro", "")
+	if not _intro is String:
+		return "bad intro"
+	if (_intro as String).length() > MAX_INTRO_CHARS:
+		return "intro too long"
 	return ""
 
 
@@ -93,4 +100,6 @@ static func serialize(layout: LevelLayout) -> String:
 		d["author"] = layout.author
 	if layout.thumb != "":
 		d["thumb"] = layout.thumb
+	if layout.intro != "":
+		d["intro"] = layout.intro
 	return JSON.stringify(d, "  ")

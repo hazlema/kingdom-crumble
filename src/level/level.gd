@@ -78,13 +78,16 @@ func _ready() -> void:
 	_spawn_crates()
 	if layout.title != "":
 		hud.toast(layout.title)
+	if layout.intro != "":
+		_show_intro()
 	var _chain := LevelChain.entries()
 	var _pos := -1
 	for i in _chain.size():
 		if _chain[i]["stem"] == current_stem and current_stem != "":
 			_pos = i + 1
 			break
-	hud.set_level_info(layout.title, _pos)
+	hud.set_level_info(layout.title, _pos, layout.intro != "")
+	hud.info_pressed.connect(_show_intro)
 	shots_left = layout.shots if layout.shots > 0 else Settings.preset.shots_per_level
 	hud.set_shots(shots_left)
 	Music.play_tier(Settings.tier)
@@ -335,6 +338,11 @@ func _on_crate_knocked(crate: Crate) -> void:
 
 func _open_jump() -> void:
 	%JumpDialog.open(Settings.tier)
+
+
+func _show_intro() -> void:
+	if layout.intro != "":
+		%IntroDialog.open(layout.title, layout.intro)
 
 
 # Log the clear — never from the editor sandbox, never for pathless

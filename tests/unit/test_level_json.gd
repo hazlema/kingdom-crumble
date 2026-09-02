@@ -111,3 +111,39 @@ func test_thumb_cap_is_exact() -> void:
 		"thumb": "a".repeat(LevelJson.MAX_THUMB_CHARS + 1),
 	}
 	assert_ne(LevelJson.validate(over), "")
+
+
+func test_intro_round_trips() -> void:
+	var l := LevelLayout.new()
+	l.title = "T"
+	l.intro = "Hold to charge, release to FIRE!"
+	var parsed := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(parsed)
+	assert_eq(parsed.intro, "Hold to charge, release to FIRE!")
+
+
+func test_absent_intro_stays_empty_and_unwritten() -> void:
+	var l := LevelLayout.new()
+	l.title = "T"
+	var s := LevelJson.serialize(l)
+	assert_false(s.contains("intro"), "empty intro is not serialized")
+	assert_eq(LevelJson.parse(s).intro, "")
+
+
+func test_non_string_intro_rejected() -> void:
+	var d := {"format": 1, "title": "T", "crates": [], "intro": 7}
+	assert_ne(LevelJson.validate(d), "")
+
+
+func test_intro_cap_is_exact() -> void:
+	var at_cap := {
+		"format": 1, "title": "T", "crates": [], "intro": "a".repeat(LevelJson.MAX_INTRO_CHARS)
+	}
+	assert_eq(LevelJson.validate(at_cap), "")
+	var over := {
+		"format": 1,
+		"title": "T",
+		"crates": [],
+		"intro": "a".repeat(LevelJson.MAX_INTRO_CHARS + 1),
+	}
+	assert_ne(LevelJson.validate(over), "")

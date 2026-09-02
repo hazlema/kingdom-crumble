@@ -4,11 +4,21 @@ extends PanelContainer
 # The unified HUD panel (pretty-pass spec §2), transcribed from the
 # owner's comps. Values in, pixels out — no game logic.
 
+signal info_pressed
+
 const BUFF_ICONS := {
 	&"exploding": "skull",
 	&"multishot": "crate-blue",
 	&"super_bounce": "crate-green",
 }
+
+
+func _ready() -> void:
+	%InfoBtn.pressed.connect(func() -> void: info_pressed.emit())
+
+
+func set_info(has_intro: bool) -> void:
+	%InfoBtn.visible = has_intro
 
 
 func set_title(t: String) -> void:

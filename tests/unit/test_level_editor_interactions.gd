@@ -147,3 +147,10 @@ func test_save_as_renames_a_fork() -> void:
 	await ed._on_save_as("gut_blowup")
 	assert_eq(ed.current.title, "gut_blowup", "Save As names the level, always")
 	DirAccess.remove_absolute("user://levels/gut_blowup.json")
+
+
+func test_intro_edit_lands_in_the_layout() -> void:
+	ed.menu.intro_edited.emit("Aim for the base of the tower!")
+	assert_eq(ed.current.intro, "Aim for the base of the tower!")
+	ed.menu.intro_edited.emit("")
+	assert_eq(ed.current.intro, "", "clearing empties the field")

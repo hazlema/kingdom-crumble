@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://src/ui/stat_card.gd" id="1"]
 [ext_resource type="Script" path="res://src/ui/dashed_line.gd" id="2"]
 [ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="f_disp"]
 [ext_resource type="FontFile" path="res://art/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/stone.png" id="t_stone"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/info.png" id="t_info"]
 
 [sub_resource type="StyleBoxFlat" id="pwr_bg"]
 bg_color = Color(1, 0.9804, 0.9412, 1)
@@ -47,6 +48,16 @@ size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("f_disp")
 theme_override_font_sizes/font_size = 22
 text = "LEVEL"
+
+[node name="InfoBtn" type="Button" parent="Body/Header"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+flat = true
+icon = ExtResource("t_info")
+expand_icon = true
+tooltip_text = "Level info"
 
 [node name="LvlChip" type="Label" parent="Body/Header"]
 unique_name_in_owner = true

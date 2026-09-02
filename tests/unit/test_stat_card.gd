@@ -60,3 +60,19 @@ func test_fire_icon_tracks_queue() -> void:
 	assert_eq(fire.icon, EditorAssets.texture_for("crate-gold"), "2+ types = gold")
 	h.set_buffs([] as Array[StringName])
 	assert_eq(fire.icon, plain, "empty queue restores the stone")
+
+
+func test_info_icon_only_when_level_has_intro() -> void:
+	var c := _card()
+	c.set_info(false)
+	assert_false(c.get_node("%InfoBtn").visible)
+	c.set_info(true)
+	assert_true(c.get_node("%InfoBtn").visible)
+
+
+func test_info_press_signals() -> void:
+	var c := _card()
+	watch_signals(c)
+	c.set_info(true)
+	c.get_node("%InfoBtn").pressed.emit()
+	assert_signal_emitted(c, "info_pressed")
