@@ -46,6 +46,14 @@ func test_reopens_after_dismiss() -> void:
 	assert_eq(d.get_node("%Body").text, "hello again")
 
 
+func test_dismiss_releases_a_held_fire_action() -> void:
+	var d := _dialog()
+	d.open("T", "hold space to read, release to NOT fire")
+	Input.action_press("fire")
+	d.dismiss()
+	assert_false(Input.is_action_pressed("fire"), "the dismissing keypress must not become a shot")
+
+
 func test_level_with_intro_speaks_at_start() -> void:
 	Level.next_layout = LevelLayout.new()
 	Level.next_layout.title = "Talky"
