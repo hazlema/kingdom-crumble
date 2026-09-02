@@ -8,6 +8,8 @@ signal clear_requested
 signal exit_requested
 signal test_requested
 signal background_picked(id: String)
+signal intro_edited(text: String)
+signal open_intro_requested
 
 const BACKGROUNDS: Array[String] = ["meadow"]
 
@@ -22,6 +24,11 @@ func _ready() -> void:
 			%SaveAsDialog.popup_centered()
 	)
 	%LoadBtn.pressed.connect(_open_load)
+	%IntroBtn.pressed.connect(
+		func() -> void:
+			%Panel.visible = false
+			open_intro_requested.emit()
+	)
 	%ClearBtn.pressed.connect(
 		func() -> void:
 			%Panel.visible = false
@@ -50,6 +57,23 @@ func _ready() -> void:
 				load_requested.emit(%LevelList.get_item_metadata(sel[0]))
 	)
 	%ClearConfirm.confirmed.connect(func() -> void: clear_requested.emit())
+	%IntroDialog.confirmed.connect(
+		func() -> void:
+			var text: String = %IntroEdit.text.strip_edges()
+			if text.length() > LevelJson.MAX_INTRO_CHARS:
+				text = text.substr(0, LevelJson.MAX_INTRO_CHARS)
+			intro_edited.emit(text)
+	)
+	# The CLEAR button inside the IntroDialog emits "" and closes the dialog.
+	%IntroClearBtn.pressed.connect(
+		func() -> void:
+			intro_edited.emit("")
+			%IntroDialog.hide()
+	)
+	%IntroDialog.about_to_popup.connect(
+		func() -> void:
+			%IntroEdit.call_deferred("grab_focus")
+	)
 	# Enter in the name field submits the dialog; Esc cancels for free
 	# (dialogs close on escape by default). Field grabs focus on open.
 	%SaveAsDialog.register_text_enter(%StemEdit)
@@ -75,7 +99,11 @@ func _pick(sig: Signal) -> void:
 # interaction so clicks aimed at a dialog can't edit the level.
 func any_dialog_open() -> bool:
 	return (
-		%SaveAsDialog.visible or %LoadDialog.visible or %ClearConfirm.visible or %LoadError.visible
+		%SaveAsDialog.visible
+		or %LoadDialog.visible
+		or %ClearConfirm.visible
+		or %LoadError.visible
+		or %IntroDialog.visible
 	)
 
 
@@ -89,6 +117,11 @@ func covers_point(p: Vector2) -> bool:
 
 func open_save_as() -> void:
 	%SaveAsDialog.popup_centered()
+
+
+func open_intro(current_text: String) -> void:
+	%IntroEdit.text = current_text
+	%IntroDialog.popup_centered()
 
 
 func show_load_error() -> void:

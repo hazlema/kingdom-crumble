@@ -41,6 +41,8 @@ func _ready() -> void:
 	menu.exit_requested.connect(_on_exit)
 	menu.test_requested.connect(_on_test)
 	menu.background_picked.connect(_on_background_picked)
+	menu.intro_edited.connect(func(t: String) -> void: current.intro = t)
+	menu.open_intro_requested.connect(func() -> void: menu.open_intro(current.intro))
 	if resume_layout != null:
 		current = resume_layout
 		resume_layout = null
