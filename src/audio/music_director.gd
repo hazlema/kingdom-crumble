@@ -6,7 +6,8 @@ const EXTENSIONS := ["ogg", "mp3", "wav"]
 var _player := AudioStreamPlayer.new()
 var _current_track := ""
 var _tier := ""
-var _volume := 1.0
+# Background music sits under the game, not on top of it (owner: 0.25).
+var _volume := 0.25
 
 
 func _ready() -> void:
@@ -15,6 +16,7 @@ func _ready() -> void:
 	_player.bus = "Music" if AudioServer.get_bus_index("Music") != -1 else "Master"
 	add_child(_player)
 	_player.finished.connect(_on_track_finished)
+	set_volume_linear(_volume)  # apply the default — an untouched slider used to mean full blast
 
 
 func set_volume_linear(v: float) -> void:
