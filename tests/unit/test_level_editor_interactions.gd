@@ -140,3 +140,10 @@ func test_clear_is_a_new_document() -> void:
 	assert_eq(ed.current.title, "Untitled", "next Save As names the level itself")
 	assert_eq(ed.current.thumb, "", "old portrait does not haunt the new level")
 	assert_eq(ed.save_path, "", "Ctrl+S cannot overwrite the previous level")
+
+
+func test_save_as_renames_a_fork() -> void:
+	ed.current.title = "aim"
+	await ed._on_save_as("gut_blowup")
+	assert_eq(ed.current.title, "gut_blowup", "Save As names the level, always")
+	DirAccess.remove_absolute("user://levels/gut_blowup.json")

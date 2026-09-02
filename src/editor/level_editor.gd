@@ -109,9 +109,11 @@ func _on_save() -> void:
 	LevelStore.save_user(current, stem)
 
 
+# Save As IS the naming act — the dialog stem is the editor's only title
+# field, so forking a level under a new name retitles it too (only-when-
+# Untitled left forks wearing the original's title).
 func _on_save_as(stem: String) -> void:
-	if current.title == "Untitled":
-		current.title = stem
+	current.title = stem
 	await _capture_thumb()
 	save_path = LevelStore.save_user(current, stem)
 
