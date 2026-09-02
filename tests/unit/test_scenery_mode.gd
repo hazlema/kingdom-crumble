@@ -36,3 +36,28 @@ func test_background_picker_still_reaches_the_layout() -> void:
 	ed._enter_scenery()
 	ed.get_node("%SceneryPanel").background_picked.emit("meadow")
 	assert_eq(ed.current.background, "meadow")
+
+
+func test_import_downscales_caps_and_dedupes() -> void:
+	var big := Image.create(2048, 1024, false, Image.FORMAT_RGBA8)
+	big.fill(Color.BLUE)
+	var key := ed.import_scenery_image(big)
+	assert_ne(key, "")
+	var stored: String = ed.current.images[key]
+	var decoded := LevelJson.decode_png_b64(stored)
+	assert_lte(maxi(decoded.get_width(), decoded.get_height()), 512, "long edge capped")
+	assert_lte(stored.length(), LevelJson.MAX_IMAGE_CHARS)
+	var key2 := ed.import_scenery_image(big)
+	assert_eq(key2, key, "same pixels, same key")
+	assert_eq(ed.current.images.size(), 1, "dedup stores one blob")
+
+
+func test_import_refuses_a_ninth_image() -> void:
+	for i in LevelJson.MAX_IMAGES:
+		var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+		img.fill(Color(float(i) / 8.0, 0.2, 0.3))
+		assert_ne(ed.import_scenery_image(img), "")
+	var extra := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	extra.fill(Color.WHITE)
+	assert_eq(ed.import_scenery_image(extra), "", "the ninth image is politely declined")
+	assert_eq(ed.current.images.size(), LevelJson.MAX_IMAGES)

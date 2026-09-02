@@ -19,6 +19,7 @@ var occupancy := {}  # Vector2i -> Crate
 var carrying := ""  # asset id while placing, "" = none
 var save_path := ""  # last saved path, "" = unsaved
 var mode := Mode.CRATES
+var selected_overlay := -1
 var _spawned: Array[Crate] = []
 var _scenery: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
@@ -48,6 +49,7 @@ func _ready() -> void:
 	menu.open_intro_requested.connect(func() -> void: menu.open_intro(current.intro))
 	menu.scenery_requested.connect(_enter_scenery)
 	%SceneryPanel.background_picked.connect(_on_background_picked)
+	%SceneryPanel.image_chosen.connect(_on_image_chosen)
 	%SceneryPanel.done.connect(_exit_scenery)
 	if resume_layout != null:
 		current = resume_layout
@@ -171,12 +173,17 @@ func _on_background_picked(id: String) -> void:
 func _enter_scenery() -> void:
 	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
 	carrying = ""
+	# Stale-input hygiene: clear drag/lmb state so a leftover press can't
+	# fire a spurious release as a crate move once we return to CRATES mode.
+	_drag_from = Vector2i(-1, -1)
+	_lmb_down = false
 	mode = Mode.SCENERY
 	palette.visible = false
 	%SceneryPanel.visible = true
 	overlay.visible = false
 	for c in _spawned:
 		c.modulate.a = 0.8
+	_refresh_pieces()
 
 
 func _exit_scenery() -> void:
@@ -307,3 +314,89 @@ func _delete_selected() -> void:
 	overlay.selected_cell = Vector2i(-1, -1)
 	_drag_from = Vector2i(-1, -1)
 	_rebuild()
+
+
+# Frees and respawns ONLY the _scenery array — crates untouched.
+# Used in the import path so entering/being in scenery mode doesn't
+# accidentally un-dim the crates (a full _rebuild would reset modulate).
+func _rebuild_scenery() -> void:
+	for s in _scenery:
+		if is_instance_valid(s):
+			s.queue_free()
+	_scenery.clear()
+	_scenery = SceneryBuilder.spawn(self, current)
+	# Re-apply dim: crates are already dimmed when we're in scenery mode.
+	if mode == Mode.SCENERY:
+		for c in _spawned:
+			c.modulate.a = 0.8
+
+
+# Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
+func _refresh_pieces() -> void:
+	var pieces: ItemList = %SceneryPanel.get_node("%Pieces")
+	pieces.clear()
+	for entry in current.overlays:
+		var img_key: String = entry.get("image", "")
+		var b64: String = current.images.get(img_key, "")
+		var img := LevelJson.decode_png_b64(b64)
+		if img == null:
+			pieces.add_item("")
+			continue
+		var tex := ImageTexture.create_from_image(img)
+		pieces.add_item("", tex)
+
+
+# Pure import pipeline — separated so unit tests can call it directly
+# without any dialog/filesystem interaction.
+# Returns the content-hash key on success, "" on refusal (cap reached).
+func import_scenery_image(img: Image) -> String:
+	# Downscale so the long edge is at most 512 px, keeping aspect ratio.
+	var w := img.get_width()
+	var h := img.get_height()
+	var long_edge := maxi(w, h)
+	if long_edge > 512:
+		var scale := 512.0 / float(long_edge)
+		var new_w := maxi(1, int(w * scale))
+		var new_h := maxi(1, int(h * scale))
+		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
+
+	# Encode to PNG and check size cap, halving if needed.
+	var png_bytes := img.save_png_to_buffer()
+	var b64 := Marshalls.raw_to_base64(png_bytes)
+	while b64.length() > LevelJson.MAX_IMAGE_CHARS:
+		var cw := img.get_width()
+		var ch := img.get_height()
+		if cw <= 1 and ch <= 1:
+			break
+		img.resize(maxi(1, cw / 2), maxi(1, ch / 2), Image.INTERPOLATE_LANCZOS)
+		png_bytes = img.save_png_to_buffer()
+		b64 = Marshalls.raw_to_base64(png_bytes)
+
+	var key := LevelJson.image_key(png_bytes)
+
+	# Dedup: if this exact image is already stored, return the existing key.
+	if current.images.has(key):
+		return key
+
+	# Refuse if we've hit the image cap.
+	if current.images.size() >= LevelJson.MAX_IMAGES:
+		return ""
+
+	current.images[key] = b64
+	return key
+
+
+# Wired to SceneryPanel.image_chosen signal.
+func _on_image_chosen(path: String) -> void:
+	var img := Image.load_from_file(path)
+	if img == null:
+		return
+	var key := import_scenery_image(img)
+	if key == "":
+		return
+	# Place the new overlay centered on the current camera view.
+	var cam_pos: Vector2 = ($Camera as Camera2D).position
+	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
+	selected_overlay = current.overlays.size() - 1
+	_rebuild_scenery()
+	_refresh_pieces()
