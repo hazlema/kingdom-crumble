@@ -2,6 +2,7 @@ class_name MusicDirector
 extends Node
 
 const EXTENSIONS := ["ogg", "mp3", "wav"]
+const SETTINGS_PATH := "user://settings.cfg"
 
 var _player := AudioStreamPlayer.new()
 var _current_track := ""
@@ -16,12 +17,20 @@ func _ready() -> void:
 	_player.bus = "Music" if AudioServer.get_bus_index("Music") != -1 else "Master"
 	add_child(_player)
 	_player.finished.connect(_on_track_finished)
-	set_volume_linear(_volume)  # apply the default — an untouched slider used to mean full blast
+	# Apply the remembered volume (an untouched slider used to mean full
+	# blast — the default was never pushed to the player).
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)  # missing file = fresh install, default rules
+	set_volume_linear(float(cfg.get_value("audio", "music_volume", _volume)))
 
 
 func set_volume_linear(v: float) -> void:
 	_volume = clampf(v, 0.0, 1.0)
 	_player.volume_db = linear_to_db(maxf(_volume, 0.0001))
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)  # keep future keys in this file intact
+	cfg.set_value("audio", "music_volume", _volume)
+	cfg.save(SETTINGS_PATH)
 
 
 func get_volume_linear() -> float:

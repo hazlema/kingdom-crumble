@@ -37,3 +37,12 @@ func test_volume_clamps_low():
 	Music.set_volume_linear(-0.2)
 	assert_eq(Music.get_volume_linear(), 0.0)
 	Music.set_volume_linear(1.0)
+
+
+func test_volume_persists_to_settings_cfg() -> void:
+	var before: float = Music.get_volume_linear()
+	Music.set_volume_linear(0.42)
+	var cfg := ConfigFile.new()
+	cfg.load("user://settings.cfg")
+	assert_almost_eq(float(cfg.get_value("audio", "music_volume", -1.0)), 0.42, 0.001)
+	Music.set_volume_linear(before)
