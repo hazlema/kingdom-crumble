@@ -34,7 +34,15 @@ static func spawn_crates(
 
 
 static func _sleep_when_registered(crate: Crate, tree: SceneTree) -> void:
-	await tree.physics_frame
-	await tree.physics_frame
+	# Count only UNPAUSED physics frames. The intro dialog pauses the
+	# tree in the same stack as spawning, and physics_frame keeps firing
+	# under pause while the space is NOT stepping — the tuck-in burned
+	# away before the server's first real step ever woke the crate, so
+	# floaters fell the moment the dialog closed.
+	var steps := 0
+	while steps < 2:
+		await tree.physics_frame
+		if not tree.paused:
+			steps += 1
 	if is_instance_valid(crate) and not crate.freeze:
 		crate.sleeping = true
