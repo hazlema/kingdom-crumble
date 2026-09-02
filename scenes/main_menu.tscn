@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://c4bbovvtgk5ql" path="res://src/ui/main_menu.gd" id="1"]
 [ext_resource type="Texture2D" path="res://art/backgrounds/main-menu.png" id="bg"]
+[ext_resource type="Script" path="res://addons/narfkit/narf_decor.gd" id="nd"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/windmill-blades.png" id="wb"]
 
 [node name="MainMenu" type="Control" unique_id=892463116]
 layout_mode = 3
@@ -23,6 +25,15 @@ texture = ExtResource("bg")
 expand_mode = 1
 stretch_mode = 6
 mouse_filter = 2
+
+[node name="WindmillWheel" type="Sprite2D" parent="."]
+position = Vector2(1543, 299)
+scale = Vector2(0.36, 0.36)
+texture = ExtResource("wb")
+script = ExtResource("nd")
+behavior = 1
+pivot = 4
+speed = 0.1
 
 [node name="Title" type="Label" parent="." unique_id=1983062749]
 layout_mode = 0
