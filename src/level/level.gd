@@ -11,6 +11,7 @@ const INVALID_LEVEL_SCENE := preload("res://scenes/ui/invalid_level.tscn")
 const DEFAULT_LAYOUT := "res://levels/demo.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
+const IDLE_SPEED := 20.0  # px/s — below this a body no longer holds the turn open
 
 # Set this before changing to the level scene to play any layout —
 # built-in, or a player-made file from user://levels/.
@@ -300,7 +301,7 @@ func _stone_is_done() -> bool:
 	for stone in _active_stones:
 		if not is_instance_valid(stone):
 			continue
-		if stone.global_position.y <= 2000.0 and not stone.sleeping:
+		if stone.global_position.y <= 2000.0 and not _is_idle(stone):
 			return false
 	return true
 
@@ -309,9 +310,20 @@ func _all_sleeping() -> bool:
 	if not _stone_is_done():
 		return false
 	for crate in _crates():
-		if not crate.sleeping:
+		if not _is_idle(crate):
 			return false
 	return true
+
+
+# Owner rule: barely-moving counts as done. True engine sleep takes a
+# second of stillness, so a crate wobbling at a crawl used to hold the
+# turn open to the RESOLVE_MAX cap.
+func _is_idle(body: RigidBody2D) -> bool:
+	return (
+		body.freeze
+		or body.sleeping
+		or (body.linear_velocity.length() < IDLE_SPEED and absf(body.angular_velocity) < 1.0)
+	)
 
 
 static func count_standing(crates: Array) -> int:
