@@ -39,3 +39,25 @@ func test_none_sits_perfectly_still() -> void:
 	d.rotation = 1.0
 	await wait_seconds(0.2)
 	assert_eq(d.rotation, 1.0)
+
+
+func test_pivot_anchors_put_the_named_point_on_the_origin() -> void:
+	var d := NarfDecor.new()
+	var img := Image.create(40, 20, false, Image.FORMAT_RGBA8)
+	d.texture = ImageTexture.create_from_image(img)
+	add_child_autofree(d)
+	var expect := {
+		NarfDecor.Pivot.TOP_LEFT: Vector2(0, 0),
+		NarfDecor.Pivot.TOP_CENTER: Vector2(-20, 0),
+		NarfDecor.Pivot.TOP_RIGHT: Vector2(-40, 0),
+		NarfDecor.Pivot.CENTER_LEFT: Vector2(0, -10),
+		NarfDecor.Pivot.CENTER: Vector2(-20, -10),
+		NarfDecor.Pivot.CENTER_RIGHT: Vector2(-40, -10),
+		NarfDecor.Pivot.LOWER_LEFT: Vector2(0, -20),
+		NarfDecor.Pivot.LOWER_CENTER: Vector2(-20, -20),
+		NarfDecor.Pivot.LOWER_RIGHT: Vector2(-40, -20),
+	}
+	for p in expect:
+		d.pivot = p
+		assert_eq(d.offset, expect[p], "pivot %d anchors correctly" % p)
+	assert_false(d.centered, "pivot mode owns placement")
