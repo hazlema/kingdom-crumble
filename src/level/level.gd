@@ -76,6 +76,7 @@ func _ready() -> void:
 		push_warning("No loadable layout (default included)")
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
+	SceneryBuilder.spawn(self, layout)
 	_spawn_crates()
 	if layout.title != "":
 		hud.toast(layout.title)

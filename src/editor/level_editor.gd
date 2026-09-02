@@ -17,6 +17,7 @@ var occupancy := {}  # Vector2i -> Crate
 var carrying := ""  # asset id while placing, "" = none
 var save_path := ""  # last saved path, "" = unsaved
 var _spawned: Array[Crate] = []
+var _scenery: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false
 var _last_mouse := Vector2.ZERO
@@ -162,6 +163,10 @@ func _on_background_picked(id: String) -> void:
 
 
 func _rebuild() -> void:
+	for s in _scenery:
+		if is_instance_valid(s):
+			s.queue_free()
+	_scenery.clear()
 	for c in _spawned:
 		if is_instance_valid(c):
 			c.queue_free()
@@ -178,6 +183,7 @@ func _rebuild() -> void:
 		seen_cells.append(cell)
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
+	_scenery = SceneryBuilder.spawn(self, current)
 	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
