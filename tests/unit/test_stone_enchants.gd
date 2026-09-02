@@ -116,3 +116,20 @@ func test_floor_crate_hops_when_smacked() -> void:
 		await wait_physics_frames(1)
 		peak_lift = maxf(peak_lift, rest_y - crates[0].global_position.y)
 	assert_gt(peak_lift, 8.0, "smacked floor crate gets airborne (lift %.1f px)" % peak_lift)
+
+
+func test_boom_rings_out_when_the_owner_authored_it() -> void:
+	if not ResourceLoader.exists("res://assets/sfx/boom.ogg"):
+		pass_test("no boom.ogg authored — silent blast is the contract")
+		return
+	var arena := _arena()
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.exploding = true
+	arena.add_child(stone)
+	stone.launch(Vector2(800, 500), Vector2(300, 200))
+	await wait_seconds(1.0)
+	var found := false
+	for c in arena.get_children():
+		if c is AudioStreamPlayer and c.stream != null:
+			found = true
+	assert_true(found, "boom.ogg rings out at detonation")

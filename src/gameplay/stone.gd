@@ -11,6 +11,8 @@ const VARIANTS: Array[Texture2D] = [
 const BOUNCE := 0.75
 const BOOM_RADIUS := 180.0
 const BOOM_MIN_SPEED := 300.0
+# Owner-art auto-prefer: the boom's voice. Absent file = silent blast.
+const BOOM_SFX := "res://assets/sfx/boom.ogg"
 
 # Set BEFORE add_child — read once in _ready (spec §3).
 var exploding := false
@@ -74,6 +76,14 @@ func _boom() -> void:
 func _boom_visual() -> void:
 	var parent := get_parent()
 	var tree := get_tree()
+
+	if ResourceLoader.exists(BOOM_SFX):
+		var sfx := AudioStreamPlayer.new()
+		sfx.stream = load(BOOM_SFX)
+		sfx.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
+		parent.add_child(sfx)
+		sfx.play()
+		tree.create_timer(3.0).timeout.connect(sfx.queue_free)
 
 	var wave := Sprite2D.new()
 	var grad := Gradient.new()
