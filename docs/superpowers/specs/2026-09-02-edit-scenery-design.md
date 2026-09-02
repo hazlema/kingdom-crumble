@@ -63,7 +63,10 @@ Textures decode once per level load; decode failures render nothing.
   mode flag (the polled-input architecture makes this a one-line
   guard); crates stay drawn, dimmed to ~80% modulate; grid overlay
   hidden.
-- ADD IMAGE → native file dialog (any image on disk) → imported:
+- ADD IMAGE → Godot's own FileDialog, NOT the native one
+  [OWNER-PROPOSED: themeable — it inherits kingdom_theme (parchment
+  skin) and has a typeable path bar; the native dialog is unskinnable].
+  Any image on disk → imported:
   auto-downscaled to ≤ 512 px long edge **[DEFAULT — veto me]**,
   PNG-encoded, byte-cap enforced (further downscale until it fits),
   placed at screen center, selected.
