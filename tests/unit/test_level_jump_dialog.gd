@@ -82,3 +82,17 @@ func test_close_btn_positioned_and_not_covering_panel() -> void:
 		btn.get_global_rect().has_point(panel.get_global_rect().get_center()),
 		"CloseBtn must not cover the Panel center"
 	)
+
+
+func test_grid_centers_in_the_scroll_area() -> void:
+	var d := _dialog()
+	d.open("chill")
+	await wait_frames(2)
+	var scroll: Control = d.get_node("Center/Panel/VBox/Scroll")
+	var list: Control = d.get_node("%List")
+	if list.get_child_count() == 0:
+		pass_test("empty chain — nothing to center")
+		return
+	var left := list.position.x
+	var right := scroll.size.x - list.position.x - list.size.x
+	assert_lt(absf(left - right), 20.0, "grid gaps even (L %.0f vs R %.0f)" % [left, right])
