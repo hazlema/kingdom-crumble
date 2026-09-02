@@ -74,3 +74,11 @@ func test_decode_gate_is_shared_and_silent() -> void:
 	assert_null(LevelJson.decode_png_b64("abc"), "bad length")
 	assert_null(LevelJson.decode_png_b64("YWJjZGFiY2Q="), "not png")
 	assert_not_null(LevelJson.decode_png_b64(_tiny_png_b64()))
+
+
+func test_serialize_never_leaks_edit_state() -> void:
+	var l := LevelLayout.new()
+	l.title = "T"
+	l.images = {"aaaa1111": "x"}
+	l.overlays = [{"image": "aaaa1111", "x": 0.0, "y": 0.0, "_rot": 1.0}]
+	assert_false(LevelJson.serialize(l).contains("_rot"))

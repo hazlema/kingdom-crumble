@@ -61,3 +61,27 @@ func test_import_refuses_a_ninth_image() -> void:
 	extra.fill(Color.WHITE)
 	assert_eq(ed.import_scenery_image(extra), "", "the ninth image is politely declined")
 	assert_eq(ed.current.images.size(), LevelJson.MAX_IMAGES)
+
+
+func test_bake_rotates_pixels_and_strips_edit_keys() -> void:
+	var img := Image.create(8, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 100.0, "y": 100.0, "_rot": PI / 2})
+	ed._bake_scenery()
+	var o: Dictionary = ed.current.overlays[-1]
+	assert_false(o.has("_rot"), "edit-state keys consumed")
+	var baked := LevelJson.decode_png_b64(ed.current.images[o["image"]])
+	assert_eq(baked.get_width(), 4, "90-degree bake swaps dimensions")
+	assert_eq(baked.get_height(), 8)
+
+
+func test_delete_drops_orphaned_image() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.YELLOW)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	ed.selected_overlay = ed.current.overlays.size() - 1
+	ed._delete_selected_piece()
+	assert_false(ed.current.images.has(key), "unreferenced blob leaves with its piece")

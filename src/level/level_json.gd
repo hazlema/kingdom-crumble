@@ -191,5 +191,14 @@ static func serialize(layout: LevelLayout) -> String:
 	if layout.images.size() > 0:
 		d["images"] = layout.images
 	if layout.overlays.size() > 0:
-		d["overlays"] = layout.overlays
+		# Strip edit-session underscore keys (e.g. _rot, _scale, _flip_h, _flip_v)
+		# before serializing so they never reach disk.
+		var clean_overlays: Array = []
+		for entry in layout.overlays:
+			var clean: Dictionary = {}
+			for k in (entry as Dictionary):
+				if not (k as String).begins_with("_"):
+					clean[k] = entry[k]
+			clean_overlays.append(clean)
+		d["overlays"] = clean_overlays
 	return JSON.stringify(d, "  ")

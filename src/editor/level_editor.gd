@@ -25,9 +25,17 @@ var _scenery: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false
 var _last_mouse := Vector2.ZERO
+# Scenery drag state
+var _scenery_dragging := false  # true while LMB drags a selected piece
+var _scenery_drag_start_world := Vector2.ZERO  # world pos when drag began
+var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
+var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
+# Right-click context menu for scenery pieces
+var _scenery_context: PopupMenu = null
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
+@onready var _gizmo: SceneryGizmo = $SceneryGizmo
 @onready var menu: EditorMenu = $Ui/EditorMenu
 
 
@@ -76,6 +84,8 @@ func _process(_delta: float) -> void:
 			_release(_mouse_cell(), over_ui)
 		_lmb_down = lmb
 		_update_ghost()
+	else:
+		_scenery_process(mouse)
 
 
 func _press(cell: Vector2i) -> void:
@@ -116,6 +126,7 @@ func _on_save() -> void:
 		menu.open_save_as()
 		return
 	var stem := save_path.get_file().get_basename()
+	_bake_scenery()
 	await _capture_thumb()
 	LevelStore.save_user(current, stem)
 
@@ -125,6 +136,7 @@ func _on_save() -> void:
 # Untitled left forks wearing the original's title).
 func _on_save_as(stem: String) -> void:
 	current.title = stem
+	_bake_scenery()
 	await _capture_thumb()
 	save_path = LevelStore.save_user(current, stem)
 
@@ -184,9 +196,13 @@ func _enter_scenery() -> void:
 	for c in _spawned:
 		c.modulate.a = 0.8
 	_refresh_pieces()
+	_gizmo.visible = true
 
 
 func _exit_scenery() -> void:
+	selected_overlay = -1
+	_gizmo.piece = null
+	_gizmo.visible = false
 	mode = Mode.CRATES
 	%SceneryPanel.visible = false
 	palette.visible = true
@@ -231,7 +247,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_S:
 				_on_save()  # falls through to Save As when unsaved
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
-		_delete_selected()
+		if mode == Mode.SCENERY:
+			_delete_selected_piece()
+		else:
+			_delete_selected()
 	elif event.is_action_pressed("menu"):
 		if mode == Mode.SCENERY:
 			_exit_scenery()
@@ -400,3 +419,386 @@ func _on_image_chosen(path: String) -> void:
 	selected_overlay = current.overlays.size() - 1
 	_rebuild_scenery()
 	_refresh_pieces()
+
+
+# ---------------------------------------------------------------------------
+# Scenery mode: pointer / handle polling (mirrors CRATES block structure)
+# ---------------------------------------------------------------------------
+
+func _scenery_process(mouse: Vector2) -> void:
+	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
+	var world := get_global_mouse_position()
+	var cam: Camera2D = $Camera
+	_gizmo.cam_zoom = cam.zoom
+
+	if lmb and not _lmb_down and not over_ui:
+		_scenery_press(world)
+	elif not lmb and _lmb_down:
+		_scenery_release()
+	elif lmb and _lmb_down and _scenery_dragging:
+		_scenery_drag(world)
+
+	_lmb_down = lmb
+
+	# Keep gizmo pointed at the selected piece.
+	if selected_overlay >= 0 and selected_overlay < _scenery.size():
+		var p := _scenery[selected_overlay]
+		if is_instance_valid(p):
+			_gizmo.piece = p
+			_gizmo.queue_redraw()
+		else:
+			_gizmo.piece = null
+			_gizmo.queue_redraw()
+	else:
+		_gizmo.piece = null
+		_gizmo.queue_redraw()
+
+
+func _scenery_press(world: Vector2) -> void:
+	var cam: Camera2D = $Camera
+	var zoom := cam.zoom.x
+
+	# Check handles on current selection first.
+	if selected_overlay >= 0 and selected_overlay < _scenery.size():
+		var h := _hit_handle(world, zoom)
+		if h >= 0:
+			_scenery_handle = h
+			_scenery_dragging = true
+			_scenery_drag_start_world = world
+			var piece := _scenery[selected_overlay]
+			_scenery_drag_piece_origin = piece.position
+			return
+
+	# Pick a new piece.
+	var idx := _pick_piece(world)
+	if idx >= 0:
+		selected_overlay = idx
+		_scenery_handle = -1  # body drag
+		_scenery_dragging = true
+		_scenery_drag_start_world = world
+		var piece := _scenery[selected_overlay]
+		_scenery_drag_piece_origin = piece.position
+	else:
+		# Deselect.
+		selected_overlay = -1
+		_scenery_dragging = false
+
+
+func _scenery_release() -> void:
+	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < _scenery.size():
+		# Commit position back to overlay dict.
+		var piece := _scenery[selected_overlay]
+		var o: Dictionary = current.overlays[selected_overlay]
+		o["x"] = piece.position.x
+		o["y"] = piece.position.y
+	_scenery_dragging = false
+	_scenery_handle = -1
+
+
+func _scenery_drag(world: Vector2) -> void:
+	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+		return
+	var piece := _scenery[selected_overlay]
+	var o: Dictionary = current.overlays[selected_overlay]
+	var delta := world - _scenery_drag_start_world
+
+	if _scenery_handle == -1:
+		# Body drag — move piece.
+		piece.position = _scenery_drag_piece_origin + delta
+	elif _scenery_handle == 4:
+		# Rotate handle — angle from piece center to mouse.
+		var center := _scenery_drag_piece_origin
+		var angle := (world - center).angle() + PI / 2.0
+		piece.rotation = angle
+		o["_rot"] = angle
+	else:
+		# Corner resize — aspect-locked scale.
+		var center := _scenery_drag_piece_origin
+		var dist_now := (world - center).length()
+		var dist_start := (_scenery_drag_start_world - center).length()
+		if dist_start > 0.01:
+			var orig_scale: float = o.get("_scale", 1.0)
+			var new_scale := clampf(orig_scale * (dist_now / dist_start), 0.05, 20.0)
+			piece.scale = Vector2(new_scale, new_scale)
+			o["_scale"] = new_scale
+
+
+# Returns the index of the topmost piece whose world-space rect contains `world_pos`,
+# or -1 if none. Exposed so unit tests can call it directly.
+func _pick_piece(world_pos: Vector2) -> int:
+	# Iterate in reverse (top-most drawn last).
+	for i in range(_scenery.size() - 1, -1, -1):
+		var piece := _scenery[i]
+		if not is_instance_valid(piece):
+			continue
+		var rect := piece.get_rect()
+		# Transform world_pos into piece's local space to test against un-rotated rect.
+		var local := piece.to_local(world_pos)
+		# Un-apply scale (piece.scale is set by _scale).
+		if piece.scale.x > 0.0 and piece.scale.y > 0.0:
+			local /= piece.scale
+		# The rect is in local-space after offset; check containment.
+		if rect.has_point(local):
+			return i
+	return -1
+
+
+# Returns which handle (0-3 corners, 4 rotate) is within hit radius at world_pos,
+# or -1 if none. Requires a selected piece.
+func _hit_handle(world_pos: Vector2, zoom: float) -> int:
+	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+		return -1
+	var piece := _scenery[selected_overlay]
+	if not is_instance_valid(piece) or piece.texture == null:
+		return -1
+	var radius := SceneryGizmo.HANDLE_RADIUS / zoom
+	var corners := SceneryGizmo._rect_corners(
+		piece.get_rect(), piece.position, piece.rotation, piece.scale
+	)
+	for i in 4:
+		if world_pos.distance_to(corners[i]) <= radius:
+			return i
+	# Rotate lollipop.
+	var top_mid := (corners[0] + corners[1]) * 0.5
+	var up_dir := Vector2(-sin(piece.rotation), -cos(piece.rotation))
+	var lollipop := top_mid + up_dir * (SceneryGizmo.ROTATE_LOLLIPOP_DIST / zoom)
+	if world_pos.distance_to(lollipop) <= radius:
+		return 4
+	return -1
+
+
+# ---------------------------------------------------------------------------
+# Delete selected scenery piece + orphan-cleanup
+# ---------------------------------------------------------------------------
+
+func _delete_selected_piece() -> void:
+	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
+		return
+	var o: Dictionary = current.overlays[selected_overlay]
+	var old_key: String = o.get("image", "")
+	current.overlays.remove_at(selected_overlay)
+	selected_overlay = -1
+	_gizmo.piece = null
+	_gizmo.queue_redraw()
+	# Drop the image blob if no remaining overlay references it.
+	if old_key != "":
+		var still_used := false
+		for entry in current.overlays:
+			if (entry as Dictionary).get("image", "") == old_key:
+				still_used = true
+				break
+		if not still_used:
+			current.images.erase(old_key)
+	_rebuild_scenery()
+	_refresh_pieces()
+
+
+# ---------------------------------------------------------------------------
+# Right-click context menu for scenery pieces
+# ---------------------------------------------------------------------------
+
+func _input(event: InputEvent) -> void:
+	if mode != Mode.SCENERY:
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+			var world := get_global_mouse_position()
+			var idx := _pick_piece(world)
+			if idx >= 0:
+				selected_overlay = idx
+				_show_scenery_context(mb.global_position)
+				get_viewport().set_input_as_handled()
+
+
+func _show_scenery_context(screen_pos: Vector2) -> void:
+	if _scenery_context == null:
+		_scenery_context = PopupMenu.new()
+		_scenery_context.id_pressed.connect(_on_scenery_context_item)
+		add_child(_scenery_context)
+	_scenery_context.clear()
+	_scenery_context.add_item("Flip H", 0)
+	_scenery_context.add_item("Flip V", 1)
+	_scenery_context.add_separator()
+	_scenery_context.add_item("Delete", 2)
+	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
+	_scenery_context.popup()
+
+
+func _on_scenery_context_item(id: int) -> void:
+	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+		return
+	var piece := _scenery[selected_overlay]
+	var o: Dictionary = current.overlays[selected_overlay]
+	match id:
+		0:  # Flip H
+			piece.flip_h = not piece.flip_h
+			o["_flip_h"] = piece.flip_h
+		1:  # Flip V
+			piece.flip_v = not piece.flip_v
+			o["_flip_v"] = piece.flip_v
+		2:  # Delete
+			_delete_selected_piece()
+
+
+# ---------------------------------------------------------------------------
+# Bake: consume edit-state transforms into the raster, re-key the blob.
+# Transform order: flip → scale → rotate (flip is pixel-level, then the
+# scaled+flipped image is rotated into its bounding box).
+# 90°/180°/270° rotations stay pixel-exact because inverse-mapping with
+# round() lands on exact source pixels for those multiples.
+# Unedited overlays (no underscore keys) are left unchanged — no re-encode churn.
+# ---------------------------------------------------------------------------
+
+func _bake_scenery() -> void:
+	# Build reference counts for all image keys.
+	var ref_count: Dictionary = {}
+	for entry in current.overlays:
+		var k: String = (entry as Dictionary).get("image", "")
+		if k != "":
+			ref_count[k] = ref_count.get(k, 0) + 1
+
+	for i in current.overlays.size():
+		var o: Dictionary = current.overlays[i]
+		var has_edits := false
+		for k in o:
+			if (k as String).begins_with("_"):
+				has_edits = true
+				break
+		if not has_edits:
+			continue
+
+		var old_key: String = o.get("image", "")
+		if old_key == "" or not current.images.has(old_key):
+			# Strip keys even on missing image to stay consistent.
+			_strip_edit_keys(o)
+			continue
+
+		var img := LevelJson.decode_png_b64(current.images[old_key])
+		if img == null:
+			_strip_edit_keys(o)
+			continue
+
+		# Apply flip (pixel-level, in place).
+		if o.get("_flip_h", false):
+			img.flip_x()
+		if o.get("_flip_v", false):
+			img.flip_y()
+
+		# Apply scale via resize.
+		var sc: float = o.get("_scale", 1.0)
+		if not is_equal_approx(sc, 1.0):
+			var nw := maxi(1, roundi(img.get_width() * sc))
+			var nh := maxi(1, roundi(img.get_height() * sc))
+			img.resize(nw, nh, Image.INTERPOLATE_LANCZOS)
+
+		# Apply rotation via inverse-mapping into a rotated bounding box.
+		var rot: float = o.get("_rot", 0.0)
+		if not is_equal_approx(fmod(rot, TAU), 0.0):
+			img = _rotate_image(img, rot)
+
+		# Re-encode and re-key.
+		var png_bytes := img.save_png_to_buffer()
+		var new_key := LevelJson.image_key(png_bytes)
+		var new_b64 := Marshalls.raw_to_base64(png_bytes)
+
+		# Store the new blob (dedup: might already exist).
+		if not current.images.has(new_key):
+			current.images[new_key] = new_b64
+
+		# Update this overlay's key.
+		o["image"] = new_key
+
+		# Decrement refcount on old key; erase if orphaned.
+		ref_count[old_key] = ref_count.get(old_key, 1) - 1
+		if ref_count.get(old_key, 0) <= 0:
+			current.images.erase(old_key)
+
+		# Strip edit-state keys.
+		_strip_edit_keys(o)
+
+		# Reset the live piece transform so the visual matches the baked image.
+		if i < _scenery.size() and is_instance_valid(_scenery[i]):
+			var piece := _scenery[i]
+			piece.rotation = 0.0
+			piece.scale = Vector2.ONE
+			piece.flip_h = false
+			piece.flip_v = false
+
+
+static func _strip_edit_keys(o: Dictionary) -> void:
+	var to_remove: Array[String] = []
+	for k in o:
+		if (k as String).begins_with("_"):
+			to_remove.append(k)
+	for k in to_remove:
+		o.erase(k)
+
+
+# Pure-GDScript inverse-mapping rotation.
+# Computes the rotated bounding box size, then for each destination pixel
+# inverse-rotates back to source space and samples with bilinear interpolation.
+# Transparent pixels outside the source rect become Color(0,0,0,0).
+static func _rotate_image(src: Image, rot: float) -> Image:
+	var sw := src.get_width()
+	var sh := src.get_height()
+	src.convert(Image.FORMAT_RGBA8)
+
+	# Rotated bounding box: for a rectangle rotated by `rot`, the enclosing
+	# axis-aligned box has dimensions:
+	#   w' = |w·cos(r)| + |h·sin(r)|
+	#   h' = |w·sin(r)| + |h·cos(r)|
+	var abs_cos := absf(cos(rot))
+	var abs_sin := absf(sin(rot))
+	var dw := roundi(sw * abs_cos + sh * abs_sin)
+	var dh := roundi(sw * abs_sin + sh * abs_cos)
+
+	var dst := Image.create(dw, dh, false, Image.FORMAT_RGBA8)
+	dst.fill(Color(0, 0, 0, 0))
+
+	# Centers.
+	var cx_src := (sw - 1) * 0.5
+	var cy_src := (sh - 1) * 0.5
+	var cx_dst := (dw - 1) * 0.5
+	var cy_dst := (dh - 1) * 0.5
+
+	var cos_r := cos(-rot)  # inverse rotation
+	var sin_r := sin(-rot)
+
+	for dy in dh:
+		for dx in dw:
+			# Vector from dst center.
+			var fx := dx - cx_dst
+			var fy := dy - cy_dst
+			# Inverse-rotate.
+			var sx := fx * cos_r - fy * sin_r + cx_src
+			var sy := fx * sin_r + fy * cos_r + cy_src
+			# Bilinear sample.
+			var color := _bilinear_sample(src, sx, sy, sw, sh)
+			dst.set_pixel(dx, dy, color)
+
+	return dst
+
+
+static func _bilinear_sample(
+	src: Image, sx: float, sy: float, sw: int, sh: int
+) -> Color:
+	# Clamp to avoid out-of-bounds — transparent outside source.
+	if sx < -0.5 or sy < -0.5 or sx > sw - 0.5 or sy > sh - 0.5:
+		return Color(0, 0, 0, 0)
+
+	var x0 := clampi(int(floor(sx)), 0, sw - 1)
+	var y0 := clampi(int(floor(sy)), 0, sh - 1)
+	var x1 := clampi(x0 + 1, 0, sw - 1)
+	var y1 := clampi(y0 + 1, 0, sh - 1)
+
+	var tx: float = sx - floor(sx)
+	var ty: float = sy - floor(sy)
+
+	var c00 := src.get_pixel(x0, y0)
+	var c10 := src.get_pixel(x1, y0)
+	var c01 := src.get_pixel(x0, y1)
+	var c11 := src.get_pixel(x1, y1)
+
+	return c00.lerp(c10, tx).lerp(c01.lerp(c11, tx), ty)

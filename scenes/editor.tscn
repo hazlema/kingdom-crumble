@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://src/editor/level_editor.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/editor_menu.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ui/polaroid.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/editor_scenery_panel.tscn" id="8"]
+[ext_resource type="Script" path="res://src/editor/scenery_gizmo.gd" id="9"]
 
 [node name="LevelEditor" type="Node2D"]
 script = ExtResource("1")
@@ -19,6 +20,10 @@ position = Vector2(200, 600)
 
 [node name="GridOverlay" type="Node2D" parent="."]
 script = ExtResource("4")
+
+[node name="SceneryGizmo" type="Node2D" parent="."]
+script = ExtResource("9")
+visible = false
 
 [node name="Camera" type="Camera2D" parent="."]
 process_callback = 1
