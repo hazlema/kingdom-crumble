@@ -134,8 +134,12 @@ func _on_load(path: String) -> void:
 	_rebuild()
 
 
+# Clear = new document. Wiping only the crates once left the old title,
+# thumb, and save_path alive — the next Save As inherited the previous
+# level's title, and Ctrl+S would overwrite the previous level's file.
 func _on_clear() -> void:
-	current.crates.clear()
+	current = LevelLayout.new()
+	save_path = ""
 	_rebuild()
 
 

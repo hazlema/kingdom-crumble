@@ -127,3 +127,16 @@ func test_delete_removes_selected_crate() -> void:
 	assert_false(ed.occupancy.has(Vector2i(2, 0)))
 	assert_eq(ed.current.crates.size(), 0)
 	assert_eq(ed.overlay.selected_cell, Vector2i(-1, -1))
+
+
+func test_clear_is_a_new_document() -> void:
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))
+	ed.current.title = "aim"
+	ed.current.thumb = "aGVsbG8="
+	ed.save_path = "user://levels/aim.json"
+	ed._on_clear()
+	assert_eq(ed.current.crates.size(), 0)
+	assert_eq(ed.current.title, "Untitled", "next Save As names the level itself")
+	assert_eq(ed.current.thumb, "", "old portrait does not haunt the new level")
+	assert_eq(ed.save_path, "", "Ctrl+S cannot overwrite the previous level")
