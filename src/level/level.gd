@@ -247,6 +247,7 @@ func _back_to_editor() -> void:
 # the CRUMBLED/OUT-OF-STONES banner the settle may raise right after.
 func _award_leans() -> void:
 	var leans := 0
+	var peek_at := Vector2.INF
 	for crate in _crates():
 		if not Lean.is_lean_angle(crate.rotation):
 			continue
@@ -255,10 +256,16 @@ func _award_leans() -> void:
 			var other: Node = bodies[i]
 			if other is Crate and _ledger.claim(crate.get_instance_id(), other.get_instance_id()):
 				leans += 1
+				if peek_at == Vector2.INF:
+					peek_at = crate.global_position
 	if leans == 1:
 		hud.toast("LEAN BONUS!")
 	elif leans > 1:
 		hud.toast("LEAN BONUS x%d!" % leans)
+	# Mr. Skunk's first job: once he's yours, he pops up to admire the
+	# lean with you (editor TEST counts as owning him, for proofing).
+	if leans > 0 and (Unlocks.has_flag("skunk") or _editor_session):
+		SkunkPeek.pop(self, peek_at)
 
 
 # Hold H: standing crates glow green, fallen ones red — what's left
