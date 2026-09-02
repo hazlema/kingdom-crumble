@@ -204,7 +204,7 @@ func _on_fired(velocity: Vector2) -> void:
 func _settle() -> void:
 	state = State.RESOLVING
 	_retire_restless_stones()
-	await _award_leans()
+	_award_leans()
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "settled"))
 	var standing := count_standing(_crates())
 	if standing == 0:
@@ -241,7 +241,12 @@ func _back_to_editor() -> void:
 	get_tree().change_scene_to_file("res://scenes/editor.tscn")
 
 
+# Non-blocking fanfare (owner: lean bonuses were stalling the turn —
+# each one used to hold the settle hostage for a 1.2s banner, stacking
+# sequentially). The toast channel self-clears and cannot collide with
+# the CRUMBLED/OUT-OF-STONES banner the settle may raise right after.
 func _award_leans() -> void:
+	var leans := 0
 	for crate in _crates():
 		if not Lean.is_lean_angle(crate.rotation):
 			continue
@@ -249,9 +254,11 @@ func _award_leans() -> void:
 		for i in bodies.size():
 			var other: Node = bodies[i]
 			if other is Crate and _ledger.claim(crate.get_instance_id(), other.get_instance_id()):
-				hud.banner("LEAN BONUS!", "")
-				await get_tree().create_timer(1.2).timeout
-				hud.clear_banner()
+				leans += 1
+	if leans == 1:
+		hud.toast("LEAN BONUS!")
+	elif leans > 1:
+		hud.toast("LEAN BONUS x%d!" % leans)
 
 
 # Hold H: standing crates glow green, fallen ones red — what's left
