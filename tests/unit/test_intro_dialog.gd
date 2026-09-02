@@ -44,3 +44,20 @@ func test_reopens_after_dismiss() -> void:
 	d.open("T", "hello again")
 	assert_true(d.visible)
 	assert_eq(d.get_node("%Body").text, "hello again")
+
+
+func test_level_with_intro_speaks_at_start() -> void:
+	Level.next_layout = LevelLayout.new()
+	Level.next_layout.title = "Talky"
+	Level.next_layout.intro = "Welcome!"
+	Level.next_layout.crates = [
+		{"x": 800.0, "y": 569.0, "type": "crate-wood"},
+	]
+	Level.return_to_editor = true
+	var lvl: Node = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_process_frames(5)
+	assert_true(lvl.get_node("%IntroDialog").visible, "the level speaks at start")
+	lvl.get_node("%IntroDialog").dismiss()
+	assert_false(get_tree().paused, "dismiss unpauses the tree")
+	Level.return_to_editor = false

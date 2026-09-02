@@ -2,6 +2,7 @@ class_name Hud
 extends CanvasLayer
 
 signal menu_pressed
+signal info_pressed
 
 const FIRE_STONE := preload("res://art/assets/ui/stone.png")
 
@@ -18,6 +19,7 @@ func _ready() -> void:
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
 	%FireButton.icon = FIRE_STONE
 	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
+	%StatCard.info_pressed.connect(func() -> void: info_pressed.emit())
 
 
 # Alt-tabbing away mid-charge eats the release the same way.
@@ -65,9 +67,10 @@ func set_buffs(buffs: Array[StringName]) -> void:
 	%FireButton.icon = _fire_icon_for(buffs)
 
 
-func set_level_info(title: String, number: int) -> void:
+func set_level_info(title: String, number: int, has_intro := false) -> void:
 	%StatCard.set_title(title)
 	%StatCard.set_level_no(number)
+	%StatCard.set_info(has_intro)
 
 
 func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
