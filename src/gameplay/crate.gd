@@ -69,7 +69,13 @@ func _physics_process(_delta: float) -> void:
 	_mat.bounce = _full_bounce * ramp
 
 
+# One-way door (owner: "dead stays dead"): once a crate has been
+# knocked out it never counts as standing again, even if physics later
+# parks it back upright on its own grave — resurrection corrupted the
+# score.
 func is_standing() -> bool:
+	if _knock_reported:
+		return false
 	return (
 		is_standing_rotation(rotation) and global_position.distance_to(home) < KNOCKED_OUT_DISTANCE
 	)

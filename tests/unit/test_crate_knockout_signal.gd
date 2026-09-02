@@ -37,3 +37,16 @@ func test_tipped_crate_emits() -> void:
 	c.rotation = deg_to_rad(90)
 	await wait_physics_frames(2)
 	assert_signal_emit_count(c, "knocked_out", 1)
+
+
+func test_dead_stays_dead_even_back_on_its_grave() -> void:
+	var c := _spawn(false)
+	await wait_physics_frames(2)
+	assert_true(c.is_standing(), "starts standing")
+	c.position += Vector2(60, 0)
+	await wait_physics_frames(2)
+	assert_false(c.is_standing(), "displaced past the line = knocked out")
+	c.position -= Vector2(60, 0)
+	c.rotation = 0.0
+	await wait_physics_frames(2)
+	assert_false(c.is_standing(), "physics parked it back home — still dead, no resurrection")
