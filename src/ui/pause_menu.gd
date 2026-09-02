@@ -33,6 +33,8 @@ func _ready() -> void:
 	)
 	_music_slider.value = Music.get_volume_linear()
 	_music_slider.value_changed.connect(Music.set_volume_linear)
+	%SfxSlider.value = Music.get_sfx_volume_linear()
+	%SfxSlider.value_changed.connect(Music.set_sfx_volume_linear)
 	%BackToEditor.visible = false
 	%BackToEditor.pressed.connect(
 		func():

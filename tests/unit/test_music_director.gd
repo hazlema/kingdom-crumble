@@ -46,3 +46,15 @@ func test_volume_persists_to_settings_cfg() -> void:
 	cfg.load("user://settings.cfg")
 	assert_almost_eq(float(cfg.get_value("audio", "music_volume", -1.0)), 0.42, 0.001)
 	Music.set_volume_linear(before)
+
+
+func test_sfx_bus_exists_and_volume_persists() -> void:
+	assert_ne(AudioServer.get_bus_index("Sfx"), -1, "Sfx bus loaded from default_bus_layout")
+	var before: float = Music.get_sfx_volume_linear()
+	Music.set_sfx_volume_linear(0.42)
+	var idx := AudioServer.get_bus_index("Sfx")
+	assert_almost_eq(AudioServer.get_bus_volume_db(idx), linear_to_db(0.42), 0.01)
+	var cfg := ConfigFile.new()
+	cfg.load("user://settings.cfg")
+	assert_almost_eq(float(cfg.get_value("audio", "sfx_volume", -1.0)), 0.42, 0.001)
+	Music.set_sfx_volume_linear(before)

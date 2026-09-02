@@ -9,6 +9,8 @@ var _current_track := ""
 var _tier := ""
 # Background music sits under the game, not on top of it (owner: 0.25).
 var _volume := 0.25
+# Effects ride the Sfx bus (boom, shutter) — full volume by default.
+var _sfx_volume := 1.0
 
 
 func _ready() -> void:
@@ -22,6 +24,7 @@ func _ready() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS_PATH)  # missing file = fresh install, default rules
 	set_volume_linear(float(cfg.get_value("audio", "music_volume", _volume)))
+	set_sfx_volume_linear(float(cfg.get_value("audio", "sfx_volume", _sfx_volume)))
 
 
 func set_volume_linear(v: float) -> void:
@@ -35,6 +38,21 @@ func set_volume_linear(v: float) -> void:
 
 func get_volume_linear() -> float:
 	return _volume
+
+
+func set_sfx_volume_linear(v: float) -> void:
+	_sfx_volume = clampf(v, 0.0, 1.0)
+	var idx := AudioServer.get_bus_index("Sfx")
+	if idx != -1:
+		AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(_sfx_volume, 0.0001)))
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)  # keep sibling keys intact
+	cfg.set_value("audio", "sfx_volume", _sfx_volume)
+	cfg.save(SETTINGS_PATH)
+
+
+func get_sfx_volume_linear() -> float:
+	return _sfx_volume
 
 
 func play_tier(tier: String) -> void:

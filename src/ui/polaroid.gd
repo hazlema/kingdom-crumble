@@ -26,6 +26,7 @@ func _ready() -> void:
 	# camera gets a voice — absent file, silent camera.
 	if ResourceLoader.exists(SHUTTER_SFX):
 		%Click.stream = load(SHUTTER_SFX)
+		%Click.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
 
 
 func show_b64(b64: String, caption: String) -> void:
