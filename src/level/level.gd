@@ -202,6 +202,7 @@ func _on_fired(velocity: Vector2) -> void:
 
 func _settle() -> void:
 	state = State.RESOLVING
+	_retire_restless_stones()
 	await _award_leans()
 	cam.set_mode(CameraDirector.next_mode(cam.mode, "settled"))
 	var standing := count_standing(_crates())
@@ -281,6 +282,18 @@ func _apply_backdrop_alpha(alpha: float) -> void:
 
 func _crates() -> Array:
 	return get_tree().get_nodes_in_group("crates")
+
+
+# The turn is over — its stones retire with it. A boom+bounce cluster
+# stone never frees itself and would keep exploding through the next
+# aiming phase (turn rules fix this, not physics — the 6s carnage
+# window is untouched). Sleeping stones stay as harmless rubble.
+func _retire_restless_stones() -> void:
+	for stone in _active_stones:
+		if is_instance_valid(stone) and not stone.sleeping:
+			var tw := stone.create_tween()
+			tw.tween_property(stone, "modulate:a", 0.0, 0.35)
+			tw.tween_callback(stone.queue_free)
 
 
 func _stone_is_done() -> bool:
