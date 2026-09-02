@@ -31,20 +31,26 @@ func test_super_bounce_stone_bounces_off_ground() -> void:
 	assert_true(bounced, "stone should rebound upward after hitting the ground")
 
 
-# The ground now carries 0.15 bounce (owner: dead thuds are "very sad"),
-# so plain stones get a LITTLE rebound — but nothing near the
-# super-bounce show. This pins the gap between the two.
-func test_plain_stone_gets_only_a_little_bounce() -> void:
+# The ground carries a bounce material (owner: dead thuds are "very
+# sad"). Rather than pin a magic number, this reads the dial off the
+# scene and asserts the plain stone's rebound TRACKS it — tuning the
+# material never breaks this test, removing it does.
+func test_plain_stone_rebound_tracks_the_ground_dial() -> void:
 	var arena := _arena()
+	var dial: float = arena.get_node("Environment/Ground").physics_material_override.bounce
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
 	arena.add_child(stone)
 	stone.launch(Vector2(800, 400), Vector2(300, 300))
-	var peak_rebound := 0.0
+	var impact := 0.0
+	var rebound := 0.0
 	for i in 120:
 		await wait_physics_frames(1)
-		peak_rebound = maxf(peak_rebound, -stone.linear_velocity.y)
-	assert_gt(peak_rebound, 20.0, "the ground has a pulse — no more dead thud")
-	assert_lt(peak_rebound, 300.0, "little bounce, not the super-bounce show")
+		impact = maxf(impact, stone.linear_velocity.y)
+		rebound = maxf(rebound, -stone.linear_velocity.y)
+	var ratio := rebound / impact
+	assert_between(
+		ratio, dial * 0.5, dial * 1.5 + 0.05, "rebound ratio %.2f follows dial %.2f" % [ratio, dial]
+	)
 
 
 func test_exploding_stone_shoves_crates_in_radius() -> void:
