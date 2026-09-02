@@ -10,12 +10,15 @@ extends Node2D
 # drag-out-of-palette and drag-to-move only work reliably by reading
 # Input state directly each frame.
 
+enum Mode { CRATES, SCENERY }
+
 static var resume_layout: LevelLayout = null
 
 var current := LevelLayout.new()
 var occupancy := {}  # Vector2i -> Crate
 var carrying := ""  # asset id while placing, "" = none
 var save_path := ""  # last saved path, "" = unsaved
+var mode := Mode.CRATES
 var _spawned: Array[Crate] = []
 var _scenery: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
@@ -41,9 +44,11 @@ func _ready() -> void:
 	menu.clear_requested.connect(_on_clear)
 	menu.exit_requested.connect(_on_exit)
 	menu.test_requested.connect(_on_test)
-	menu.background_picked.connect(_on_background_picked)
 	menu.intro_edited.connect(func(t: String) -> void: current.intro = t)
 	menu.open_intro_requested.connect(func() -> void: menu.open_intro(current.intro))
+	menu.scenery_requested.connect(_enter_scenery)
+	%SceneryPanel.background_picked.connect(_on_background_picked)
+	%SceneryPanel.done.connect(_exit_scenery)
 	if resume_layout != null:
 		current = resume_layout
 		resume_layout = null
@@ -57,17 +62,18 @@ func _process(_delta: float) -> void:
 		_clamp_camera()
 	_last_mouse = mouse
 
-	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	# Geometry, not gui_get_hovered_control(): during a drag that began
-	# on a palette Button the Control keeps mouse capture, so the hover
-	# API still reports UI at release and would veto the drop.
-	var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
-	if lmb and not _lmb_down and not over_ui:
-		_press(_mouse_cell())
-	elif not lmb and _lmb_down:
-		_release(_mouse_cell(), over_ui)
-	_lmb_down = lmb
-	_update_ghost()
+	if mode == Mode.CRATES:
+		var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+		# Geometry, not gui_get_hovered_control(): during a drag that began
+		# on a palette Button the Control keeps mouse capture, so the hover
+		# API still reports UI at release and would veto the drop.
+		var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
+		if lmb and not _lmb_down and not over_ui:
+			_press(_mouse_cell())
+		elif not lmb and _lmb_down:
+			_release(_mouse_cell(), over_ui)
+		_lmb_down = lmb
+		_update_ghost()
 
 
 func _press(cell: Vector2i) -> void:
@@ -162,6 +168,26 @@ func _on_background_picked(id: String) -> void:
 	current.background = id
 
 
+func _enter_scenery() -> void:
+	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
+	carrying = ""
+	mode = Mode.SCENERY
+	palette.visible = false
+	%SceneryPanel.visible = true
+	overlay.visible = false
+	for c in _spawned:
+		c.modulate.a = 0.8
+
+
+func _exit_scenery() -> void:
+	mode = Mode.CRATES
+	%SceneryPanel.visible = false
+	palette.visible = true
+	overlay.visible = true
+	for c in _spawned:
+		c.modulate.a = 1.0
+
+
 func _rebuild() -> void:
 	for s in _scenery:
 		if is_instance_valid(s):
@@ -199,8 +225,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_save()  # falls through to Save As when unsaved
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		_delete_selected()
-	elif event.is_action_pressed("menu") and carrying != "":
-		carrying = ""
+	elif event.is_action_pressed("menu"):
+		if mode == Mode.SCENERY:
+			_exit_scenery()
+		elif carrying != "":
+			carrying = ""
 
 
 func _mouse_cell() -> Vector2i:
@@ -208,7 +237,12 @@ func _mouse_cell() -> Vector2i:
 
 
 func _mouse_over_ui(p: Vector2) -> bool:
-	return palette.get_global_rect().has_point(p) or menu.covers_point(p)
+	var sp: Node = %SceneryPanel
+	return (
+		palette.get_global_rect().has_point(p)
+		or menu.covers_point(p)
+		or (sp.visible and (sp as Control).get_global_rect().has_point(p))
+	)
 
 
 # Clamp pan POSITION to the camera limits — past the bounds the display

@@ -61,6 +61,12 @@ custom_minimum_size = Vector2(180, 0)
 theme_override_font_sizes/font_size = 18
 text = "INTRO…"
 
+[node name="SceneryBtn" type="Button" parent="Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+theme_override_font_sizes/font_size = 18
+text = "EDIT SCENERY"
+
 [node name="ClearBtn" type="Button" parent="Panel/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 0)
@@ -78,17 +84,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 0)
 theme_override_font_sizes/font_size = 18
 text = "Exit to Menu"
-
-[node name="Separator" type="HSeparator" parent="Panel/VBox"]
-
-[node name="BgLabel" type="Label" parent="Panel/VBox"]
-theme_override_font_sizes/font_size = 14
-text = "Background:"
-
-[node name="BackgroundList" type="ItemList" parent="Panel/VBox"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 40)
-theme_override_font_sizes/font_size = 16
 
 [node name="SaveAsDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
