@@ -9,6 +9,9 @@ extends Resource
 @export var background := "meadow"
 # Base64 PNG portrait captured by the editor at save ("" = none).
 @export var thumb := ""
+# Optional intro text shown when the level starts ("" = none). Plain
+# String — text can charm, never act (sharing stays safe).
+@export var intro := ""
 @export var shots := 0  # 0 = difficulty preset decides
 # Each entry: { "x": float, "y": float, "type": String }
 @export var crates: Array[Dictionary] = []
