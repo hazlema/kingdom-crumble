@@ -31,18 +31,20 @@ func test_super_bounce_stone_bounces_off_ground() -> void:
 	assert_true(bounced, "stone should rebound upward after hitting the ground")
 
 
-func test_plain_stone_does_not_bounce() -> void:
+# The ground now carries 0.15 bounce (owner: dead thuds are "very sad"),
+# so plain stones get a LITTLE rebound — but nothing near the
+# super-bounce show. This pins the gap between the two.
+func test_plain_stone_gets_only_a_little_bounce() -> void:
 	var arena := _arena()
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
 	arena.add_child(stone)
 	stone.launch(Vector2(800, 400), Vector2(300, 300))
-	var bounced := false
+	var peak_rebound := 0.0
 	for i in 120:
 		await wait_physics_frames(1)
-		if stone.linear_velocity.y < -50.0:
-			bounced = true
-			break
-	assert_false(bounced)
+		peak_rebound = maxf(peak_rebound, -stone.linear_velocity.y)
+	assert_gt(peak_rebound, 20.0, "the ground has a pulse — no more dead thud")
+	assert_lt(peak_rebound, 300.0, "little bounce, not the super-bounce show")
 
 
 func test_exploding_stone_shoves_crates_in_radius() -> void:
