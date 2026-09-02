@@ -8,6 +8,57 @@ const MAX_COORD := 100000.0
 const MAX_CRATES := 500
 const MAX_THUMB_CHARS := 600_000  # ~450 KB decoded — a 416x256 PNG fits many times over
 const MAX_INTRO_CHARS := 600  # a hearty paragraph; hard wall for blobs
+const MAX_IMAGES := 8
+const MAX_IMAGE_CHARS := 600_000
+const MAX_OVERLAYS := 16
+
+# Compiled once for the class; validates base64 alphabet before decoding.
+# Marshalls.base64_to_raw emits an engine error on bad chars — untrusted data
+# must degrade silently, so we pre-screen rather than let it through.
+static var _b64_rx := RegEx.create_from_string("^[A-Za-z0-9+/]*={0,2}$")
+
+
+# Returns the first 8 hex characters of the SHA-256 hash of the given bytes.
+static func image_key(png_bytes: PackedByteArray) -> String:
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_SHA256)
+	ctx.update(png_bytes)
+	return ctx.finish().hex_encode().substr(0, 8)
+
+
+# Shared PNG gate: validates base64 string, decodes to Image, or returns null
+# silently on any failure. Hostile or corrupt blobs degrade silently —
+# a bad image can disappoint, never crash (spec §4).
+static func decode_png_b64(b64: String) -> Image:
+	if b64 == "":
+		return null
+	# base64 encodes 3 bytes per 4 chars (with padding); any other length is
+	# invalid and Marshalls.base64_to_raw behavior is undefined — reject early.
+	if b64.length() % 4 != 0:
+		return null
+	# Alphabet check: Marshalls.base64_to_raw emits an engine error on bad
+	# chars which GUT counts as a test failure; untrusted data must not reach it.
+	if _b64_rx.search(b64) == null:
+		return null
+	var buf := Marshalls.base64_to_raw(b64)
+	if buf.is_empty():
+		return null
+	# load_png_from_buffer emits engine errors on non-PNG bytes (confirmed by
+	# test — 4 errors per call, GUT treats those as failures). Guard with the
+	# 8-byte PNG magic signature before calling into the driver. Residual: a
+	# correct magic prefix on a corrupt body still reaches the driver and logs
+	# its errors — the != OK guard keeps the degrade correct, so hostile files
+	# can spam the log but never crash or mis-render.
+	const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
+	if buf.size() < PNG_MAGIC.size():
+		return null
+	for i in PNG_MAGIC.size():
+		if buf[i] != PNG_MAGIC[i]:
+			return null
+	var img := Image.new()
+	if img.load_png_from_buffer(buf) != OK:
+		return null
+	return img
 
 
 static func parse(text: String) -> LevelLayout:
@@ -40,6 +91,13 @@ static func parse(text: String) -> LevelLayout:
 					if i is String:
 						str_ids.append(i)
 				l.triggers[String(event)] = str_ids
+	l.images = (data.get("images", {}) as Dictionary).duplicate()
+	var raw_overlays: Variant = data.get("overlays", [])
+	var typed_overlays: Array[Dictionary] = []
+	for entry in (raw_overlays as Array):
+		if entry is Dictionary:
+			typed_overlays.append((entry as Dictionary).duplicate())
+	l.overlays = typed_overlays
 	return l
 
 
@@ -84,6 +142,34 @@ static func validate(d: Dictionary) -> String:
 		return "bad intro"
 	if (_intro as String).length() > MAX_INTRO_CHARS:
 		return "intro too long"
+	var _images: Variant = d.get("images", {})
+	if not _images is Dictionary:
+		return "bad images"
+	if (_images as Dictionary).size() > MAX_IMAGES:
+		return "too many images"
+	for _key in (_images as Dictionary):
+		if not _key is String or (_key as String).length() > 16:
+			return "bad images"
+		var _val: Variant = (_images as Dictionary)[_key]
+		if not _val is String or (_val as String).length() > MAX_IMAGE_CHARS:
+			return "image too large"
+	var _overlays: Variant = d.get("overlays", [])
+	if not _overlays is Array:
+		return "bad overlays"
+	if (_overlays as Array).size() > MAX_OVERLAYS:
+		return "too many overlays"
+	for _entry in (_overlays as Array):
+		if not _entry is Dictionary:
+			return "bad overlay"
+		var _img: Variant = (_entry as Dictionary).get("image", null)
+		if not _img is String:
+			return "bad overlay"
+		var _ox: Variant = (_entry as Dictionary).get("x", null)
+		var _oy: Variant = (_entry as Dictionary).get("y", null)
+		if not (_ox is float or _ox is int) or not (_oy is float or _oy is int):
+			return "bad overlay"
+		if absf(float(_ox)) > MAX_COORD or absf(float(_oy)) > MAX_COORD:
+			return "bad overlay"
 	return ""
 
 
@@ -102,4 +188,8 @@ static func serialize(layout: LevelLayout) -> String:
 		d["thumb"] = layout.thumb
 	if layout.intro != "":
 		d["intro"] = layout.intro
+	if layout.images.size() > 0:
+		d["images"] = layout.images
+	if layout.overlays.size() > 0:
+		d["overlays"] = layout.overlays
 	return JSON.stringify(d, "  ")

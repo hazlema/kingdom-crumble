@@ -17,3 +17,7 @@ extends Resource
 @export var crates: Array[Dictionary] = []
 # event name -> Array[String] of curated effect ids
 @export var triggers := {}
+# Embedded scenery art: content-hash key -> base64 PNG (spec 2026-09-02).
+@export var images := {}
+# Scenery placements: {image, x, y, behavior?, pivot?, speed?, amplitude?}
+@export var overlays: Array[Dictionary] = []
