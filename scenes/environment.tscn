@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://benv5ronm3k9r"]
+[gd_scene load_steps=6 format=3 uid="uid://benv5ronm3k9r"]
 
 [ext_resource type="PackedScene" path="res://scenes/background.tscn" id="1"]
 [ext_resource type="Shader" path="res://art/shaders/grass.gdshader" id="2"]
@@ -16,6 +16,9 @@ shader_parameter/body_bottom_color = Color(0.16, 0.4, 0.25, 1)
 
 [sub_resource type="WorldBoundaryShape2D" id="ground_shape"]
 
+[sub_resource type="PhysicsMaterial" id="ground_mat"]
+bounce = 0.15
+
 [node name="Environment" type="Node2D"]
 
 [node name="Background" parent="." instance=ExtResource("1")]
@@ -30,6 +33,7 @@ color = Color(0.42, 0.56, 0.3, 1)
 
 [node name="Ground" type="StaticBody2D" parent="." unique_id=1747476027]
 position = Vector2(0, 600)
+physics_material_override = SubResource("ground_mat")
 
 [node name="Shape" type="CollisionShape2D" parent="Ground" unique_id=1461618730]
 shape = SubResource("ground_shape")
