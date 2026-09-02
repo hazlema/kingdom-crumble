@@ -1,6 +1,18 @@
 extends GutTest
 
 
+# Stones take their mass from Settings.preset (2 x impact_force). Load a
+# real tier so this file is deterministic solo — it used to pass only
+# when an earlier test file happened to leave a preset loaded.
+func before_all() -> void:
+	Settings.load_tier("chill")
+
+
+func after_all() -> void:
+	Settings.preset = null
+	Settings.tier = ""
+
+
 func _arena() -> Node2D:
 	var a := Node2D.new()
 	add_child_autofree(a)
@@ -89,3 +101,18 @@ func test_bounce_explode_stone_survives_first_boom() -> void:
 	stone.launch(Vector2(800, 500), Vector2(400, 100))
 	await wait_seconds(0.8)
 	assert_true(is_instance_valid(stone), "skipping cluster bomb lives past boom one")
+
+
+func test_floor_crate_hops_when_smacked() -> void:
+	var arena := _arena()
+	var crates := _stack(arena, 12, 1)
+	await wait_seconds(0.3)
+	var rest_y := crates[0].global_position.y
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	arena.add_child(stone)
+	stone.launch(Vector2(crates[0].global_position.x - 300.0, rest_y), Vector2(700, 0))
+	var peak_lift := 0.0
+	for i in 90:
+		await wait_physics_frames(1)
+		peak_lift = maxf(peak_lift, rest_y - crates[0].global_position.y)
+	assert_gt(peak_lift, 8.0, "smacked floor crate gets airborne (lift %.1f px)" % peak_lift)

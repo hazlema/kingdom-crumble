@@ -20,6 +20,13 @@ const BOUNCE_MAX_SPEED := 240.0
 # spot — bottom-row crates slide upright along the ground and can never
 # tip past 45 degrees.
 const KNOCKED_OUT_DISTANCE := 48.0
+# The hop (owner: a floor-level crate has "no clearance to build
+# momentum when you hit it"): a solid stone hit adds a small upward
+# kick so the crate gets airborne — then the tumble and the ground's
+# bounce material can actually perform. Slow kisses don't hop. Scaled
+# by the crate's own mass so the hop height is consistent.
+const POP_MIN_STONE_SPEED := 150.0
+const POP_VELOCITY := 170.0
 
 var type_id := "crate-wood"
 var home := Vector2.ZERO  # spawn position, captured in _ready
@@ -38,6 +45,14 @@ func _ready() -> void:
 	var p := Settings.preset
 	linear_damp = p.crate_linear_damp if p and p.crate_linear_damp >= 0.0 else LINEAR_DAMP
 	angular_damp = p.crate_angular_damp if p and p.crate_angular_damp >= 0.0 else ANGULAR_DAMP
+	contact_monitor = true
+	max_contacts_reported = 4
+	body_entered.connect(_on_body_entered)
+
+
+func _on_body_entered(body: Node) -> void:
+	if body is Stone and body.linear_velocity.length() > POP_MIN_STONE_SPEED:
+		apply_central_impulse(Vector2.UP * POP_VELOCITY * mass)
 
 
 func _physics_process(_delta: float) -> void:
