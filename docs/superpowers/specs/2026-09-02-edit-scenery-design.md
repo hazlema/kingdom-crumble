@@ -18,14 +18,19 @@ scenery art — sharable as one file, Crate-Store ready.
 ## 1. Format [OWNER-PROPOSED, sharpened to named keys]
 
 ```json
-"images": { "blades": "<base64 png>" },
+"images": { "a3f29c01": "<base64 png>" },
 "overlays": [
-  { "image": "blades", "x": 1344, "y": 260, "behavior": "SPIN",
+  { "image": "a3f29c01", "x": 1344, "y": 260, "behavior": "SPIN",
     "pivot": "CENTER", "speed": 0.1 }
 ]
 ```
 
-- `images`: dict name → base64 PNG. Caps: ≤ 8 entries, each ≤
+- Image keys are AUTO-GENERATED at import [OWNER-PROPOSED: no user
+  text entry] — first 8 hex chars of the PNG bytes' SHA-256, so
+  re-importing identical art dedupes to one stored blob for free. The
+  key is invisible plumbing; the editor's placed-pieces list shows
+  thumbnails, never names.
+- `images`: dict key → base64 PNG. Caps: ≤ 8 entries, each ≤
   MAX_THUMB_CHARS-style byte cap (600k chars), PNG magic-gated at
   display, silent degrade on bad data. Multiple overlays may share one
   image.
