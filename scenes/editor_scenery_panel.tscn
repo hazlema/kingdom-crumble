@@ -1,0 +1,54 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/editor/scenery_panel.gd" id="1"]
+
+[node name="SceneryPanel" type="PanelContainer"]
+visible = false
+offset_left = 24.0
+offset_top = 140.0
+offset_right = 344.0
+script = ExtResource("1")
+
+[node name="Box" type="VBoxContainer" parent="."]
+
+[node name="TitleBar" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+text = "SCENERY"
+mouse_filter = 0
+
+[node name="BgLabel" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 14
+text = "Background:"
+
+[node name="BackgroundList" type="ItemList" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 40)
+theme_override_font_sizes/font_size = 16
+
+[node name="Separator" type="HSeparator" parent="Box"]
+
+[node name="AddImageBtn" type="Button" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+theme_override_font_sizes/font_size = 18
+text = "ADD IMAGE"
+
+[node name="Separator2" type="HSeparator" parent="Box"]
+
+[node name="PiecesLabel" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 14
+text = "Pieces:"
+
+[node name="Pieces" type="ItemList" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+theme_override_font_sizes/font_size = 14
+
+[node name="Separator3" type="HSeparator" parent="Box"]
+
+[node name="DoneBtn" type="Button" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+theme_override_font_sizes/font_size = 18
+text = "DONE"

@@ -7,11 +7,9 @@ signal load_requested(path: String)
 signal clear_requested
 signal exit_requested
 signal test_requested
-signal background_picked(id: String)
 signal intro_edited(text: String)
 signal open_intro_requested
-
-const BACKGROUNDS: Array[String] = ["meadow"]
+signal scenery_requested
 
 
 func _ready() -> void:
@@ -40,11 +38,7 @@ func _ready() -> void:
 			OS.shell_open(ProjectSettings.globalize_path(LevelStore.USER_DIR))
 	)
 	%ExitBtn.pressed.connect(func() -> void: _pick(exit_requested))
-	for bg in BACKGROUNDS:
-		%BackgroundList.add_item(bg)
-	%BackgroundList.item_selected.connect(
-		func(i: int) -> void: background_picked.emit(%BackgroundList.get_item_text(i))
-	)
+	%SceneryBtn.pressed.connect(func() -> void: _pick(scenery_requested))
 	%SaveAsDialog.confirmed.connect(
 		func() -> void:
 			if %StemEdit.text.strip_edges() != "":

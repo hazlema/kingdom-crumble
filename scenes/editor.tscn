@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://src/editor/level_editor.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="2"]
@@ -7,6 +7,9 @@
 [ext_resource type="PackedScene" path="res://scenes/editor_palette.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/editor_menu.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ui/polaroid.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/editor_scenery_panel.tscn" id="8"]
+[ext_resource type="Script" path="res://src/editor/scenery_gizmo.gd" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/editor_piece_inspector.tscn" id="10"]
 
 [node name="LevelEditor" type="Node2D"]
 script = ExtResource("1")
@@ -18,6 +21,10 @@ position = Vector2(200, 600)
 
 [node name="GridOverlay" type="Node2D" parent="."]
 script = ExtResource("4")
+
+[node name="SceneryGizmo" type="Node2D" parent="."]
+script = ExtResource("9")
+visible = false
 
 [node name="Camera" type="Camera2D" parent="."]
 process_callback = 1
@@ -32,8 +39,14 @@ limit_bottom = 700
 [node name="Palette" parent="Ui" instance=ExtResource("5")]
 unique_name_in_owner = true
 
+[node name="SceneryPanel" parent="Ui" instance=ExtResource("8")]
+unique_name_in_owner = true
+
 [node name="EditorMenu" parent="Ui" instance=ExtResource("6")]
 unique_name_in_owner = true
 
 [node name="Polaroid" parent="Ui" instance=ExtResource("7")]
+unique_name_in_owner = true
+
+[node name="PieceInspector" parent="Ui" instance=ExtResource("10")]
 unique_name_in_owner = true

@@ -76,6 +76,11 @@ func _ready() -> void:
 		push_warning("No loadable layout (default included)")
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
+	var _pieces := SceneryBuilder.spawn(self, layout)
+	# Scenery lives BEHIND the whole stage (spec: below crates AND the
+	# trebuchet) — tuck pieces right after the Environment backdrop.
+	for i in _pieces.size():
+		move_child(_pieces[i], 1 + i)
 	_spawn_crates()
 	if layout.title != "":
 		hud.toast(layout.title)
