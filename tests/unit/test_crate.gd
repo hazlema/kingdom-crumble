@@ -49,7 +49,7 @@ func test_impact_sound_plays_on_sfx_bus_with_pitch_wobble() -> void:
 	# Sfx bus, pitch wobbled 0.9-1.1, player freed when the take ends.
 	var c := Crate.new()
 	add_child_autofree(c)
-	c._play_impact()
+	c._play_impact(Crate.IMPACT_FULL_SPEED)
 	var found: AudioStreamPlayer = null
 	for child in c.get_children():
 		if child is AudioStreamPlayer:
@@ -65,3 +65,17 @@ func test_impact_sound_plays_on_sfx_bus_with_pitch_wobble() -> void:
 	assert_eq(found.bus, "Sfx", "rides the Sfx bus (owner's sound slider governs it)")
 	assert_between(found.pitch_scale, Crate.IMPACT_PITCH * 0.9, Crate.IMPACT_PITCH * 1.1, "octave-down pitch with wobble in range")
 	assert_true(Crate.IMPACT_SOUNDS.has(found.stream), "plays one of the two takes")
+
+
+func test_impact_volume_rides_the_hit_speed() -> void:
+	var c := Crate.new()
+	add_child_autofree(c)
+	c._play_impact(Crate.IMPACT_MIN_SPEED + 1.0)  # barely a tap
+	c._play_impact(Crate.IMPACT_FULL_SPEED)  # full thunk
+	var volumes: Array[float] = []
+	for child in c.get_children():
+		if child is AudioStreamPlayer:
+			volumes.append(child.volume_db)
+	assert_eq(volumes.size(), 2, "both hits spawn a player")
+	assert_lt(volumes[0], volumes[1], "the tap is quieter than the thunk")
+	assert_almost_eq(volumes[1], 0.0, 0.01, "full-speed hit plays at full volume")

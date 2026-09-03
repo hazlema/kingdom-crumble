@@ -39,6 +39,12 @@ const IMPACT_SOUNDS: Array[AudioStream] = [
 # octave down. 0.5 = one octave; raise toward 1.0 if the thunk gets
 # too muddy. The +/-10% wobble rides on top of this.
 const IMPACT_PITCH := 0.5
+# Every real contact speaks (owner: silent hits feel like a miss) —
+# volume rides the impact speed instead of a hard gate. Below MIN it's
+# a resting nudge (stay silent), at FULL and above it's the whole thunk.
+const IMPACT_MIN_SPEED := 40.0
+const IMPACT_FULL_SPEED := 400.0
+const IMPACT_MIN_VOLUME := 0.35
 
 var type_id := "crate-wood"
 var home := Vector2.ZERO  # spawn position, captured in _ready
@@ -63,18 +69,26 @@ func _ready() -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if body is Stone and body.linear_velocity.length() > POP_MIN_STONE_SPEED:
+	if not body is Stone:
+		return
+	var speed: float = (body as Stone).linear_velocity.length()
+	if speed > POP_MIN_STONE_SPEED:
 		apply_central_impulse(Vector2.UP * POP_VELOCITY * mass)
-		_play_impact()
+	if speed > IMPACT_MIN_SPEED:
+		_play_impact(speed)
 
 
-# Rides the same speed gate as the hop: slow kisses stay silent,
-# real hits speak. One-shot player, freed when the take ends.
-func _play_impact() -> void:
+# One-shot player, freed when the take ends. Volume follows the hit:
+# a slow roll taps softly, a full-speed stone gets the whole thunk.
+func _play_impact(speed: float) -> void:
 	var player := AudioStreamPlayer.new()
 	player.stream = IMPACT_SOUNDS[randi() % IMPACT_SOUNDS.size()]
 	player.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
 	player.pitch_scale = IMPACT_PITCH * randf_range(0.9, 1.1)
+	var ramp := clampf(
+		(speed - IMPACT_MIN_SPEED) / (IMPACT_FULL_SPEED - IMPACT_MIN_SPEED), 0.0, 1.0
+	)
+	player.volume_db = linear_to_db(lerpf(IMPACT_MIN_VOLUME, 1.0, ramp))
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	# Same-frame smash: several crates struck in one physics tick would
