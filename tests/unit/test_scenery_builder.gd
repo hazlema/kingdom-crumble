@@ -63,6 +63,44 @@ func test_no_scenery_no_nodes() -> void:
 	assert_eq(host.get_child_count(), before)
 
 
+func test_drift_fields_map_and_clamp() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := _layout_with(
+		[{"image": "abcd1234", "x": 0.0, "y": 0.0, "behavior": "DRIFT", "axis": "VERTICAL", "travel": 9999.0, "tilt": 99.0}]
+	)
+	var pieces := SceneryBuilder.spawn(host, l)
+	assert_eq(pieces.size(), 1)
+	assert_eq(pieces[0].behavior, NarfDecor.Behavior.DRIFT)
+	assert_eq(pieces[0].axis, NarfDecor.DriftAxis.VERTICAL)
+	assert_almost_eq(pieces[0].travel, 2000.0, 0.001, "travel clamped to 2000")
+	assert_almost_eq(pieces[0].tilt, 45.0, 0.001, "tilt clamped to 45")
+
+
+func test_drift_fields_default_when_absent() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := _layout_with(
+		[{"image": "abcd1234", "x": 0.0, "y": 0.0, "behavior": "WANDER"}]
+	)
+	var pieces := SceneryBuilder.spawn(host, l)
+	assert_eq(pieces.size(), 1)
+	assert_eq(pieces[0].behavior, NarfDecor.Behavior.WANDER)
+	assert_eq(pieces[0].axis, NarfDecor.DriftAxis.HORIZONTAL)
+	assert_almost_eq(pieces[0].travel, 120.0, 0.001, "travel defaults to 120")
+	assert_almost_eq(pieces[0].tilt, 8.0, 0.001, "tilt defaults to 8")
+
+
+func test_unknown_axis_name_skips_entry_with_warning() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := _layout_with(
+		[{"image": "abcd1234", "x": 0.0, "y": 0.0, "behavior": "DRIFT", "axis": "DIAGONAL"}]
+	)
+	var pieces := SceneryBuilder.spawn(host, l)
+	assert_eq(pieces.size(), 0, "unknown axis name skips the entry")
+
+
 func test_overlay_index_meta_set() -> void:
 	var host := Node2D.new()
 	add_child_autofree(host)

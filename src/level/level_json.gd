@@ -181,6 +181,13 @@ static func validate(d: Dictionary) -> String:
 		var _am: Variant = (_entry as Dictionary).get("amplitude", 0.0)
 		if not (_sp is float or _sp is int) or not (_am is float or _am is int):
 			return "bad overlay"
+		var _ax: Variant = (_entry as Dictionary).get("axis", "HORIZONTAL")
+		if not _ax is String:
+			return "bad overlay"
+		var _tr: Variant = (_entry as Dictionary).get("travel", 0.0)
+		var _ti: Variant = (_entry as Dictionary).get("tilt", 0.0)
+		if not (_tr is float or _tr is int) or not (_ti is float or _ti is int):
+			return "bad overlay"
 	return ""
 
 

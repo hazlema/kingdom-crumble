@@ -25,6 +25,7 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 
 	var behavior_keys := NarfDecor.Behavior.keys()
 	var pivot_keys := NarfDecor.Pivot.keys()
+	var axis_keys := NarfDecor.DriftAxis.keys()
 
 	for i in layout.overlays.size():
 		var entry: Dictionary = layout.overlays[i]
@@ -47,13 +48,24 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 			push_warning("SceneryBuilder: unknown pivot '%s' — skipping overlay" % pivot_name)
 			continue
 
+		# Map axis name; unknown name → warning and skip entry.
+		var axis_name: String = entry.get("axis", "HORIZONTAL")
+		var axis_idx: int = axis_keys.find(axis_name)
+		if axis_idx == -1:
+			push_warning("SceneryBuilder: unknown axis '%s' — skipping overlay" % axis_name)
+			continue
+
 		var piece := NarfDecor.new()
 		# Set texture first so _apply_pivot can compute offset correctly.
 		piece.texture = tex_cache[img_key]
 		piece.behavior = behavior_idx as NarfDecor.Behavior
 		piece.pivot = pivot_idx as NarfDecor.Pivot
 		piece.speed = clampf(float(entry.get("speed", 0.25)), 0.0, 10.0)
-		piece.amplitude = clampf(float(entry.get("amplitude", 6.0)), 0.0, 180.0)
+		# JSON field keeps the old name "amplitude" for save compat.
+		piece.movement = clampf(float(entry.get("amplitude", 6.0)), 0.0, 180.0)
+		piece.axis = axis_idx as NarfDecor.DriftAxis
+		piece.travel = clampf(float(entry.get("travel", 120.0)), 0.0, 2000.0)
+		piece.tilt = clampf(float(entry.get("tilt", 8.0)), 0.0, 45.0)
 		piece.position = Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
