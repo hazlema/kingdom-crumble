@@ -131,19 +131,7 @@ func _on_save() -> void:
 		menu.open_save_as()
 		return
 	var stem := save_path.get_file().get_basename()
-	_bake_scenery()
-	_rebuild_scenery()
-	_refresh_pieces()
-	# Undim crates and hide gizmo for a clean thumb.
-	if mode == Mode.SCENERY:
-		for c in _spawned:
-			c.modulate.a = 1.0
-	_gizmo.visible = false
-	await _capture_thumb()
-	_gizmo.visible = (mode == Mode.SCENERY)
-	if mode == Mode.SCENERY:
-		for c in _spawned:
-			c.modulate.a = 0.8
+	await _bake_and_capture()
 	LevelStore.save_user(current, stem)
 
 
@@ -152,20 +140,26 @@ func _on_save() -> void:
 # Untitled left forks wearing the original's title).
 func _on_save_as(stem: String) -> void:
 	current.title = stem
+	await _bake_and_capture()
+	save_path = LevelStore.save_user(current, stem)
+
+
+# Bake pending scenery edits, refresh the live scene to match, then
+# capture the thumb over a CLEAN view (gizmo hidden, crates undimmed) —
+# shared by Save and Save As.
+func _bake_and_capture() -> void:
 	_bake_scenery()
 	_rebuild_scenery()
 	_refresh_pieces()
-	# Undim crates and hide gizmo for a clean thumb.
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
 	_gizmo.visible = false
 	await _capture_thumb()
-	_gizmo.visible = (mode == Mode.SCENERY)
+	_gizmo.visible = mode == Mode.SCENERY
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
-	save_path = LevelStore.save_user(current, stem)
 
 
 # A failed camera (headless, render hiccup) never wipes a good portrait.
@@ -216,19 +210,13 @@ func _enter_scenery() -> void:
 	# fire a spurious release as a crate move once we return to CRATES mode.
 	_drag_from = Vector2i(-1, -1)
 	_lmb_down = false
+	_rmb_down = false  # a held right-click must not menu on re-entry
 	mode = Mode.SCENERY
 	palette.visible = false
 	%SceneryPanel.visible = true
 	overlay.visible = false
-	for c in _spawned:
-		c.modulate.a = 0.8
-	_rebuild_scenery()
+	_rebuild_scenery()  # dims crates + pauses behaviors (mode is SCENERY)
 	_refresh_pieces()
-	# Pause piece behaviors: editor previews are static while editing.
-	# The real behavior is preserved in the overlay dict and restored via _rebuild_scenery on exit.
-	for s in _scenery:
-		if is_instance_valid(s):
-			s.behavior = NarfDecor.Behavior.NONE
 	_gizmo.visible = true
 
 
@@ -242,6 +230,9 @@ func _exit_scenery() -> void:
 	overlay.visible = true
 	for c in _spawned:
 		c.modulate.a = 1.0
+	# Respawn scenery in CRATES mode: behaviors come back to life (the
+	# pause above was editor-session-only; the dict never forgot them).
+	_rebuild_scenery()
 
 
 func _rebuild() -> void:
@@ -377,7 +368,23 @@ func _rebuild_scenery() -> void:
 			s.queue_free()
 	_scenery.clear()
 	_scenery = SceneryBuilder.spawn(self, current)
-	# Re-apply dim and behavior pause while in scenery mode.
+	# Pieces re-emerge wearing any PENDING (unbaked) edit-state — a
+	# rebuild must never visually revert edits the dict still carries
+	# (import/delete/cap-skip all rebuild mid-session).
+	for s in _scenery:
+		if not is_instance_valid(s):
+			continue
+		var oi: int = s.get_meta("overlay_index", -1)
+		if oi < 0 or oi >= current.overlays.size():
+			continue
+		var o: Dictionary = current.overlays[oi]
+		s.rotation = o.get("_rot", 0.0)
+		var sc: float = o.get("_scale", 1.0)
+		s.scale = Vector2(sc, sc)
+		s.flip_h = o.get("_flip_h", false)
+		s.flip_v = o.get("_flip_v", false)
+	# Re-apply dim and behavior pause while in scenery mode (editor
+	# previews are static while editing; the dict keeps the real verb).
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
@@ -521,10 +528,12 @@ func _scenery_press(world: Vector2) -> void:
 	if selected_overlay >= 0:
 		var h := _hit_handle(world, zoom)
 		if h >= 0:
+			var piece := _piece_for_overlay(selected_overlay)
+			if piece == null:
+				return
 			_scenery_handle = h
 			_scenery_dragging = true
 			_scenery_drag_start_world = world
-			var piece := _piece_for_overlay(selected_overlay)
 			_scenery_drag_piece_origin = piece.position
 			var po: Dictionary = current.overlays[selected_overlay]
 			_scenery_drag_press_scale = po.get("_scale", 1.0)
@@ -533,11 +542,13 @@ func _scenery_press(world: Vector2) -> void:
 	# Pick a new piece.
 	var idx := _pick_piece(world)
 	if idx >= 0:
+		var piece := _piece_for_overlay(idx)
+		if piece == null:
+			return
 		selected_overlay = idx
 		_scenery_handle = -1  # body drag
 		_scenery_dragging = true
 		_scenery_drag_start_world = world
-		var piece := _piece_for_overlay(selected_overlay)
 		_scenery_drag_piece_origin = piece.position
 		var po: Dictionary = current.overlays[selected_overlay]
 		_scenery_drag_press_scale = po.get("_scale", 1.0)
@@ -718,8 +729,9 @@ func _on_scenery_context_item(id: int) -> void:
 # Bake: consume edit-state transforms into the raster, re-key the blob.
 # Transform order: flip → scale → rotate (flip is pixel-level, then the
 # scaled+flipped image is rotated into its bounding box).
-# 90°/180°/270° rotations stay pixel-exact because inverse-mapping with
-# round() lands on exact source pixels for those multiples.
+# 90°/180°/270° rotations stay pixel-exact via the epsilon-guarded ceil
+# bbox (swallows cos(PI/2)'s 1e-17 dust) + unclamped-floor bilinear
+# (epsilon-negative coords land full-weight on the correct clamped pixel).
 # Unedited overlays (no underscore keys) are left unchanged — no re-encode churn.
 # ---------------------------------------------------------------------------
 
