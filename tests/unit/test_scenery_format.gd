@@ -82,3 +82,19 @@ func test_serialize_never_leaks_edit_state() -> void:
 	l.images = {"aaaa1111": "x"}
 	l.overlays = [{"image": "aaaa1111", "x": 0.0, "y": 0.0, "_rot": 1.0}]
 	assert_false(LevelJson.serialize(l).contains("_rot"))
+
+
+func test_wrong_typed_dials_rejected() -> void:
+	var base := {"format": 1, "title": "T", "crates": [], "images": {"k": "aaaa"}}
+	for bad in [
+		{"image": "k", "x": 0.0, "y": 0.0, "behavior": []},
+		{"image": "k", "x": 0.0, "y": 0.0, "pivot": 7},
+		{"image": "k", "x": 0.0, "y": 0.0, "speed": "fast"},
+		{"image": "k", "x": 0.0, "y": 0.0, "amplitude": {}},
+	]:
+		var d := base.duplicate(true)
+		d["overlays"] = [bad]
+		assert_ne(LevelJson.validate(d), "", "typed dial gate: %s" % str(bad))
+	var ok := base.duplicate(true)
+	ok["overlays"] = [{"image": "k", "x": 0.0, "y": 0.0, "behavior": "SPIN", "speed": 1}]
+	assert_eq(LevelJson.validate(ok), "", "well-typed dials pass")

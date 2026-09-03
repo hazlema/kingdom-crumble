@@ -259,6 +259,9 @@ func _rebuild() -> void:
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
 	_scenery_pieces = SceneryBuilder.spawn(self, current)
+	# Behind the whole stage in the editor preview too (below trebuchet).
+	for _zi in _scenery_pieces.size():
+		move_child(_scenery_pieces[_zi], 1 + _zi)
 	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
@@ -372,6 +375,9 @@ func _rebuild_scenery() -> void:
 			s.queue_free()
 	_scenery_pieces.clear()
 	_scenery_pieces = SceneryBuilder.spawn(self, current)
+	# Behind the whole stage in the editor preview too (below trebuchet).
+	for _zi in _scenery_pieces.size():
+		move_child(_scenery_pieces[_zi], 1 + _zi)
 	# Pieces re-emerge wearing any PENDING (unbaked) edit-state — a
 	# rebuild must never visually revert edits the dict still carries
 	# (import/delete/cap-skip all rebuild mid-session).

@@ -170,6 +170,17 @@ static func validate(d: Dictionary) -> String:
 			return "bad overlay"
 		if absf(float(_ox)) > MAX_COORD or absf(float(_oy)) > MAX_COORD:
 			return "bad overlay"
+		# Optional dials: wrong TYPES are rejected here (a typed read in
+		# the builder would abort the whole spawn); unknown NAMES are the
+		# builder's skip-with-warning department.
+		var _b: Variant = (_entry as Dictionary).get("behavior", "NONE")
+		var _p: Variant = (_entry as Dictionary).get("pivot", "CENTER")
+		if not _b is String or not _p is String:
+			return "bad overlay"
+		var _sp: Variant = (_entry as Dictionary).get("speed", 0.0)
+		var _am: Variant = (_entry as Dictionary).get("amplitude", 0.0)
+		if not (_sp is float or _sp is int) or not (_am is float or _am is int):
+			return "bad overlay"
 	return ""
 
 
