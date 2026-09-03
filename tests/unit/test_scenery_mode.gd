@@ -224,3 +224,32 @@ func test_pick_piece_survives_skipped_overlay() -> void:
 	assert_eq(ed.current.overlays.size(), overlays_before - 1, "one overlay removed")
 	# overlay[0] (the missing-image one) must still be present.
 	assert_eq(ed.current.overlays[0].get("image", ""), "deadbeef", "overlay[0] untouched")
+
+
+func test_drop_background_keys_out_flat_backdrop() -> void:
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLACK)
+	img.fill_rect(Rect2i(11, 11, 10, 10), Color.RED)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	ed.selected_overlay = 0
+	ed._drop_background()
+	var o: Dictionary = ed.current.overlays[0]
+	assert_ne(str(o["image"]), key, "stripped image gets its own key")
+	var out := LevelJson.decode_png_b64(ed.current.images[str(o["image"])])
+	assert_almost_eq(out.get_pixel(2, 2).a, 0.0, 0.02, "backdrop keyed out")
+	assert_gt(out.get_pixel(16, 16).a, 0.9, "the subject survives")
+	assert_false(ed.current.images.has(key), "orphaned original dropped")
+
+
+func test_drop_background_declines_without_uniform_backdrop() -> void:
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLACK)
+	img.fill_rect(Rect2i(0, 0, 16, 32), Color.WHITE)  # corners disagree
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	ed.selected_overlay = 0
+	ed._drop_background()
+	assert_eq(str(ed.current.overlays[0]["image"]), key, "no uniform bg = polite no-op")

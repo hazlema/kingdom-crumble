@@ -724,6 +724,7 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 	_scenery_context.clear()
 	_scenery_context.add_item("Flip H", 0)
 	_scenery_context.add_item("Flip V", 1)
+	_scenery_context.add_item("Drop Background", 3)
 	_scenery_context.add_separator()
 	_scenery_context.add_item("Delete", 2)
 	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
@@ -748,6 +749,86 @@ func _on_scenery_context_item(id: int) -> void:
 				o["_flip_v"] = piece.flip_v
 		2:  # Delete
 			_delete_selected_piece()
+		3:  # Drop Background
+			_drop_background()
+
+
+# The darkroom, in-engine (owner: "drop background"): flat AI-image
+# backdrops (the classic black/white card) become transparency. The
+# four corners vote on the background color; if they disagree there is
+# no uniform background and the op declines. Destructive by design —
+# recovery is delete + re-import (the source file never left the disk).
+static func _strip_background(img: Image) -> Image:
+	var w := img.get_width()
+	var h := img.get_height()
+	if w < 4 or h < 4:
+		return null
+	var corners: Array[Color] = [
+		img.get_pixel(1, 1),
+		img.get_pixel(w - 2, 1),
+		img.get_pixel(1, h - 2),
+		img.get_pixel(w - 2, h - 2),
+	]
+	var bg := Color(0, 0, 0, 0)
+	for c in corners:
+		bg += c
+	bg *= 0.25
+	for c in corners:
+		if Vector3(c.r - bg.r, c.g - bg.g, c.b - bg.b).length() > 0.15:
+			return null
+	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var px := img.get_pixel(x, y)
+			var d := Vector3(px.r - bg.r, px.g - bg.g, px.b - bg.b).length()
+			var a := clampf((d - 0.10) / 0.25, 0.0, 1.0) * px.a
+			if a <= 0.001:
+				out.set_pixel(x, y, Color(0, 0, 0, 0))
+			else:
+				# Unmix the background's contribution from edge blends.
+				var r := clampf((px.r - (1.0 - a) * bg.r) / a, 0.0, 1.0)
+				var g := clampf((px.g - (1.0 - a) * bg.g) / a, 0.0, 1.0)
+				var b := clampf((px.b - (1.0 - a) * bg.b) / a, 0.0, 1.0)
+				out.set_pixel(x, y, Color(r, g, b, a))
+	return out
+
+
+func _drop_background() -> void:
+	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
+		return
+	var o: Dictionary = current.overlays[selected_overlay]
+	var old_key := str(o.get("image", ""))
+	var img := LevelJson.decode_png_b64(str(current.images.get(old_key, "")))
+	if img == null:
+		return
+	var stripped := _strip_background(img)
+	if stripped == null:
+		push_warning("Drop Background: corners disagree — no uniform backdrop found")
+		return
+	var cap_result := _cap_image_to_max(stripped)
+	var png_bytes: PackedByteArray = cap_result[0]
+	var new_b64: String = cap_result[1]
+	var new_key := LevelJson.image_key(png_bytes)
+	if new_key != old_key:
+		var refs := 0
+		for entry in current.overlays:
+			if str(entry.get("image", "")) == old_key:
+				refs += 1
+		if (
+			not current.images.has(new_key)
+			and refs > 1
+			and current.images.size() >= LevelJson.MAX_IMAGES
+		):
+			push_warning("Drop Background: image cap full")
+			return
+		if not current.images.has(new_key):
+			current.images[new_key] = new_b64
+		o["image"] = new_key
+		if refs <= 1:
+			current.images.erase(old_key)
+	_rebuild_scenery()
+	_refresh_pieces()
+	_reopen_inspector()
 
 
 # ---------------------------------------------------------------------------
