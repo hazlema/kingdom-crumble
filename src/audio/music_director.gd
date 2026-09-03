@@ -64,6 +64,19 @@ func play_tier(tier: String) -> void:
 	_play_next()
 
 
+# Play a specific track now, adopting its tier — the pool takes over
+# when it ends, and a same-tier level keeps it rolling seamlessly. If
+# something from the same tier is ALREADY playing, let it ride (the
+# no-cut doctrine): the caller wanted the mood, and the mood is on.
+func play_track(path: String, tier: String) -> void:
+	if _player.playing and _tier == tier:
+		return
+	_tier = tier
+	_current_track = path
+	_player.stream = load(path)
+	_player.play()
+
+
 func stop() -> void:
 	_tier = ""
 	_player.stop()

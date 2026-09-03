@@ -2,6 +2,9 @@ extends Control
 
 
 func _ready() -> void:
+	# The meadow's overture (owner pick — fits the theme). Chill-tier, so
+	# starting a Chill run continues it seamlessly; other tiers switch.
+	Music.play_track("res://music/chill/Mossy-Lantern.mp3", "chill")
 	$Buttons/Chill.pressed.connect(_start.bind("chill"))
 	$Buttons/HeartPumper.pressed.connect(_start.bind("heartpumper"))
 	$Buttons/Hardcore.pressed.connect(_start.bind("hardcore"))

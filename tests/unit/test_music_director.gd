@@ -82,3 +82,16 @@ func test_same_tier_replay_keeps_current_track() -> void:
 		Music.play_tier("chill")
 	assert_eq(Music._current_track, first, "a level change is not a reason to cut the music")
 	Music.stop()
+
+
+func test_play_track_starts_named_song_then_lets_same_tier_ride() -> void:
+	# Menu overture: an explicit track adopts its tier; anything from the
+	# same tier already rolling stays (no-cut doctrine).
+	Music.stop()
+	var pool: Array = MusicDirector.list_pool("chill")
+	Music.play_track(pool[0], "chill")
+	assert_eq(Music._current_track, pool[0], "the named track plays")
+	assert_true(Music._player.playing, "and it is rolling")
+	Music.play_track(pool[pool.size() - 1], "chill")
+	assert_eq(Music._current_track, pool[0], "same tier already on: let it ride")
+	Music.stop()
