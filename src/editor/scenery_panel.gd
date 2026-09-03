@@ -30,22 +30,66 @@ func _ready() -> void:
 
 func _open_file_dialog() -> void:
 	if OS.has_feature("web"):
-		# The browser guards the real disk — summon ITS picker instead.
-		# The chosen file is copied into the WASM sandbox and the path
-		# handed back, where the normal import pipeline can eat it.
-		DisplayServer.file_dialog_show(
-			"Add Image",
-			"",
-			"",
-			false,
-			DisplayServer.FILE_DIALOG_MODE_OPEN_FILE,
-			PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp ; Images"]),
-			_on_web_file_picked
-		)
+		_web_pick_via_js()
 		return
 	_file_dialog.popup_centered(Vector2i(940, 640))  # a polite window, not a cinema screen (owner)
 
 
-func _on_web_file_picked(status: bool, selected: PackedStringArray, _filter: int) -> void:
-	if status and selected.size() > 0:
-		image_chosen.emit(selected[0])
+# The browser guards the real disk and Godot's web backend has no native
+# dialog — so we spawn the browser's OWN <input type=file>, read the
+# bytes in JS, and hand them across the bridge. Must run inside the
+# button-press (user gesture) or the browser vetoes the click().
+var _js_pick_cb: JavaScriptObject  # held so it isn't garbage-collected
+
+
+func _web_pick_via_js() -> void:
+	_js_pick_cb = JavaScriptBridge.create_callback(_on_js_file)
+	var window := JavaScriptBridge.get_interface("window")
+	window.kcPickCallback = _js_pick_cb
+	JavaScriptBridge.eval(
+		"""
+		(function(){
+			const inp = document.createElement('input');
+			inp.type = 'file';
+			inp.accept = '.png,.jpg,.jpeg,.webp';
+			inp.onchange = function(e){
+				const f = e.target.files[0];
+				if(!f) return;
+				const r = new FileReader();
+				r.onload = function(){
+					const b = new Uint8Array(r.result);
+					let bin = '';
+					const chunk = 0x8000;
+					for(let i = 0; i < b.length; i += chunk){
+						bin += String.fromCharCode.apply(null, b.subarray(i, i + chunk));
+					}
+					window.kcPickCallback(f.name, btoa(bin));
+				};
+				r.readAsArrayBuffer(f);
+			};
+			inp.click();
+		})();
+		""",
+		true
+	)
+
+
+func _on_js_file(args: Array) -> void:
+	if args.size() < 2:
+		return
+	var fname := str(args[0])
+	var bytes := Marshalls.base64_to_raw(str(args[1]))
+	if bytes.is_empty():
+		return
+	# Land it in the sandbox with its real extension (load_from_file
+	# sniffs format by extension), then the normal pipeline eats it.
+	var ext := fname.get_extension().to_lower()
+	if not ext in ["png", "jpg", "jpeg", "webp"]:
+		return
+	var tmp := "user://web_import_tmp.%s" % ext
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_buffer(bytes)
+	f.close()
+	image_chosen.emit(tmp)
