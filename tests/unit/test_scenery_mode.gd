@@ -271,3 +271,87 @@ func test_drop_background_spares_the_kings_eyes() -> void:
 	assert_almost_eq(out.get_pixel(2, 2).a, 0.0, 0.02, "card keyed out")
 	assert_gt(out.get_pixel(10, 10).a, 0.9, "frog survives")
 	assert_gt(out.get_pixel(16, 16).a, 0.9, "the royal eye survives")
+
+
+# ---------------------------------------------------------------------------
+# Task 4: DRIFT / WANDER inspector dials
+# ---------------------------------------------------------------------------
+
+func _make_inspector_with_piece() -> Array:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.CORAL)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	return [insp, ed.current.overlays[-1], ed._scenery_pieces[-1]]
+
+
+func test_inspector_offers_all_six_behaviors() -> void:
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	var opt: OptionButton = insp.get_node("%BehaviorOption")
+	assert_eq(opt.item_count, 6, "BehaviorOption has 6 items")
+	assert_eq(opt.get_item_text(4), "DRIFT", "index 4 = DRIFT")
+	assert_eq(opt.get_item_text(5), "WANDER", "index 5 = WANDER")
+
+
+func test_axis_setter_writes_dict_and_radio_buttons() -> void:
+	var result := _make_inspector_with_piece()
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+	var piece: NarfDecor = result[2]
+	insp.set_axis_by_name("VERTICAL")
+	assert_eq(str(overlay.get("axis", "")), "VERTICAL", "overlay[axis] == VERTICAL")
+	assert_eq(piece.axis, NarfDecor.DriftAxis.VERTICAL, "piece.axis == VERTICAL")
+	var axis_v: Button = insp.get_node("%AxisV")
+	var axis_h: Button = insp.get_node("%AxisH")
+	assert_true(axis_v.button_pressed, "%AxisV must be pressed")
+	assert_false(axis_h.button_pressed, "%AxisH must be unpressed")
+
+
+func test_travel_and_tilt_setters_write_dict_and_piece() -> void:
+	var result := _make_inspector_with_piece()
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+	var piece: NarfDecor = result[2]
+	insp.set_travel(640.0)
+	assert_almost_eq(float(overlay.get("travel", 0.0)), 640.0, 0.001, "overlay[travel] == 640.0")
+	assert_almost_eq(piece.travel, 640.0, 0.001, "piece.travel == 640.0")
+	var travel_slider: HSlider = insp.get_node("%TravelSlider")
+	assert_almost_eq(travel_slider.value, 640.0, 0.001, "%TravelSlider.value == 640.0")
+	insp.set_tilt(20.0)
+	assert_almost_eq(float(overlay.get("tilt", 0.0)), 20.0, 0.001, "overlay[tilt] == 20.0")
+	assert_almost_eq(piece.tilt, 20.0, 0.001, "piece.tilt == 20.0")
+	var tilt_slider: HSlider = insp.get_node("%TiltSlider")
+	assert_almost_eq(tilt_slider.value, 20.0, 0.001, "%TiltSlider.value == 20.0")
+
+
+func test_open_prepopulates_drift_dials() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.AQUA)
+	var key := ed.import_scenery_image(img)
+	# open() with overlay containing drift keys
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0, "axis": "VERTICAL", "travel": 500.0, "tilt": 30.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	var axis_v: Button = insp.get_node("%AxisV")
+	var axis_h: Button = insp.get_node("%AxisH")
+	var travel_slider: HSlider = insp.get_node("%TravelSlider")
+	var tilt_slider: HSlider = insp.get_node("%TiltSlider")
+	assert_true(axis_v.button_pressed, "%AxisV pressed when axis=VERTICAL")
+	assert_false(axis_h.button_pressed, "%AxisH unpressed when axis=VERTICAL")
+	assert_almost_eq(travel_slider.value, 500.0, 0.001, "%TravelSlider pre-populated from overlay")
+	assert_almost_eq(tilt_slider.value, 30.0, 0.001, "%TiltSlider pre-populated from overlay")
+	# open() with overlay missing those keys — should default to H, 120.0, 8.0
+	var img2 := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img2.fill(Color.LIME)
+	var key2 := ed.import_scenery_image(img2)
+	ed.current.overlays.append({"image": key2, "x": 10.0, "y": 10.0})
+	ed._rebuild_scenery()
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	assert_true(axis_h.button_pressed, "%AxisH defaults to pressed when axis absent")
+	assert_false(axis_v.button_pressed, "%AxisV defaults to unpressed when axis absent")
+	assert_almost_eq(travel_slider.value, 120.0, 0.001, "%TravelSlider defaults to 120.0")
+	assert_almost_eq(tilt_slider.value, 8.0, 0.001, "%TiltSlider defaults to 8.0")

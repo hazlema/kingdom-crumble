@@ -28,9 +28,14 @@ var _behavior_option: OptionButton
 var _pivot_buttons: Array[Button] = []
 var _speed_slider: HSlider
 var _amplitude_slider: HSlider
+var _axis_h: Button
+var _axis_v: Button
+var _travel_slider: HSlider
+var _tilt_slider: HSlider
 
-# Behavior name ordering must match the OptionButton indices 0-3.
-const BEHAVIOR_NAMES := ["NONE", "SPIN", "SWAY", "BOB"]
+# Behavior name ordering must match NarfDecor.Behavior ordinals exactly — indices 0-5.
+const BEHAVIOR_NAMES := ["NONE", "SPIN", "SWAY", "BOB", "DRIFT", "WANDER"]
+const AXIS_NAMES := ["HORIZONTAL", "VERTICAL"]
 
 
 func _ready() -> void:
@@ -61,6 +66,26 @@ func _ready() -> void:
 	_amplitude_slider.value_changed.connect(func(v: float) -> void:
 		if not _updating:
 			set_amplitude(v)
+	)
+	_axis_h = %AxisH
+	_axis_v = %AxisV
+	_travel_slider = %TravelSlider
+	_tilt_slider = %TiltSlider
+	_axis_h.toggled.connect(func(pressed: bool) -> void:
+		if pressed and not _updating:
+			set_axis_by_name("HORIZONTAL")
+	)
+	_axis_v.toggled.connect(func(pressed: bool) -> void:
+		if pressed and not _updating:
+			set_axis_by_name("VERTICAL")
+	)
+	_travel_slider.value_changed.connect(func(v: float) -> void:
+		if not _updating:
+			set_travel(v)
+	)
+	_tilt_slider.value_changed.connect(func(v: float) -> void:
+		if not _updating:
+			set_tilt(v)
 	)
 	for i in _pivot_buttons.size():
 		var btn := _pivot_buttons[i]
@@ -101,6 +126,11 @@ func open(overlay: Dictionary, piece: NarfDecor) -> void:
 	if p_idx < 0:
 		p_idx = NarfDecor.Pivot.CENTER
 	_press_pivot_button(p_idx)
+
+	# --- Pre-populate drift dials ---
+	_press_axis(String(overlay.get("axis", "HORIZONTAL")))
+	_travel_slider.value = float(overlay.get("travel", 120.0))
+	_tilt_slider.value = float(overlay.get("tilt", 8.0))
 
 	_updating = false
 
@@ -175,9 +205,52 @@ func set_pivot_by_index(i: int) -> void:
 	_press_pivot_button(i)
 
 
+func set_axis_by_name(name: String) -> void:
+	if _overlay.is_empty():
+		return
+	if not name in AXIS_NAMES:
+		return
+	_overlay["axis"] = name
+	if is_instance_valid(_piece):
+		_piece.axis = AXIS_NAMES.find(name) as NarfDecor.DriftAxis
+	_press_axis(name)
+
+
+func set_travel(v: float) -> void:
+	if _overlay.is_empty():
+		return
+	_overlay["travel"] = v
+	if is_instance_valid(_piece):
+		_piece.travel = v
+	if not is_equal_approx(_travel_slider.value, v):
+		_updating = true
+		_travel_slider.value = v
+		_updating = false
+
+
+func set_tilt(v: float) -> void:
+	if _overlay.is_empty():
+		return
+	_overlay["tilt"] = v
+	if is_instance_valid(_piece):
+		_piece.tilt = v
+	if not is_equal_approx(_tilt_slider.value, v):
+		_updating = true
+		_tilt_slider.value = v
+		_updating = false
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+# Radio-press the axis pair. Sets _updating to suppress re-entrant toggles.
+func _press_axis(name: String) -> void:
+	_updating = true
+	_axis_h.button_pressed = name == "HORIZONTAL"
+	_axis_v.button_pressed = name != "HORIZONTAL"
+	_updating = false
+
 
 # Press the pivot button at index i, unpressing all others.
 # Sets _updating to suppress re-entrant toggle signals.

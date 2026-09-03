@@ -4,7 +4,7 @@
 
 [node name="PieceInspector" type="PanelContainer"]
 offset_left = 24.0
-offset_top = 560.0
+offset_top = 380.0
 offset_right = 344.0
 visible = false
 script = ExtResource("1")
@@ -118,3 +118,54 @@ min_value = 0.0
 max_value = 60.0
 step = 0.5
 value = 6.0
+
+[node name="Separator4" type="HSeparator" parent="Box"]
+
+[node name="AxisLabel" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 13
+text = "Axis:"
+
+[node name="AxisRow" type="HBoxContainer" parent="Box"]
+
+[node name="AxisH" type="Button" parent="Box/AxisRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 28)
+theme_override_font_sizes/font_size = 12
+text = "H"
+toggle_mode = true
+button_pressed = true
+
+[node name="AxisV" type="Button" parent="Box/AxisRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 28)
+theme_override_font_sizes/font_size = 12
+text = "V"
+toggle_mode = true
+
+[node name="Separator5" type="HSeparator" parent="Box"]
+
+[node name="TravelLabel" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 13
+text = "Travel:"
+
+[node name="TravelSlider" type="HSlider" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+min_value = 0.0
+max_value = 2000.0
+step = 1.0
+value = 120.0
+
+[node name="Separator6" type="HSeparator" parent="Box"]
+
+[node name="TiltLabel" type="Label" parent="Box"]
+theme_override_font_sizes/font_size = 13
+text = "Tilt:"
+
+[node name="TiltSlider" type="HSlider" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+min_value = 0.0
+max_value = 45.0
+step = 0.5
+value = 8.0
