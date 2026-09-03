@@ -32,7 +32,9 @@ func _open_file_dialog() -> void:
 	if OS.has_feature("web"):
 		_web_pick_via_js()
 		return
-	_file_dialog.popup_centered(Vector2i(940, 640))  # a polite window, not a cinema screen (owner)
+	# Clamped, because FileDialog happily grows past the screen edge to
+	# fit long filenames — 940x640 wanted, never more than 80% of screen.
+	_file_dialog.popup_centered_clamped(Vector2i(940, 640), 0.8)
 
 
 # The browser guards the real disk and Godot's web backend has no native
