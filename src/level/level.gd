@@ -148,18 +148,38 @@ func _physics_process(delta: float) -> void:
 			pass
 		State.CLEARED, State.FAILED:
 			if Input.is_action_just_pressed("advance"):
-				if _editor_session:
-					_back_to_editor()
-				else:
-					if state == State.CLEARED:
-						if _chain_end:
-							get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
-							return
-						var nxt := _next_path_after_clear()
-						if nxt != "":
-							Level.next_layout_path = nxt
-						Level.carry_buffs = pending_buffs.duplicate()
-					get_tree().reload_current_scene()
+				_advance()
+
+
+# Phones have no ENTER key: once the banner is up, any unclaimed tap
+# advances too. Mouse-only on purpose -- a touch tap also emits an
+# emulated mouse click, so handling both events would double-advance.
+func _unhandled_input(event: InputEvent) -> void:
+	if state != State.CLEARED and state != State.FAILED:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_advance()
+
+
+# The banner's call to action, told honestly per device.
+func _advance_hint(rest: String) -> String:
+	var verb := "tap" if DisplayServer.is_touchscreen_available() else "press ENTER"
+	return "%s %s" % [verb, rest]
+
+
+func _advance() -> void:
+	if _editor_session:
+		_back_to_editor()
+		return
+	if state == State.CLEARED:
+		if _chain_end:
+			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+			return
+		var nxt := _next_path_after_clear()
+		if nxt != "":
+			Level.next_layout_path = nxt
+		Level.carry_buffs = pending_buffs.duplicate()
+	get_tree().reload_current_scene()
 
 
 func _spawn_crates() -> void:
@@ -217,11 +237,11 @@ func _settle() -> void:
 		_record_clear()
 		_chain_end = current_stem != "" and _next_path_after_clear() == ""
 		if _editor_session:
-			hud.banner("KINGDOM CRUMBLED!", "press ENTER to return to editor")
+			hud.banner("KINGDOM CRUMBLED!", _advance_hint("to return to editor"))
 		elif _chain_end:
-			hud.banner("KINGDOM CONQUERED!", "press ENTER for the throne room")
+			hud.banner("KINGDOM CONQUERED!", _advance_hint("for the throne room"))
 		else:
-			hud.banner("KINGDOM CRUMBLED!", "press ENTER for the next level")
+			hud.banner("KINGDOM CRUMBLED!", _advance_hint("for the next level"))
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
 		if not effects.is_empty():
 			var center := Vector2(1400, 400)
@@ -231,7 +251,7 @@ func _settle() -> void:
 	elif shots_left <= 0:
 		state = State.FAILED
 		var _failed_sub := (
-			"press ENTER to return to editor" if _editor_session else "press ENTER to retry"
+			_advance_hint("to return to editor") if _editor_session else _advance_hint("to retry")
 		)
 		hud.banner("OUT OF STONES", _failed_sub)
 	else:
