@@ -4,6 +4,12 @@
 [ext_resource type="Texture2D" path="res://art/backgrounds/main-menu.png" id="bg"]
 [ext_resource type="Script" path="res://addons/narfkit/narf_decor.gd" id="nd"]
 [ext_resource type="Texture2D" path="res://art/backgrounds/windmill-blades.png" id="wb"]
+[ext_resource type="Texture2D" path="res://art/decor/cloud-big.png" id="cl1"]
+[ext_resource type="Texture2D" path="res://art/decor/cloud-wisp.png" id="cl2"]
+[ext_resource type="Texture2D" path="res://art/decor/cloud-rolling.png" id="cl3"]
+[ext_resource type="Texture2D" path="res://art/decor/butterfly-pink.png" id="bf1"]
+[ext_resource type="Texture2D" path="res://art/decor/butterfly-blue.png" id="bf2"]
+[ext_resource type="Texture2D" path="res://art/decor/butterfly-gold.png" id="bf3"]
 
 [node name="MainMenu" type="Control" unique_id=892463116]
 layout_mode = 3
@@ -25,6 +31,63 @@ texture = ExtResource("bg")
 expand_mode = 1
 stretch_mode = 6
 mouse_filter = 2
+
+[node name="CloudBig" type="Sprite2D" parent="."]
+position = Vector2(340, 150)
+scale = Vector2(0.34, 0.34)
+texture = ExtResource("cl1")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.045
+travel = 240.0
+
+[node name="CloudWisp" type="Sprite2D" parent="."]
+position = Vector2(980, 100)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("cl2")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.08
+travel = 320.0
+
+[node name="CloudRolling" type="Sprite2D" parent="."]
+position = Vector2(1210, 190)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("cl3")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.06
+travel = 170.0
+
+[node name="ButterflyPink" type="Sprite2D" parent="."]
+position = Vector2(260, 860)
+scale = Vector2(0.14, 0.14)
+texture = ExtResource("bf1")
+script = ExtResource("nd")
+behavior = 5
+speed = 0.3
+travel = 160.0
+tilt = 9.0
+
+[node name="ButterflyBlue" type="Sprite2D" parent="."]
+position = Vector2(1640, 830)
+scale = Vector2(0.15, 0.15)
+texture = ExtResource("bf2")
+script = ExtResource("nd")
+behavior = 5
+speed = 0.24
+travel = 180.0
+tilt = 8.0
+
+[node name="ButterflyGold" type="Sprite2D" parent="."]
+position = Vector2(900, 950)
+scale = Vector2(0.12, 0.12)
+texture = ExtResource("bf3")
+script = ExtResource("nd")
+behavior = 5
+speed = 0.36
+travel = 130.0
+tilt = 11.0
 
 [node name="WindmillWheel" type="Sprite2D" parent="."]
 position = Vector2(1543, 299)
