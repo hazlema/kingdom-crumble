@@ -776,12 +776,52 @@ static func _strip_background(img: Image) -> Image:
 	for c in corners:
 		if Vector3(c.r - bg.r, c.g - bg.g, c.b - bg.b).length() > 0.15:
 			return null
-	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	# Flood-fill from the border: only background CONNECTED to the frame
+	# is keyed — a king's black pupils on a black card stay landlocked
+	# and untouched (the global-distance version blinded the poor frog).
+	var dist := PackedFloat32Array()
+	dist.resize(w * h)
 	for y in h:
 		for x in w:
 			var px := img.get_pixel(x, y)
-			var d := Vector3(px.r - bg.r, px.g - bg.g, px.b - bg.b).length()
-			var a := clampf((d - 0.10) / 0.25, 0.0, 1.0) * px.a
+			dist[y * w + x] = Vector3(px.r - bg.r, px.g - bg.g, px.b - bg.b).length()
+	var keyed := PackedByteArray()
+	keyed.resize(w * h)
+	var queue: Array[int] = []
+	for x in w:
+		for y in [0, h - 1]:
+			var i := y * w + x
+			if dist[i] < 0.35 and keyed[i] == 0:
+				keyed[i] = 1
+				queue.append(i)
+	for y in h:
+		for x in [0, w - 1]:
+			var i := y * w + x
+			if dist[i] < 0.35 and keyed[i] == 0:
+				keyed[i] = 1
+				queue.append(i)
+	while not queue.is_empty():
+		var i: int = queue.pop_back()
+		var ix := i % w
+		var iy := i / w
+		for n in [[ix + 1, iy], [ix - 1, iy], [ix, iy + 1], [ix, iy - 1]]:
+			var nx: int = n[0]
+			var ny: int = n[1]
+			if nx < 0 or ny < 0 or nx >= w or ny >= h:
+				continue
+			var ni := ny * w + nx
+			if keyed[ni] == 0 and dist[ni] < 0.35:
+				keyed[ni] = 1
+				queue.append(ni)
+	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var i := y * w + x
+			var px := img.get_pixel(x, y)
+			if keyed[i] == 0:
+				out.set_pixel(x, y, px)
+				continue
+			var a := clampf((dist[i] - 0.10) / 0.25, 0.0, 1.0) * px.a
 			if a <= 0.001:
 				out.set_pixel(x, y, Color(0, 0, 0, 0))
 			else:

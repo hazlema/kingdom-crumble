@@ -253,3 +253,21 @@ func test_drop_background_declines_without_uniform_backdrop() -> void:
 	ed.selected_overlay = 0
 	ed._drop_background()
 	assert_eq(str(ed.current.overlays[0]["image"]), key, "no uniform bg = polite no-op")
+
+
+func test_drop_background_spares_the_kings_eyes() -> void:
+	# Black card, red frog, black EYE inside the frog — the eye must
+	# survive because it is not connected to the border.
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLACK)
+	img.fill_rect(Rect2i(8, 8, 16, 16), Color.RED)
+	img.fill_rect(Rect2i(14, 14, 4, 4), Color.BLACK)  # the eye
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	ed.selected_overlay = 0
+	ed._drop_background()
+	var out := LevelJson.decode_png_b64(ed.current.images[str(ed.current.overlays[0]["image"])])
+	assert_almost_eq(out.get_pixel(2, 2).a, 0.0, 0.02, "card keyed out")
+	assert_gt(out.get_pixel(10, 10).a, 0.9, "frog survives")
+	assert_gt(out.get_pixel(16, 16).a, 0.9, "the royal eye survives")
