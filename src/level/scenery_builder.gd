@@ -25,6 +25,7 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 
 	var behavior_keys := NarfDecor.Behavior.keys()
 	var pivot_keys := NarfDecor.Pivot.keys()
+	var axis_keys := NarfDecor.DriftAxis.keys()
 
 	for i in layout.overlays.size():
 		var entry: Dictionary = layout.overlays[i]
@@ -48,7 +49,6 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 			continue
 
 		# Map axis name; unknown name → warning and skip entry.
-		var axis_keys := NarfDecor.DriftAxis.keys()
 		var axis_name: String = entry.get("axis", "HORIZONTAL")
 		var axis_idx: int = axis_keys.find(axis_name)
 		if axis_idx == -1:

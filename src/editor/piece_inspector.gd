@@ -35,6 +35,7 @@ var _tilt_slider: HSlider
 
 # Behavior name ordering must match NarfDecor.Behavior ordinals exactly — indices 0-5.
 const BEHAVIOR_NAMES := ["NONE", "SPIN", "SWAY", "BOB", "DRIFT", "WANDER"]
+# Axis name ordering must match NarfDecor.DriftAxis indices 0-1.
 const AXIS_NAMES := ["HORIZONTAL", "VERTICAL"]
 
 
@@ -249,8 +250,8 @@ func set_tilt(v: float) -> void:
 func _press_axis(name: String) -> void:
 	var was := _updating
 	_updating = true
-	_axis_h.button_pressed = name == "HORIZONTAL"
-	_axis_v.button_pressed = name != "HORIZONTAL"
+	_axis_v.button_pressed = name == "VERTICAL"
+	_axis_h.button_pressed = not _axis_v.button_pressed
 	_updating = was
 
 
