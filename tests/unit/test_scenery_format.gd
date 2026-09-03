@@ -84,6 +84,21 @@ func test_serialize_never_leaks_edit_state() -> void:
 	assert_false(LevelJson.serialize(l).contains("_rot"))
 
 
+func test_wrong_typed_drift_dials_rejected() -> void:
+	var base := {"format": 1, "title": "T", "crates": [], "images": {"k": "aaaa"}}
+	for bad in [
+		{"image": "k", "x": 0.0, "y": 0.0, "axis": 7},
+		{"image": "k", "x": 0.0, "y": 0.0, "travel": "far"},
+		{"image": "k", "x": 0.0, "y": 0.0, "tilt": []},
+	]:
+		var d := base.duplicate(true)
+		d["overlays"] = [bad]
+		assert_ne(LevelJson.validate(d), "", "typed drift dial gate: %s" % str(bad))
+	var ok := base.duplicate(true)
+	ok["overlays"] = [{"image": "k", "x": 0.0, "y": 0.0, "axis": "VERTICAL", "travel": 300.0, "tilt": 12.0}]
+	assert_eq(LevelJson.validate(ok), "", "well-typed drift dials pass")
+
+
 func test_wrong_typed_dials_rejected() -> void:
 	var base := {"format": 1, "title": "T", "crates": [], "images": {"k": "aaaa"}}
 	for bad in [
