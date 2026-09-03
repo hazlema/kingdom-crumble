@@ -355,3 +355,9 @@ func test_open_prepopulates_drift_dials() -> void:
 	assert_false(axis_v.button_pressed, "%AxisV defaults to unpressed when axis absent")
 	assert_almost_eq(travel_slider.value, 120.0, 0.001, "%TravelSlider defaults to 120.0")
 	assert_almost_eq(tilt_slider.value, 8.0, 0.001, "%TiltSlider defaults to 8.0")
+	# Overlay-cleanliness: mere selection must NOT write default dial values into
+	# an overlay that never had those keys (pins the _updating guard fix).
+	var overlay2: Dictionary = ed.current.overlays[-1]
+	assert_false(overlay2.has("axis"), "mere selection must not write axis into overlay")
+	assert_false(overlay2.has("travel"), "mere selection must not write travel into overlay")
+	assert_false(overlay2.has("tilt"), "mere selection must not write tilt into overlay")

@@ -244,18 +244,22 @@ func set_tilt(v: float) -> void:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-# Radio-press the axis pair. Sets _updating to suppress re-entrant toggles.
+# Radio-press the axis pair. Saves and restores the _updating guard so that
+# callers mid-block (e.g. open()) do not drop the guard early.
 func _press_axis(name: String) -> void:
+	var was := _updating
 	_updating = true
 	_axis_h.button_pressed = name == "HORIZONTAL"
 	_axis_v.button_pressed = name != "HORIZONTAL"
-	_updating = false
+	_updating = was
 
 
 # Press the pivot button at index i, unpressing all others.
-# Sets _updating to suppress re-entrant toggle signals.
+# Saves and restores the _updating guard so that callers mid-block (e.g.
+# open()) do not drop the guard early.
 func _press_pivot_button(i: int) -> void:
+	var was := _updating
 	_updating = true
 	for j in _pivot_buttons.size():
 		_pivot_buttons[j].button_pressed = (j == i)
-	_updating = false
+	_updating = was
