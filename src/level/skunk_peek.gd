@@ -5,7 +5,7 @@ extends RefCounted
 # from the grass wherever a lean bonus lands, hugs his heart for a
 # beat, and sinks back down. The reward is friendship.
 
-const SHEET := "res://art/characters/skunk-sprites.png"
+const SHEET := "res://art/characters/skunk/skunk-spritesheet.png"
 const GRID := 3  # the sheet is a 3x3 pose grid, not a strip
 const HEART_POSE := Vector2i(1, 2)  # column, row: bottom-middle heart hug
 const HEIGHT := 90.0  # on-screen size

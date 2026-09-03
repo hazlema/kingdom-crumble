@@ -13,6 +13,9 @@ func test_show_unlock_displays_then_frees() -> void:
 	f.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
 	await wait_frames(2)
 	assert_eq(f.get_node("%Title").text, "Rare Unlock")
-	assert_true(f.get_node("%Anim").is_playing())
+	if ResourceLoader.exists(RareUnlockFrame.PHOTO_FRONT):
+		assert_false(f.get_node("%Anim").visible, "portrait flip reveal stands in for the sheet")
+	else:
+		assert_true(f.get_node("%Anim").is_playing())
 	await wait_seconds(6.0)
 	assert_false(is_instance_valid(f), "ceremony cleans up after itself")
