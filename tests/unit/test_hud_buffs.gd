@@ -32,3 +32,22 @@ func test_set_buffs_empty_clears_row() -> void:
 		if not c.is_queued_for_deletion():
 			live += 1
 	assert_eq(live, 0)
+
+
+func test_crates_row_hold_bridges_the_check_action() -> void:
+	# Playtester ask: "which boxes are left to hit" had no touch path.
+	# Press-and-hold on the CRATES row now drives the same "check" action
+	# as holding H; slide-off or focus loss releases it.
+	var h := _hud()
+	await wait_frames(1)
+	var card: StatCard = h.get_node("%StatCard")
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	card._on_crates_row_input(press)
+	assert_true(Input.is_action_pressed("check"), "hold = H down")
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	card._on_crates_row_input(release)
+	assert_false(Input.is_action_pressed("check"), "let go = H up")

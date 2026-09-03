@@ -5,6 +5,7 @@ extends PanelContainer
 # owner's comps. Values in, pixels out — no game logic.
 
 signal info_pressed
+signal check_held(held: bool)
 
 const BUFF_ICONS := {
 	&"exploding": "skull",
@@ -15,6 +16,15 @@ const BUFF_ICONS := {
 
 func _ready() -> void:
 	%InfoBtn.pressed.connect(func() -> void: info_pressed.emit())
+	# Touch home for the H check (playtester ask): press-and-hold the
+	# CRATES row. A finger sliding off the row counts as release.
+	%CratesRow.gui_input.connect(_on_crates_row_input)
+	%CratesRow.mouse_exited.connect(func() -> void: check_held.emit(false))
+
+
+func _on_crates_row_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		check_held.emit(event.pressed)
 
 
 func set_info(has_intro: bool) -> void:

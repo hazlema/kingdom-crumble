@@ -20,12 +20,21 @@ func _ready() -> void:
 	%FireButton.icon = FIRE_STONE
 	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
 	%StatCard.info_pressed.connect(func() -> void: info_pressed.emit())
+	# The crates row is touch's H key — same Input bridge as FIRE.
+	%StatCard.check_held.connect(
+		func(held: bool) -> void:
+			if held:
+				Input.action_press("check")
+			else:
+				Input.action_release("check")
+	)
 
 
 # Alt-tabbing away mid-charge eats the release the same way.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		Input.action_release("fire")
+		Input.action_release("check")
 
 
 func set_shots(n: int) -> void:
