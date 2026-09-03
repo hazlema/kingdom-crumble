@@ -29,4 +29,4 @@ func _ready() -> void:
 
 
 func _open_file_dialog() -> void:
-	_file_dialog.popup_centered_ratio(0.7)
+	_file_dialog.popup_centered(Vector2i(940, 640))  # a polite window, not a cinema screen (owner)
