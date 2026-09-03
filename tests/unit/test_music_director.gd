@@ -65,3 +65,15 @@ func test_export_suffixes_stripped_for_all_disguises() -> void:
 	assert_eq(MusicDirector._strip_export_suffixes("song.ogg.remap"), "song.ogg")
 	assert_eq(MusicDirector._strip_export_suffixes("song.mp3"), "song.mp3")
 	assert_eq(MusicDirector._strip_export_suffixes("song.wav"), "song.wav")
+
+
+func test_same_tier_replay_keeps_current_track() -> void:
+	# Regression: levels call play_tier on every load; same tier with the
+	# song still going must NOT reroll the track mid-listen (owner nit).
+	Music.play_tier("chill")
+	var first: String = Music._current_track
+	assert_true(Music._player.playing, "track should be rolling")
+	for i in 5:
+		Music.play_tier("chill")
+	assert_eq(Music._current_track, first, "a level change is not a reason to cut the music")
+	Music.stop()

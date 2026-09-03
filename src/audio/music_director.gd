@@ -56,6 +56,10 @@ func get_sfx_volume_linear() -> float:
 
 
 func play_tier(tier: String) -> void:
+	# Levels call this on every load. Same tier + song still going =
+	# let it ride; a level change is not a reason to cut the music.
+	if tier == _tier and _player.playing:
+		return
 	_tier = tier
 	_play_next()
 
