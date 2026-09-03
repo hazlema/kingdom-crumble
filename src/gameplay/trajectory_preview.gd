@@ -10,8 +10,10 @@ const DT := 0.07
 const CYCLE_SEC := 1.1  # one grow cycle
 const HOLD_FRACTION := 0.2  # portion of the cycle spent fully drawn
 
-const CORE := Color(1.0, 1.0, 1.0, 0.4)
-const RIM := Color(0.1, 0.1, 0.12, 0.3)
+# Cream core, ink rim (theme palette) — near-opaque since playtest
+# feedback: the old 40%-alpha white vanished on phone screens.
+const CORE := Color(1.0, 0.98, 0.94, 0.9)
+const RIM := Color(0.22, 0.16, 0.09, 0.6)
 
 var velocity := Vector2.ZERO:
 	set(v):
