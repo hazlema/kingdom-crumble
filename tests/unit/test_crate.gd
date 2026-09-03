@@ -57,5 +57,5 @@ func test_impact_sound_plays_on_sfx_bus_with_pitch_wobble() -> void:
 	assert_not_null(found, "a one-shot player spawns")
 	assert_true(found.playing, "the take is rolling")
 	assert_eq(found.bus, "Sfx", "rides the Sfx bus (owner's sound slider governs it)")
-	assert_between(found.pitch_scale, 0.9, 1.1, "pitch wobble in range")
+	assert_between(found.pitch_scale, Crate.IMPACT_PITCH * 0.9, Crate.IMPACT_PITCH * 1.1, "octave-down pitch with wobble in range")
 	assert_true(Crate.IMPACT_SOUNDS.has(found.stream), "plays one of the two takes")

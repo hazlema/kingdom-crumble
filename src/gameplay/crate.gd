@@ -35,6 +35,10 @@ const IMPACT_SOUNDS: Array[AudioStream] = [
 	preload("res://assets/sfx/impact-1.ogg"),
 	preload("res://assets/sfx/impact-2.ogg"),
 ]
+# The raw takes ring too high (owner's ear, 2026-09-03) — play them an
+# octave down. 0.5 = one octave; raise toward 1.0 if the thunk gets
+# too muddy. The +/-10% wobble rides on top of this.
+const IMPACT_PITCH := 0.5
 
 var type_id := "crate-wood"
 var home := Vector2.ZERO  # spawn position, captured in _ready
@@ -70,7 +74,7 @@ func _play_impact() -> void:
 	var player := AudioStreamPlayer.new()
 	player.stream = IMPACT_SOUNDS[randi() % IMPACT_SOUNDS.size()]
 	player.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
-	player.pitch_scale = randf_range(0.9, 1.1)
+	player.pitch_scale = IMPACT_PITCH * randf_range(0.9, 1.1)
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()
