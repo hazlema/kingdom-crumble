@@ -33,7 +33,7 @@ enum Pivot {
 		_apply_pivot()
 ## SPIN: rotations per second. SWAY/BOB: oscillations per second.
 @export_range(0.0, 10.0, 0.01) var speed := 0.25
-## How much it moves — SWAY: peak tilt in degrees. BOB: peak travel in pixels.
+## How much it moves. SWAY: peak tilt in degrees. BOB: peak travel in pixels.
 @export_range(0.0, 180.0, 0.5) var movement := 6.0
 
 var _t := 0.0

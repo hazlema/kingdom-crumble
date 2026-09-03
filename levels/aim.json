@@ -1,31 +1,31 @@
 {
   "background": "meadow",
   "crates": [
-	{
-	  "type": "crate-wood",
-	  "x": 1088.0,
-	  "y": 506.0
-	},
-	{
-	  "type": "crate-wood",
-	  "x": 1088.0,
-	  "y": 443.0
-	},
-	{
-	  "type": "crate-wood",
-	  "x": 1088.0,
-	  "y": 380.0
-	},
-	{
-	  "type": "crate-wood",
-	  "x": 1088.0,
-	  "y": 317.0
-	},
-	{
-	  "type": "crate-wood",
-	  "x": 1088.0,
-	  "y": 569.0
-	}
+    {
+      "type": "crate-wood",
+      "x": 1088.0,
+      "y": 506.0
+    },
+    {
+      "type": "crate-wood",
+      "x": 1088.0,
+      "y": 443.0
+    },
+    {
+      "type": "crate-wood",
+      "x": 1088.0,
+      "y": 380.0
+    },
+    {
+      "type": "crate-wood",
+      "x": 1088.0,
+      "y": 317.0
+    },
+    {
+      "type": "crate-wood",
+      "x": 1088.0,
+      "y": 569.0
+    }
   ],
   "format": 1,
   "shots": 0,
