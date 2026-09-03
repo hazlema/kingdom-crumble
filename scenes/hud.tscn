@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="1"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/btn_fire.png" id="btn_fire"]
 [ext_resource type="Texture2D" path="res://art/assets/ui/btn_brass.png" id="btn_brass"]
 [ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="f_lilita"]
 [ext_resource type="PackedScene" path="res://scenes/ui/stat_card.tscn" id="sc"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/burger.png" id="burger"]
 
 [sub_resource type="StyleBoxTexture" id="fire_normal"]
 texture = ExtResource("btn_fire")
@@ -77,7 +78,8 @@ theme_override_colors/font_color = Color(0.2941, 0.2314, 0.1647, 1)
 theme_override_colors/font_hover_color = Color(0.2941, 0.2314, 0.1647, 1)
 theme_override_colors/font_pressed_color = Color(0.2941, 0.2314, 0.1647, 1)
 theme_override_colors/font_disabled_color = Color(0.2941, 0.2314, 0.1647, 1)
-text = "☰  MENU"
+icon = ExtResource("burger")
+text = "MENU"
 
 [node name="FireButton" type="Button" parent="."]
 unique_name_in_owner = true

@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://src/editor/editor_menu.gd" id="1"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/burger.png" id="burger"]
 
 [node name="EditorMenu" type="CanvasLayer"]
 layer = 10
@@ -14,8 +15,9 @@ offset_left = -100.0
 offset_top = 16.0
 offset_right = -30.0
 offset_bottom = 82.0
-theme_override_font_sizes/font_size = 30
-text = "☰"
+icon = ExtResource("burger")
+icon_alignment = 1
+expand_icon = true
 
 [node name="Panel" type="PanelContainer" parent="."]
 unique_name_in_owner = true

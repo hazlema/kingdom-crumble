@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/ui/level_jump_dialog.gd" id="1"]
 [ext_resource type="Script" path="res://src/ui/dashed_line.gd" id="2"]
 [ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="f_disp"]
 [ext_resource type="FontFile" path="res://art/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
+[ext_resource type="Texture2D" path="res://art/assets/ui/close-x.png" id="closex"]
 
 [sub_resource type="StyleBoxFlat" id="close_bg"]
 bg_color = Color(0.7098, 0.2667, 0.1804, 1)
@@ -91,7 +92,6 @@ anchors_preset = -1
 theme_override_styles/normal = SubResource("close_bg")
 theme_override_styles/hover = SubResource("close_bg")
 theme_override_styles/pressed = SubResource("close_bg")
-theme_override_fonts/font = ExtResource("f_mono")
-theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(0.9569, 0.9059, 0.7843, 1)
-text = "✕"
+icon = ExtResource("closex")
+icon_alignment = 1
+expand_icon = true

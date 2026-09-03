@@ -58,15 +58,15 @@ theme_override_constants/separation = 16
 
 [node name="Chill" type="Button" parent="Buttons" unique_id=1596262242]
 layout_mode = 2
-text = "🌿  Chill"
+text = "Chill"
 
 [node name="HeartPumper" type="Button" parent="Buttons" unique_id=171232873]
 layout_mode = 2
-text = "🔥  Heart-Pumper"
+text = "Heart-Pumper"
 
 [node name="Hardcore" type="Button" parent="Buttons" unique_id=521078720]
 layout_mode = 2
-text = "💀  Hardcore"
+text = "Hardcore"
 
 [node name="Editor" type="Button" parent="Buttons" unique_id=652967640]
 layout_mode = 2
