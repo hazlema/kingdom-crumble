@@ -26,7 +26,8 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 	var behavior_keys := NarfDecor.Behavior.keys()
 	var pivot_keys := NarfDecor.Pivot.keys()
 
-	for entry in layout.overlays:
+	for i in layout.overlays.size():
+		var entry: Dictionary = layout.overlays[i]
 		var img_key: String = entry.get("image", "")
 		if not tex_cache.has(img_key):
 			# missing or broken image — skip silently
@@ -55,6 +56,7 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 		piece.amplitude = clampf(float(entry.get("amplitude", 6.0)), 0.0, 180.0)
 		piece.position = Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
 		piece.add_to_group("scenery")
+		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
 		parent.add_child(piece)
 		out.append(piece)
 

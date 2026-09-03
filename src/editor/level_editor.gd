@@ -30,8 +30,13 @@ var _scenery_dragging := false  # true while LMB drags a selected piece
 var _scenery_drag_start_world := Vector2.ZERO  # world pos when drag began
 var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
 var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
+var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
 # Right-click context menu for scenery pieces
 var _scenery_context: PopupMenu = null
+# RMB context menu state (scenery mode)
+var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed (scenery mode)
+var _rmb_down := false              # RMB was pressed this frame in scenery mode
+const _CONTEXT_MENU_MOTION_THRESHOLD := 6.0  # px; below this RMB release opens menu
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -127,7 +132,18 @@ func _on_save() -> void:
 		return
 	var stem := save_path.get_file().get_basename()
 	_bake_scenery()
+	_rebuild_scenery()
+	_refresh_pieces()
+	# Undim crates and hide gizmo for a clean thumb.
+	if mode == Mode.SCENERY:
+		for c in _spawned:
+			c.modulate.a = 1.0
+	_gizmo.visible = false
 	await _capture_thumb()
+	_gizmo.visible = (mode == Mode.SCENERY)
+	if mode == Mode.SCENERY:
+		for c in _spawned:
+			c.modulate.a = 0.8
 	LevelStore.save_user(current, stem)
 
 
@@ -137,7 +153,18 @@ func _on_save() -> void:
 func _on_save_as(stem: String) -> void:
 	current.title = stem
 	_bake_scenery()
+	_rebuild_scenery()
+	_refresh_pieces()
+	# Undim crates and hide gizmo for a clean thumb.
+	if mode == Mode.SCENERY:
+		for c in _spawned:
+			c.modulate.a = 1.0
+	_gizmo.visible = false
 	await _capture_thumb()
+	_gizmo.visible = (mode == Mode.SCENERY)
+	if mode == Mode.SCENERY:
+		for c in _spawned:
+			c.modulate.a = 0.8
 	save_path = LevelStore.save_user(current, stem)
 
 
@@ -195,7 +222,13 @@ func _enter_scenery() -> void:
 	overlay.visible = false
 	for c in _spawned:
 		c.modulate.a = 0.8
+	_rebuild_scenery()
 	_refresh_pieces()
+	# Pause piece behaviors: editor previews are static while editing.
+	# The real behavior is preserved in the overlay dict and restored via _rebuild_scenery on exit.
+	for s in _scenery:
+		if is_instance_valid(s):
+			s.behavior = NarfDecor.Behavior.NONE
 	_gizmo.visible = true
 
 
@@ -344,10 +377,13 @@ func _rebuild_scenery() -> void:
 			s.queue_free()
 	_scenery.clear()
 	_scenery = SceneryBuilder.spawn(self, current)
-	# Re-apply dim: crates are already dimmed when we're in scenery mode.
+	# Re-apply dim and behavior pause while in scenery mode.
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
+		for s in _scenery:
+			if is_instance_valid(s):
+				s.behavior = NarfDecor.Behavior.NONE
 
 
 # Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
@@ -365,6 +401,23 @@ func _refresh_pieces() -> void:
 		pieces.add_item("", tex)
 
 
+# Shared size-cap: halve the image until its base64 fits MAX_IMAGE_CHARS.
+# Returns [png_bytes: PackedByteArray, b64: String]. Used by import AND bake
+# so a baked blob can never bypass the cap the import path enforces.
+static func _cap_image_to_max(img: Image) -> Array:
+	var png_bytes := img.save_png_to_buffer()
+	var b64 := Marshalls.raw_to_base64(png_bytes)
+	while b64.length() > LevelJson.MAX_IMAGE_CHARS:
+		var cw := img.get_width()
+		var ch := img.get_height()
+		if cw <= 1 and ch <= 1:
+			break
+		img.resize(maxi(1, cw / 2), maxi(1, ch / 2), Image.INTERPOLATE_LANCZOS)
+		png_bytes = img.save_png_to_buffer()
+		b64 = Marshalls.raw_to_base64(png_bytes)
+	return [png_bytes, b64]
+
+
 # Pure import pipeline — separated so unit tests can call it directly
 # without any dialog/filesystem interaction.
 # Returns the content-hash key on success, "" on refusal (cap reached).
@@ -380,16 +433,9 @@ func import_scenery_image(img: Image) -> String:
 		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
 
 	# Encode to PNG and check size cap, halving if needed.
-	var png_bytes := img.save_png_to_buffer()
-	var b64 := Marshalls.raw_to_base64(png_bytes)
-	while b64.length() > LevelJson.MAX_IMAGE_CHARS:
-		var cw := img.get_width()
-		var ch := img.get_height()
-		if cw <= 1 and ch <= 1:
-			break
-		img.resize(maxi(1, cw / 2), maxi(1, ch / 2), Image.INTERPOLATE_LANCZOS)
-		png_bytes = img.save_png_to_buffer()
-		b64 = Marshalls.raw_to_base64(png_bytes)
+	var cap_result := _cap_image_to_max(img)
+	var png_bytes: PackedByteArray = cap_result[0]
+	var b64: String = cap_result[1]
 
 	var key := LevelJson.image_key(png_bytes)
 
@@ -441,15 +487,27 @@ func _scenery_process(mouse: Vector2) -> void:
 
 	_lmb_down = lmb
 
+	# RMB context menu: open only on release without significant motion.
+	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if rmb and not _rmb_down:
+		_rmb_press_pos = mouse
+		_rmb_down = true
+	elif not rmb and _rmb_down:
+		_rmb_down = false
+		if not menu.any_dialog_open() and not _mouse_over_ui(mouse):
+			var travel := mouse.distance_to(_rmb_press_pos)
+			if travel < _CONTEXT_MENU_MOTION_THRESHOLD:
+				var rmb_world := get_global_mouse_position()
+				var idx := _pick_piece(rmb_world)
+				if idx >= 0:
+					selected_overlay = idx
+					_show_scenery_context(mouse)
+
 	# Keep gizmo pointed at the selected piece.
-	if selected_overlay >= 0 and selected_overlay < _scenery.size():
-		var p := _scenery[selected_overlay]
-		if is_instance_valid(p):
-			_gizmo.piece = p
-			_gizmo.queue_redraw()
-		else:
-			_gizmo.piece = null
-			_gizmo.queue_redraw()
+	var _selected_piece := _piece_for_overlay(selected_overlay) if selected_overlay >= 0 else null
+	if _selected_piece != null:
+		_gizmo.piece = _selected_piece
+		_gizmo.queue_redraw()
 	else:
 		_gizmo.piece = null
 		_gizmo.queue_redraw()
@@ -460,14 +518,16 @@ func _scenery_press(world: Vector2) -> void:
 	var zoom := cam.zoom.x
 
 	# Check handles on current selection first.
-	if selected_overlay >= 0 and selected_overlay < _scenery.size():
+	if selected_overlay >= 0:
 		var h := _hit_handle(world, zoom)
 		if h >= 0:
 			_scenery_handle = h
 			_scenery_dragging = true
 			_scenery_drag_start_world = world
-			var piece := _scenery[selected_overlay]
+			var piece := _piece_for_overlay(selected_overlay)
 			_scenery_drag_piece_origin = piece.position
+			var po: Dictionary = current.overlays[selected_overlay]
+			_scenery_drag_press_scale = po.get("_scale", 1.0)
 			return
 
 	# Pick a new piece.
@@ -477,8 +537,10 @@ func _scenery_press(world: Vector2) -> void:
 		_scenery_handle = -1  # body drag
 		_scenery_dragging = true
 		_scenery_drag_start_world = world
-		var piece := _scenery[selected_overlay]
+		var piece := _piece_for_overlay(selected_overlay)
 		_scenery_drag_piece_origin = piece.position
+		var po: Dictionary = current.overlays[selected_overlay]
+		_scenery_drag_press_scale = po.get("_scale", 1.0)
 	else:
 		# Deselect.
 		selected_overlay = -1
@@ -486,26 +548,30 @@ func _scenery_press(world: Vector2) -> void:
 
 
 func _scenery_release() -> void:
-	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < _scenery.size():
-		# Commit position back to overlay dict.
-		var piece := _scenery[selected_overlay]
-		var o: Dictionary = current.overlays[selected_overlay]
-		o["x"] = piece.position.x
-		o["y"] = piece.position.y
+	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < current.overlays.size():
+		var piece := _piece_for_overlay(selected_overlay)
+		if piece != null:
+			var o: Dictionary = current.overlays[selected_overlay]
+			o["x"] = piece.position.x
+			o["y"] = piece.position.y
 	_scenery_dragging = false
 	_scenery_handle = -1
 
 
 func _scenery_drag(world: Vector2) -> void:
-	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
 		return
-	var piece := _scenery[selected_overlay]
+	var piece := _piece_for_overlay(selected_overlay)
+	if piece == null:
+		return
 	var o: Dictionary = current.overlays[selected_overlay]
 	var delta := world - _scenery_drag_start_world
 
 	if _scenery_handle == -1:
-		# Body drag — move piece.
+		# Body drag — move piece, and keep overlay dict in sync for mid-drag saves.
 		piece.position = _scenery_drag_piece_origin + delta
+		o["x"] = piece.position.x
+		o["y"] = piece.position.y
 	elif _scenery_handle == 4:
 		# Rotate handle — angle from piece center to mouse.
 		var center := _scenery_drag_piece_origin
@@ -514,14 +580,30 @@ func _scenery_drag(world: Vector2) -> void:
 		o["_rot"] = angle
 	else:
 		# Corner resize — aspect-locked scale.
+		# Uses the scale captured at PRESS time so each frame computes from the
+		# original, preventing per-frame compounding.
 		var center := _scenery_drag_piece_origin
 		var dist_now := (world - center).length()
 		var dist_start := (_scenery_drag_start_world - center).length()
 		if dist_start > 0.01:
-			var orig_scale: float = o.get("_scale", 1.0)
-			var new_scale := clampf(orig_scale * (dist_now / dist_start), 0.05, 20.0)
+			# Clamp: the baked long edge must not exceed 1024 px.
+			var tex := piece.texture
+			var max_scale := 20.0
+			if tex != null:
+				var long_edge := maxi(tex.get_width(), tex.get_height())
+				if long_edge > 0:
+					max_scale = minf(20.0, 1024.0 / float(long_edge))
+			var new_scale := clampf(_scenery_drag_press_scale * (dist_now / dist_start), 0.05, max_scale)
 			piece.scale = Vector2(new_scale, new_scale)
 			o["_scale"] = new_scale
+
+
+# Returns the NarfDecor piece for the given overlay source index, or null.
+func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
+	for p in _scenery:
+		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
+			return p
+	return null
 
 
 # Returns the index of the topmost piece whose world-space rect contains `world_pos`,
@@ -533,24 +615,21 @@ func _pick_piece(world_pos: Vector2) -> int:
 		if not is_instance_valid(piece):
 			continue
 		var rect := piece.get_rect()
-		# Transform world_pos into piece's local space to test against un-rotated rect.
+		# to_local() already accounts for the piece's position, rotation, and scale;
+		# the rect from get_rect() is in un-scaled local space — no further division needed.
 		var local := piece.to_local(world_pos)
-		# Un-apply scale (piece.scale is set by _scale).
-		if piece.scale.x > 0.0 and piece.scale.y > 0.0:
-			local /= piece.scale
-		# The rect is in local-space after offset; check containment.
 		if rect.has_point(local):
-			return i
+			return piece.get_meta("overlay_index", i) as int
 	return -1
 
 
 # Returns which handle (0-3 corners, 4 rotate) is within hit radius at world_pos,
 # or -1 if none. Requires a selected piece.
 func _hit_handle(world_pos: Vector2, zoom: float) -> int:
-	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+	if selected_overlay < 0:
 		return -1
-	var piece := _scenery[selected_overlay]
-	if not is_instance_valid(piece) or piece.texture == null:
+	var piece := _piece_for_overlay(selected_overlay)
+	if piece == null or piece.texture == null:
 		return -1
 	var radius := SceneryGizmo.HANDLE_RADIUS / zoom
 	var corners := SceneryGizmo._rect_corners(
@@ -598,18 +677,7 @@ func _delete_selected_piece() -> void:
 # Right-click context menu for scenery pieces
 # ---------------------------------------------------------------------------
 
-func _input(event: InputEvent) -> void:
-	if mode != Mode.SCENERY:
-		return
-	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
-			var world := get_global_mouse_position()
-			var idx := _pick_piece(world)
-			if idx >= 0:
-				selected_overlay = idx
-				_show_scenery_context(mb.global_position)
-				get_viewport().set_input_as_handled()
+# RMB context menu is handled via release-based polling in _scenery_process.
 
 
 func _show_scenery_context(screen_pos: Vector2) -> void:
@@ -627,17 +695,21 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 
 
 func _on_scenery_context_item(id: int) -> void:
-	if selected_overlay < 0 or selected_overlay >= _scenery.size():
+	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
 		return
-	var piece := _scenery[selected_overlay]
+	var piece := _piece_for_overlay(selected_overlay)
+	if piece == null and id != 2:
+		return
 	var o: Dictionary = current.overlays[selected_overlay]
 	match id:
 		0:  # Flip H
-			piece.flip_h = not piece.flip_h
-			o["_flip_h"] = piece.flip_h
+			if piece != null:
+				piece.flip_h = not piece.flip_h
+				o["_flip_h"] = piece.flip_h
 		1:  # Flip V
-			piece.flip_v = not piece.flip_v
-			o["_flip_v"] = piece.flip_v
+			if piece != null:
+				piece.flip_v = not piece.flip_v
+				o["_flip_v"] = piece.flip_v
 		2:  # Delete
 			_delete_selected_piece()
 
@@ -698,29 +770,37 @@ func _bake_scenery() -> void:
 		if not is_equal_approx(fmod(rot, TAU), 0.0):
 			img = _rotate_image(img, rot)
 
-		# Re-encode and re-key.
-		var png_bytes := img.save_png_to_buffer()
+		# Re-encode and cap.
+		var cap_result := _cap_image_to_max(img)
+		var png_bytes: PackedByteArray = cap_result[0]
+		var new_b64: String = cap_result[1]
 		var new_key := LevelJson.image_key(png_bytes)
-		var new_b64 := Marshalls.raw_to_base64(png_bytes)
 
-		# Store the new blob (dedup: might already exist).
-		if not current.images.has(new_key):
-			current.images[new_key] = new_b64
+		if new_key != old_key:
+			# Would storing this new blob exceed the image cap?
+			# Allow only if old_key is being orphaned (net count stays same).
+			var old_still_needed: bool = ref_count.get(old_key, 0) > 1
+			if not current.images.has(new_key) and old_still_needed and current.images.size() >= LevelJson.MAX_IMAGES:
+				# Cap hit: skip bake for this overlay, keep its underscore edit-state.
+				push_warning("SceneryBake: skipping overlay %d — image cap full" % i)
+				continue
+			# Store the new blob (dedup: might already exist under new_key).
+			if not current.images.has(new_key):
+				current.images[new_key] = new_b64
+			# Update this overlay's key.
+			o["image"] = new_key
+			# Decrement refcount on old key; erase if orphaned.
+			ref_count[old_key] = ref_count.get(old_key, 1) - 1
+			if ref_count.get(old_key, 0) <= 0:
+				current.images.erase(old_key)
 
-		# Update this overlay's key.
-		o["image"] = new_key
-
-		# Decrement refcount on old key; erase if orphaned.
-		ref_count[old_key] = ref_count.get(old_key, 1) - 1
-		if ref_count.get(old_key, 0) <= 0:
-			current.images.erase(old_key)
-
-		# Strip edit-state keys.
+		# Strip edit-state keys (always — identity bake still consumed them).
 		_strip_edit_keys(o)
 
 		# Reset the live piece transform so the visual matches the baked image.
-		if i < _scenery.size() and is_instance_valid(_scenery[i]):
-			var piece := _scenery[i]
+		var live_piece := _piece_for_overlay(i)
+		if live_piece != null:
+			var piece := live_piece
 			piece.rotation = 0.0
 			piece.scale = Vector2.ONE
 			piece.flip_h = false
@@ -751,8 +831,11 @@ static func _rotate_image(src: Image, rot: float) -> Image:
 	#   h' = |w·sin(r)| + |h·cos(r)|
 	var abs_cos := absf(cos(rot))
 	var abs_sin := absf(sin(rot))
-	var dw := roundi(sw * abs_cos + sh * abs_sin)
-	var dh := roundi(sw * abs_sin + sh * abs_cos)
+	# ceili guards the half-pixel clip at odd angles; the tiny epsilon
+	# guards ceili against cos(PI/2)'s 6e-17 dust inflating exact
+	# 90-degree boxes by a whole pixel.
+	var dw := maxi(1, ceili(sw * abs_cos + sh * abs_sin - 0.001))
+	var dh := maxi(1, ceili(sw * abs_sin + sh * abs_cos - 0.001))
 
 	var dst := Image.create(dw, dh, false, Image.FORMAT_RGBA8)
 	dst.fill(Color(0, 0, 0, 0))
@@ -788,17 +871,31 @@ static func _bilinear_sample(
 	if sx < -0.5 or sy < -0.5 or sx > sw - 0.5 or sy > sh - 0.5:
 		return Color(0, 0, 0, 0)
 
-	var x0 := clampi(int(floor(sx)), 0, sw - 1)
-	var y0 := clampi(int(floor(sy)), 0, sh - 1)
-	var x1 := clampi(x0 + 1, 0, sw - 1)
-	var y1 := clampi(y0 + 1, 0, sh - 1)
-
-	var tx: float = sx - floor(sx)
-	var ty: float = sy - floor(sy)
+	# Compute unclamped floor first so tx/ty are always in [0,1).
+	var x0f := floorf(sx)
+	var y0f := floorf(sy)
+	var tx: float = sx - x0f
+	var ty: float = sy - y0f
+	var x0 := clampi(int(x0f), 0, sw - 1)
+	var y0 := clampi(int(y0f), 0, sh - 1)
+	var x1 := clampi(int(x0f) + 1, 0, sw - 1)
+	var y1 := clampi(int(y0f) + 1, 0, sh - 1)
 
 	var c00 := src.get_pixel(x0, y0)
 	var c10 := src.get_pixel(x1, y0)
 	var c01 := src.get_pixel(x0, y1)
 	var c11 := src.get_pixel(x1, y1)
 
-	return c00.lerp(c10, tx).lerp(c01.lerp(c11, tx), ty)
+	# Premultiplied-alpha bilinear: lerp premultiplied channels, then unpremultiply.
+	# Prevents transparent-black fringing at alpha boundaries.
+	var a00 := c00.a
+	var a10 := c10.a
+	var a01 := c01.a
+	var a11 := c11.a
+	var r := c00.r * a00 * (1 - tx) * (1 - ty) + c10.r * a10 * tx * (1 - ty) + c01.r * a01 * (1 - tx) * ty + c11.r * a11 * tx * ty
+	var g := c00.g * a00 * (1 - tx) * (1 - ty) + c10.g * a10 * tx * (1 - ty) + c01.g * a01 * (1 - tx) * ty + c11.g * a11 * tx * ty
+	var b := c00.b * a00 * (1 - tx) * (1 - ty) + c10.b * a10 * tx * (1 - ty) + c01.b * a01 * (1 - tx) * ty + c11.b * a11 * tx * ty
+	var a := a00 * (1 - tx) * (1 - ty) + a10 * tx * (1 - ty) + a01 * (1 - tx) * ty + a11 * tx * ty
+	if a < 0.00001:
+		return Color(0, 0, 0, 0)
+	return Color(r / a, g / a, b / a, a)
