@@ -789,13 +789,13 @@ static func _strip_background(img: Image) -> Image:
 	keyed.resize(w * h)
 	var queue: Array[int] = []
 	for x in w:
-		for y in [0, h - 1]:
+		for y: int in [0, h - 1]:
 			var i := y * w + x
 			if dist[i] < 0.35 and keyed[i] == 0:
 				keyed[i] = 1
 				queue.append(i)
 	for y in h:
-		for x in [0, w - 1]:
+		for x: int in [0, w - 1]:
 			var i := y * w + x
 			if dist[i] < 0.35 and keyed[i] == 0:
 				keyed[i] = 1
