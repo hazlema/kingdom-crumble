@@ -77,7 +77,10 @@ func _play_impact() -> void:
 	player.pitch_scale = IMPACT_PITCH * randf_range(0.9, 1.1)
 	add_child(player)
 	player.finished.connect(player.queue_free)
-	player.play()
+	# Same-frame smash: several crates struck in one physics tick would
+	# start identical samples in perfect sync, which fuses into ONE
+	# thunk. A few ms of random smear turns the chord into a clatter.
+	get_tree().create_timer(randf_range(0.0, 0.06)).timeout.connect(player.play)
 
 
 func _physics_process(_delta: float) -> void:

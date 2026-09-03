@@ -55,6 +55,7 @@ func test_impact_sound_plays_on_sfx_bus_with_pitch_wobble() -> void:
 		if child is AudioStreamPlayer:
 			found = child
 	assert_not_null(found, "a one-shot player spawns")
+	await wait_seconds(0.12)  # play is smeared 0-60ms to de-sync same-frame hits
 	assert_true(found.playing, "the take is rolling")
 	assert_eq(found.bus, "Sfx", "rides the Sfx bus (owner's sound slider governs it)")
 	assert_between(found.pitch_scale, Crate.IMPACT_PITCH * 0.9, Crate.IMPACT_PITCH * 1.1, "octave-down pitch with wobble in range")
