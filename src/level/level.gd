@@ -130,6 +130,7 @@ func _physics_process(delta: float) -> void:
 		_apply_backdrop_alpha(_backdrop.toggle())
 	if not _editor_session and Input.is_action_just_pressed("jump_levels"):
 		_open_jump()
+	_tick_hold(delta)
 	_update_crate_check()
 	match state:
 		State.AIMING:
@@ -151,14 +152,51 @@ func _physics_process(delta: float) -> void:
 				_advance()
 
 
+# Long-press-the-battlefield = the H crate check (owner: "a long press,
+# somewhere other than the fire button"). Hold still this long to light
+# it; wander further than the slop and it's a drag, not a press.
+const CHECK_HOLD_SEC := 0.4
+const CHECK_HOLD_SLOP := 24.0
+
+var _hold_pos := Vector2.ZERO
+var _hold_clock := -1.0  # below zero = no press pending
+var _hold_checking := false
+
+
 # Phones have no ENTER key: once the banner is up, any unclaimed tap
 # advances too. Mouse-only on purpose -- a touch tap also emits an
 # emulated mouse click, so handling both events would double-advance.
+# The same handler tracks the long-press check on the open battlefield.
 func _unhandled_input(event: InputEvent) -> void:
-	if state != State.CLEARED and state != State.FAILED:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+		_cancel_hold()
+	if state == State.CLEARED or state == State.FAILED:
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_advance()
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_advance()
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+		_hold_pos = mb.position
+		_hold_clock = 0.0
+	elif event is InputEventMouseMotion and _hold_clock >= 0.0:
+		if (event as InputEventMouseMotion).position.distance_to(_hold_pos) > CHECK_HOLD_SLOP:
+			_cancel_hold()
+
+
+func _tick_hold(delta: float) -> void:
+	if _hold_clock < 0.0 or _hold_checking:
+		return
+	_hold_clock += delta
+	if _hold_clock >= CHECK_HOLD_SEC:
+		_hold_checking = true
+		Input.action_press("check")
+
+
+func _cancel_hold() -> void:
+	_hold_clock = -1.0
+	if _hold_checking:
+		_hold_checking = false
+		Input.action_release("check")
 
 
 # The banner's call to action, told honestly per device.
