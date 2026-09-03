@@ -42,3 +42,20 @@ func test_count_standing_mixes_tilt_and_displacement():
 	var tipped := _spawn_frozen_crate()
 	tipped.rotation = deg_to_rad(90)
 	assert_eq(Level.count_standing([upright, tipped]), 1)
+
+
+func test_impact_sound_plays_on_sfx_bus_with_pitch_wobble() -> void:
+	# Owner's tennis-ball foley: solid hits deal one of two takes on the
+	# Sfx bus, pitch wobbled 0.9-1.1, player freed when the take ends.
+	var c := Crate.new()
+	add_child_autofree(c)
+	c._play_impact()
+	var found: AudioStreamPlayer = null
+	for child in c.get_children():
+		if child is AudioStreamPlayer:
+			found = child
+	assert_not_null(found, "a one-shot player spawns")
+	assert_true(found.playing, "the take is rolling")
+	assert_eq(found.bus, "Sfx", "rides the Sfx bus (owner's sound slider governs it)")
+	assert_between(found.pitch_scale, 0.9, 1.1, "pitch wobble in range")
+	assert_true(Crate.IMPACT_SOUNDS.has(found.stream), "plays one of the two takes")

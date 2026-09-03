@@ -28,6 +28,14 @@ const KNOCKED_OUT_DISTANCE := 48.0
 const POP_MIN_STONE_SPEED := 150.0
 const POP_VELOCITY := 170.0
 
+# Owner's tennis-ball foley (phone + tennis ball, 2026-09-03): two takes,
+# dealt at random with a little pitch wobble so a collapsing tower does
+# not machine-gun the identical sample.
+const IMPACT_SOUNDS: Array[AudioStream] = [
+	preload("res://assets/sfx/impact-1.ogg"),
+	preload("res://assets/sfx/impact-2.ogg"),
+]
+
 var type_id := "crate-wood"
 var home := Vector2.ZERO  # spawn position, captured in _ready
 
@@ -53,6 +61,19 @@ func _ready() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body is Stone and body.linear_velocity.length() > POP_MIN_STONE_SPEED:
 		apply_central_impulse(Vector2.UP * POP_VELOCITY * mass)
+		_play_impact()
+
+
+# Rides the same speed gate as the hop: slow kisses stay silent,
+# real hits speak. One-shot player, freed when the take ends.
+func _play_impact() -> void:
+	var player := AudioStreamPlayer.new()
+	player.stream = IMPACT_SOUNDS[randi() % IMPACT_SOUNDS.size()]
+	player.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
+	player.pitch_scale = randf_range(0.9, 1.1)
+	add_child(player)
+	player.finished.connect(player.queue_free)
+	player.play()
 
 
 func _physics_process(_delta: float) -> void:
