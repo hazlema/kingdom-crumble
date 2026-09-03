@@ -151,6 +151,7 @@ func _bake_and_capture() -> void:
 	_bake_scenery()
 	_rebuild_scenery()
 	_refresh_pieces()
+	_reopen_inspector()
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
@@ -475,6 +476,18 @@ func _on_image_chosen(path: String) -> void:
 	selected_overlay = current.overlays.size() - 1
 	_rebuild_scenery()
 	_refresh_pieces()
+	_reopen_inspector()
+
+
+# Rebuilds free every live piece — any open inspector must be re-pointed
+# at the FRESH piece for the current selection (or closed if none), else
+# it displays one overlay while selection means another.
+func _reopen_inspector() -> void:
+	if selected_overlay >= 0 and selected_overlay < current.overlays.size():
+		var piece := _piece_for_overlay(selected_overlay)
+		%PieceInspector.open(current.overlays[selected_overlay], piece)
+	else:
+		%PieceInspector.close()
 
 
 # ---------------------------------------------------------------------------
