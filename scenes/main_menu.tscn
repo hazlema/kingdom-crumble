@@ -72,6 +72,10 @@ text = "Hardcore"
 layout_mode = 2
 text = "EDITOR"
 
+[node name="Fullscreen" type="Button" parent="Buttons"]
+layout_mode = 2
+text = "FULLSCREEN"
+
 [node name="Quit" type="Button" parent="Buttons" unique_id=665082779]
 layout_mode = 2
 text = "Quit"

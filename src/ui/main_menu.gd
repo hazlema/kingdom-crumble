@@ -8,7 +8,18 @@ func _ready() -> void:
 	$Buttons/Editor.pressed.connect(
 		func() -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
 	)
+	# Browsers only grant fullscreen from a user tap, so it's a button —
+	# and only a web problem; desktop players have F11 and a window manager.
+	$Buttons/Fullscreen.visible = OS.has_feature("web")
+	$Buttons/Fullscreen.pressed.connect(_toggle_fullscreen)
 	$Buttons/Quit.pressed.connect(_quit)
+
+
+func _toggle_fullscreen() -> void:
+	var fs := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	DisplayServer.window_set_mode(
+		DisplayServer.WINDOW_MODE_WINDOWED if fs else DisplayServer.WINDOW_MODE_FULLSCREEN
+	)
 
 
 func _start(tier: String) -> void:
