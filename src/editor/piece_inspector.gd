@@ -161,6 +161,9 @@ func set_behavior_by_name(name: String) -> void:
 		var behavior_keys := NarfDecor.Behavior.keys()
 		var idx := behavior_keys.find(name)
 		if idx >= 0:
+			# Re-anchor first: home was captured at spawn, and the piece may
+			# have been dragged since -- without this the verb snaps it back.
+			_piece.rehome()
 			_piece.behavior = idx as NarfDecor.Behavior
 	# Sync the UI without triggering the signal callback.
 	var b_idx := BEHAVIOR_NAMES.find(name)

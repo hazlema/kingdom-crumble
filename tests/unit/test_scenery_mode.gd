@@ -361,3 +361,14 @@ func test_open_prepopulates_drift_dials() -> void:
 	assert_false(overlay2.has("axis"), "mere selection must not write axis into overlay")
 	assert_false(overlay2.has("travel"), "mere selection must not write travel into overlay")
 	assert_false(overlay2.has("tilt"), "mere selection must not write tilt into overlay")
+
+
+func test_setting_behavior_rehomes_a_dragged_piece() -> void:
+	# Regression: place -> drag -> turn on DRIFT used to snap the piece
+	# back to its spawn position (stale _home_pos captured in _ready).
+	var result := _make_inspector_with_piece()
+	var insp: PieceInspector = result[0]
+	var piece: NarfDecor = result[2]
+	piece.position = Vector2(777, 333)  # simulate the editor drag
+	insp.set_behavior_by_name("DRIFT")
+	assert_eq(piece._home_pos, Vector2(777, 333), "verb anchors to the dragged spot")

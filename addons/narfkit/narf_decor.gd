@@ -57,8 +57,17 @@ var _hop_active := false
 
 func _ready() -> void:
 	_apply_pivot()
+	rehome()
+
+
+## Re-anchor the motion home to the current transform. Position-driven
+## verbs animate AROUND home, so a host that moves a live piece (an
+## editor drag, a cutscene) must call this or the next frame snaps the
+## piece back to wherever it was born.
+func rehome() -> void:
 	_home_rotation = rotation
 	_home_pos = position
+	_hop_active = false
 
 
 func _process(delta: float) -> void:

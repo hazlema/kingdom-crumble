@@ -605,6 +605,7 @@ func _scenery_drag(world: Vector2) -> void:
 	if _scenery_handle == -1:
 		# Body drag — move piece, and keep overlay dict in sync for mid-drag saves.
 		piece.position = _scenery_drag_piece_origin + delta
+		piece.rehome()  # else a live verb snaps it back to where it was born
 		o["x"] = piece.position.x
 		o["y"] = piece.position.y
 	elif _scenery_handle == 4:
@@ -612,6 +613,7 @@ func _scenery_drag(world: Vector2) -> void:
 		var center := _scenery_drag_piece_origin
 		var angle := (world - center).angle() + PI / 2.0
 		piece.rotation = angle
+		piece.rehome()  # SPIN/SWAY anchor to home rotation the same way
 		o["_rot"] = angle
 	else:
 		# Corner resize — aspect-locked scale.

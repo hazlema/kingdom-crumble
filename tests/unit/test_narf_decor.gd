@@ -129,3 +129,14 @@ func test_wander_flies_nose_first_and_lands_level() -> void:
 			assert_almost_eq(angle_difference(d.rotation, d._home_rotation), 0.0, 0.001, "level at rest")
 	assert_true(tilt_ok, "banking never exceeds the tilt dial")
 	assert_gt(checked_hops, 0, "at least one hop completed during the test")
+
+
+func test_rehome_reanchors_motion_to_current_spot() -> void:
+	var d := _stepper(NarfDecor.Behavior.DRIFT, Vector2(100, 100))
+	d.axis = NarfDecor.DriftAxis.HORIZONTAL
+	d.position = Vector2(900, 500)  # host moved the piece after spawn
+	d.rehome()
+	for i in 30:
+		d._process(1.0 / 60.0)
+	assert_between(d.position.x, 800.0, 1000.0, "animates around the NEW home")
+	assert_eq(d.position.y, 500.0, "no snap back to the birth spot")
