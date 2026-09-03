@@ -135,6 +135,72 @@ func test_bake_identity_preserves_image_key() -> void:
 	assert_false(o.has("_flip_h"), "edit key stripped")
 
 
+func test_inspector_writes_through_to_overlay_and_piece() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.CYAN)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	insp.set_behavior_by_name("SPIN")
+	insp.set_speed(0.4)
+	assert_eq(str(ed.current.overlays[-1]["behavior"]), "SPIN")
+	assert_eq(ed._scenery_pieces[-1].behavior, NarfDecor.Behavior.SPIN)
+	assert_almost_eq(ed._scenery_pieces[-1].speed, 0.4, 0.001)
+
+
+func test_inspector_hidden_on_deselect() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.MAGENTA)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	assert_true(insp.visible, "open makes inspector visible")
+	ed._exit_scenery()
+	assert_false(insp.visible, "exit_scenery hides inspector")
+
+
+func test_inspector_pre_populates_from_overlay() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.WHITE)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0, "behavior": "SWAY", "speed": 1.2, "amplitude": 30.0, "pivot": "LOWER_CENTER"})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	assert_eq(str(ed.current.overlays[-1]["behavior"]), "SWAY", "behavior pre-populated")
+	assert_almost_eq(ed.current.overlays[-1].get("speed", 0.0) as float, 1.2, 0.001, "speed pre-populated")
+
+
+func test_inspector_set_amplitude_writes_dict_and_piece() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.ORANGE)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	insp.set_amplitude(25.0)
+	assert_almost_eq(ed.current.overlays[-1].get("amplitude", 0.0) as float, 25.0, 0.001)
+	assert_almost_eq(ed._scenery_pieces[-1].amplitude, 25.0, 0.001)
+
+
+func test_inspector_set_pivot_writes_dict_and_piece() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.PURPLE)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	insp.set_pivot_by_index(NarfDecor.Pivot.LOWER_CENTER)
+	assert_eq(str(ed.current.overlays[-1].get("pivot", "")), "LOWER_CENTER")
+	assert_eq(ed._scenery_pieces[-1].pivot, NarfDecor.Pivot.LOWER_CENTER)
+
+
 func test_pick_piece_survives_skipped_overlay() -> void:
 	# overlay[0] references a MISSING image (will be skipped by SceneryBuilder).
 	# overlay[1] is valid. After rebuild, picking at overlay[1]'s position must
@@ -147,9 +213,9 @@ func test_pick_piece_survives_skipped_overlay() -> void:
 	# overlay[1] = valid
 	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
 	ed._rebuild_scenery()
-	assert_eq(ed._scenery.size(), 1, "only 1 piece spawned (overlay[0] skipped)")
+	assert_eq(ed._scenery_pieces.size(), 1, "only 1 piece spawned (overlay[0] skipped)")
 	# The one piece's position is overlay[1]'s position.
-	var piece_pos: Vector2 = ed._scenery[0].position
+	var piece_pos: Vector2 = ed._scenery_pieces[0].position
 	var idx := ed._pick_piece(piece_pos)
 	assert_eq(idx, 1, "_pick_piece returns source index 1")
 	ed.selected_overlay = idx

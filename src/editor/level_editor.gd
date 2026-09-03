@@ -21,7 +21,7 @@ var save_path := ""  # last saved path, "" = unsaved
 var mode := Mode.CRATES
 var selected_overlay := -1
 var _spawned: Array[Crate] = []
-var _scenery: Array[NarfDecor] = []
+var _scenery_pieces: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false
 var _last_mouse := Vector2.ZERO
@@ -224,6 +224,7 @@ func _exit_scenery() -> void:
 	selected_overlay = -1
 	_gizmo.piece = null
 	_gizmo.visible = false
+	%PieceInspector.close()
 	mode = Mode.CRATES
 	%SceneryPanel.visible = false
 	palette.visible = true
@@ -236,10 +237,10 @@ func _exit_scenery() -> void:
 
 
 func _rebuild() -> void:
-	for s in _scenery:
+	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()
-	_scenery.clear()
+	_scenery_pieces.clear()
 	for c in _spawned:
 		if is_instance_valid(c):
 			c.queue_free()
@@ -256,7 +257,7 @@ func _rebuild() -> void:
 		seen_cells.append(cell)
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
-	_scenery = SceneryBuilder.spawn(self, current)
+	_scenery_pieces = SceneryBuilder.spawn(self, current)
 	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
@@ -288,10 +289,12 @@ func _mouse_cell() -> Vector2i:
 
 func _mouse_over_ui(p: Vector2) -> bool:
 	var sp: Node = %SceneryPanel
+	var insp: Node = %PieceInspector
 	return (
 		palette.get_global_rect().has_point(p)
 		or menu.covers_point(p)
 		or (sp.visible and (sp as Control).get_global_rect().has_point(p))
+		or (insp.visible and (insp as Control).get_global_rect().has_point(p))
 	)
 
 
@@ -359,19 +362,19 @@ func _delete_selected() -> void:
 	_rebuild()
 
 
-# Frees and respawns ONLY the _scenery array — crates untouched.
+# Frees and respawns ONLY the _scenery_pieces array — crates untouched.
 # Used in the import path so entering/being in scenery mode doesn't
 # accidentally un-dim the crates (a full _rebuild would reset modulate).
 func _rebuild_scenery() -> void:
-	for s in _scenery:
+	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()
-	_scenery.clear()
-	_scenery = SceneryBuilder.spawn(self, current)
+	_scenery_pieces.clear()
+	_scenery_pieces = SceneryBuilder.spawn(self, current)
 	# Pieces re-emerge wearing any PENDING (unbaked) edit-state — a
 	# rebuild must never visually revert edits the dict still carries
 	# (import/delete/cap-skip all rebuild mid-session).
-	for s in _scenery:
+	for s in _scenery_pieces:
 		if not is_instance_valid(s):
 			continue
 		var oi: int = s.get_meta("overlay_index", -1)
@@ -388,7 +391,7 @@ func _rebuild_scenery() -> void:
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
-		for s in _scenery:
+		for s in _scenery_pieces:
 			if is_instance_valid(s):
 				s.behavior = NarfDecor.Behavior.NONE
 
@@ -552,10 +555,12 @@ func _scenery_press(world: Vector2) -> void:
 		_scenery_drag_piece_origin = piece.position
 		var po: Dictionary = current.overlays[selected_overlay]
 		_scenery_drag_press_scale = po.get("_scale", 1.0)
+		%PieceInspector.open(po, piece)
 	else:
 		# Deselect.
 		selected_overlay = -1
 		_scenery_dragging = false
+		%PieceInspector.close()
 
 
 func _scenery_release() -> void:
@@ -611,7 +616,7 @@ func _scenery_drag(world: Vector2) -> void:
 
 # Returns the NarfDecor piece for the given overlay source index, or null.
 func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
-	for p in _scenery:
+	for p in _scenery_pieces:
 		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
 			return p
 	return null
@@ -621,8 +626,8 @@ func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
 # or -1 if none. Exposed so unit tests can call it directly.
 func _pick_piece(world_pos: Vector2) -> int:
 	# Iterate in reverse (top-most drawn last).
-	for i in range(_scenery.size() - 1, -1, -1):
-		var piece := _scenery[i]
+	for i in range(_scenery_pieces.size() - 1, -1, -1):
+		var piece := _scenery_pieces[i]
 		if not is_instance_valid(piece):
 			continue
 		var rect := piece.get_rect()
@@ -671,6 +676,7 @@ func _delete_selected_piece() -> void:
 	selected_overlay = -1
 	_gizmo.piece = null
 	_gizmo.queue_redraw()
+	%PieceInspector.close()
 	# Drop the image blob if no remaining overlay references it.
 	if old_key != "":
 		var still_used := false
