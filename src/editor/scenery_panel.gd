@@ -26,6 +26,23 @@ func _ready() -> void:
 	_file_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp ; Images"])
 	_file_dialog.file_selected.connect(func(path: String) -> void: image_chosen.emit(path))
 	add_child(_file_dialog)
+	_tame_path_dropdown(_file_dialog)
+
+
+# FileDialog's internal path dropdown sizes itself to its LONGEST entry
+# (fit_to_longest_item), so one deep dev path makes the whole window's
+# minimum width wider than the monitor — no popup call can override a
+# content minimum. Clip the button text; the dropdown list still shows
+# full paths when opened.
+func _tame_path_dropdown(node: Node) -> bool:
+	if node is OptionButton:
+		node.fit_to_longest_item = false
+		node.clip_text = true
+		return true
+	for child in node.get_children(true):
+		if _tame_path_dropdown(child):
+			return true
+	return false
 
 
 func _open_file_dialog() -> void:
