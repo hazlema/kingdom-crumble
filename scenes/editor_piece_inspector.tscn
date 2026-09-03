@@ -109,7 +109,7 @@ value = 0.25
 
 [node name="AmplitudeLabel" type="Label" parent="Box"]
 theme_override_font_sizes/font_size = 13
-text = "Amplitude:"
+text = "Movement:"
 
 [node name="AmplitudeSlider" type="HSlider" parent="Box"]
 unique_name_in_owner = true

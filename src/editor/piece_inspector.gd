@@ -3,7 +3,7 @@ extends PanelContainer
 
 # Floating inspector shown while a scenery piece is selected.
 # Exposes: behavior OptionButton (None/Spin/Sway/Bob), a 3x3 pivot grid
-# (radio-style toggle buttons), speed HSlider (0-2), amplitude HSlider (0-60).
+# (radio-style toggle buttons), speed HSlider (0-2), movement HSlider (0-60, overlay key "amplitude").
 #
 # open(overlay, piece) populates all controls from the dict and stores
 # references.  Setter methods are the single path through which both UI
@@ -13,7 +13,7 @@ extends PanelContainer
 # pieces to behavior=NONE so they stay static during editing.  set_behavior_by_name
 # writes the dict (source of truth) and pokes piece.behavior for the live
 # piece — but _rebuild_scenery will re-zero it on the next rebuild.
-# Speed, amplitude, and pivot ARE applied live because they are purely
+# Speed, movement, and pivot ARE applied live because they are purely
 # visual without motion.  Live behavior preview is deliberately off in the
 # editor; the tests confirm dict correctness, not animation playback.
 
@@ -91,7 +91,7 @@ func open(overlay: Dictionary, piece: NarfDecor) -> void:
 	# --- Pre-populate speed ---
 	_speed_slider.value = float(overlay.get("speed", 0.25))
 
-	# --- Pre-populate amplitude ---
+	# --- Pre-populate movement (overlay key "amplitude") ---
 	_amplitude_slider.value = float(overlay.get("amplitude", 6.0))
 
 	# --- Pre-populate pivot ---
@@ -156,7 +156,7 @@ func set_amplitude(v: float) -> void:
 		return
 	_overlay["amplitude"] = v
 	if is_instance_valid(_piece):
-		_piece.amplitude = v
+		_piece.movement = v
 	if not is_equal_approx(_amplitude_slider.value, v):
 		_updating = true
 		_amplitude_slider.value = v

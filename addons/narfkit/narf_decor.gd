@@ -33,8 +33,8 @@ enum Pivot {
 		_apply_pivot()
 ## SPIN: rotations per second. SWAY/BOB: oscillations per second.
 @export_range(0.0, 10.0, 0.01) var speed := 0.25
-## SWAY: peak tilt in degrees. BOB: peak travel in pixels.
-@export_range(0.0, 180.0, 0.5) var amplitude := 6.0
+## How much it moves — SWAY: peak tilt in degrees. BOB: peak travel in pixels.
+@export_range(0.0, 180.0, 0.5) var movement := 6.0
 
 var _t := 0.0
 var _home_rotation := 0.0
@@ -55,9 +55,9 @@ func _process(delta: float) -> void:
 		Behavior.SPIN:
 			rotation = _home_rotation + _t * speed * TAU
 		Behavior.SWAY:
-			rotation = _home_rotation + deg_to_rad(amplitude) * sin(_t * speed * TAU)
+			rotation = _home_rotation + deg_to_rad(movement) * sin(_t * speed * TAU)
 		Behavior.BOB:
-			position.y = _home_y + amplitude * sin(_t * speed * TAU)
+			position.y = _home_y + movement * sin(_t * speed * TAU)
 
 
 func _apply_pivot() -> void:

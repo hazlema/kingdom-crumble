@@ -53,7 +53,8 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 		piece.behavior = behavior_idx as NarfDecor.Behavior
 		piece.pivot = pivot_idx as NarfDecor.Pivot
 		piece.speed = clampf(float(entry.get("speed", 0.25)), 0.0, 10.0)
-		piece.amplitude = clampf(float(entry.get("amplitude", 6.0)), 0.0, 180.0)
+		# JSON field keeps the old name "amplitude" for save compat.
+		piece.movement = clampf(float(entry.get("amplitude", 6.0)), 0.0, 180.0)
 		piece.position = Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment

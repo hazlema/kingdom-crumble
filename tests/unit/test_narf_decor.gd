@@ -8,7 +8,7 @@ func _piece(b: NarfDecor.Behavior) -> NarfDecor:
 	var d := NarfDecor.new()
 	d.behavior = b
 	d.speed = 1.0
-	d.amplitude = 10.0
+	d.movement = 10.0
 	add_child_autofree(d)
 	return d
 
@@ -28,7 +28,7 @@ func test_sway_oscillates_around_home() -> void:
 	assert_between(d.rotation, 0.5 - deg_to_rad(10.5), 0.5 + deg_to_rad(10.5), "tilts near home")
 
 
-func test_bob_moves_vertically_within_amplitude() -> void:
+func test_bob_moves_vertically_within_movement() -> void:
 	var d := _piece(NarfDecor.Behavior.BOB)
 	await wait_seconds(0.3)
 	assert_between(d.position.y, -10.5, 10.5, "bobs around home")

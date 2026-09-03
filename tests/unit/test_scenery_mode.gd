@@ -185,7 +185,7 @@ func test_inspector_set_amplitude_writes_dict_and_piece() -> void:
 	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
 	insp.set_amplitude(25.0)
 	assert_almost_eq(ed.current.overlays[-1].get("amplitude", 0.0) as float, 25.0, 0.001)
-	assert_almost_eq(ed._scenery_pieces[-1].amplitude, 25.0, 0.001)
+	assert_almost_eq(ed._scenery_pieces[-1].movement, 25.0, 0.001)
 
 
 func test_inspector_set_pivot_writes_dict_and_piece() -> void:
