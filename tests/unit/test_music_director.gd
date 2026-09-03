@@ -58,3 +58,10 @@ func test_sfx_bus_exists_and_volume_persists() -> void:
 	cfg.load("user://settings.cfg")
 	assert_almost_eq(float(cfg.get_value("audio", "sfx_volume", -1.0)), 0.42, 0.001)
 	Music.set_sfx_volume_linear(before)
+
+
+func test_export_suffixes_stripped_for_all_disguises() -> void:
+	assert_eq(MusicDirector._strip_export_suffixes("song.mp3.import"), "song.mp3")
+	assert_eq(MusicDirector._strip_export_suffixes("song.ogg.remap"), "song.ogg")
+	assert_eq(MusicDirector._strip_export_suffixes("song.mp3"), "song.mp3")
+	assert_eq(MusicDirector._strip_export_suffixes("song.wav"), "song.wav")

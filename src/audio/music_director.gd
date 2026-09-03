@@ -95,9 +95,17 @@ static func list_pool(tier: String) -> Array:
 	if dir == null:
 		return out
 	for file in dir.get_files():
-		# exported builds list "track.ogg.remap"; strip and re-check
-		var stripped := file.trim_suffix(".remap")
+		var stripped := _strip_export_suffixes(file)
 		if stripped.get_extension() in EXTENSIONS:
-			out.append("res://music/%s/%s" % [tier, stripped])
+			var path := "res://music/%s/%s" % [tier, stripped]
+			if not out.has(path):
+				out.append(path)
 	out.sort()
 	return out
+
+
+# Exported builds don't list the original filenames: imported audio
+# shows as "track.mp3.import" (and remapped resources as "*.remap").
+# Strip both, dedupe upstream — this bug shipped one silent kingdom.
+static func _strip_export_suffixes(file: String) -> String:
+	return file.trim_suffix(".remap").trim_suffix(".import")
