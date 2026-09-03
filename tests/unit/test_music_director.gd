@@ -28,15 +28,20 @@ func test_list_pool_of_missing_tier_dir_is_empty():
 
 
 func test_volume_clamps_high():
+	# Restore what was there before, NOT a hardcoded value: set_volume_linear
+	# persists to the REAL user://settings.cfg — a hardcoded restore stomped
+	# the owner's saved volume to max on every suite run.
+	var before: float = Music.get_volume_linear()
 	Music.set_volume_linear(1.5)
 	assert_eq(Music.get_volume_linear(), 1.0)
-	Music.set_volume_linear(1.0)
+	Music.set_volume_linear(before)
 
 
 func test_volume_clamps_low():
+	var before: float = Music.get_volume_linear()
 	Music.set_volume_linear(-0.2)
 	assert_eq(Music.get_volume_linear(), 0.0)
-	Music.set_volume_linear(1.0)
+	Music.set_volume_linear(before)
 
 
 func test_volume_persists_to_settings_cfg() -> void:
