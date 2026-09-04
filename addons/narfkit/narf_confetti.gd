@@ -10,7 +10,7 @@ extends CPUParticles2D
 #   code:  NarfConfetti.burst(host, at) -- fire-and-forget, self-cleaning
 
 ## How hard pieces launch before gravity wins.
-@export_range(0.0, 2000.0, 10.0) var punch := 420.0
+@export_range(0.0, 2000.0, 10.0) var punch := 780.0
 ## Seconds a piece stays aloft -- 3s reaches the floor of a 1080 screen.
 @export_range(0.5, 8.0, 0.1) var flutter_time := 3.0
 ## How many pieces per pop.
@@ -29,13 +29,14 @@ func _ready() -> void:
 	amount = pieces
 	lifetime = flutter_time
 	gravity = Vector2(0, 420)
-	initial_velocity_min = punch * 0.45
+	initial_velocity_min = punch * 0.6
 	initial_velocity_max = punch
 	angular_velocity_min = -540.0
 	angular_velocity_max = 540.0
-	# Air resistance: launch dies off and pieces settle into a drift.
-	damping_min = 40.0
-	damping_max = 120.0
+	# Light air resistance only -- heavy damping strangles the launch
+	# (learned the hard way: the party barely left the crate).
+	damping_min = 15.0
+	damping_max = 50.0
 	scale_amount_min = 3.0
 	scale_amount_max = 6.0
 	color_ramp = _festive()
