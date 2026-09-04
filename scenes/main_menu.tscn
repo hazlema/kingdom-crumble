@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://dlgifplw3ecbc"]
 
 [ext_resource type="Script" uid="uid://c4bbovvtgk5ql" path="res://src/ui/main_menu.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://ct3y36nut7lln" path="res://scenes/menu_option.tscn" id="mo"]
 [ext_resource type="Texture2D" uid="uid://b18mqv4d7fn0o" path="res://art/backgrounds/logo.png" id="11_lgwnu"]
 [ext_resource type="Texture2D" uid="uid://ds7bv3ox1w47p" path="res://art/decor/butterfly-pink.png" id="bf1"]
 [ext_resource type="Texture2D" uid="uid://n2axrdcq8bch" path="res://art/decor/butterfly-blue.png" id="bf2"]
@@ -228,44 +229,78 @@ script = ExtResource("nd")
 behavior = 1
 speed = 0.1
 
-[node name="Buttons" type="VBoxContainer" parent="menu" unique_id=825930571]
+[node name="Options" type="Control" parent="menu"]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 800.0
-offset_top = 460.0
-offset_right = 1080.0
-offset_bottom = 816.0
-theme_override_constants/separation = 16
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="Chill" type="Button" parent="menu/Buttons" unique_id=1596262242]
-layout_mode = 2
-text = "Chill"
+[node name="Chill" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 490.0
+offset_right = 2669.0
+offset_bottom = 890.0
+scale = Vector2(0.22, 0.22)
+lbl = "Chill"
 
-[node name="HeartPumper" type="Button" parent="menu/Buttons" unique_id=171232873]
-layout_mode = 2
-text = "Heart-Pumper"
+[node name="HeartPumper" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 578.0
+offset_right = 2669.0
+offset_bottom = 978.0
+scale = Vector2(0.22, 0.22)
+lbl = "Heart-Pumper"
 
-[node name="Hardcore" type="Button" parent="menu/Buttons" unique_id=521078720]
-layout_mode = 2
-text = "Hardcore"
+[node name="Hardcore" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 666.0
+offset_right = 2669.0
+offset_bottom = 1066.0
+scale = Vector2(0.22, 0.22)
+lbl = "Hardcore"
 
-[node name="Editor" type="Button" parent="menu/Buttons" unique_id=652967640]
-layout_mode = 2
-text = "EDITOR"
+[node name="Editor" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 754.0
+offset_right = 2669.0
+offset_bottom = 1154.0
+scale = Vector2(0.22, 0.22)
+lbl = "Editor"
 
-[node name="Fullscreen" type="Button" parent="menu/Buttons" unique_id=264919149]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "FULLSCREEN"
+[node name="Fullscreen" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 842.0
+offset_right = 2669.0
+offset_bottom = 1242.0
+scale = Vector2(0.22, 0.22)
+lbl = "Fullscreen"
 
-[node name="Quit" type="Button" parent="menu/Buttons" unique_id=665082779]
-layout_mode = 2
-text = "Quit"
+[node name="Quit" parent="menu/Options" instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 930.0
+offset_right = 2669.0
+offset_bottom = 1330.0
+scale = Vector2(0.22, 0.22)
+lbl = "Quit"
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=460252435]
 layout_mode = 1

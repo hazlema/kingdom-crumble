@@ -83,6 +83,8 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
+[sub_resource type="StyleBoxEmpty" id="flat_empty"]
+
 [sub_resource type="FontVariation" id="nunito_800"]
 base_font = ExtResource("font_body")
 variation_opentype = {
@@ -101,6 +103,12 @@ Button/styles/focus = SubResource("btn_focus")
 Button/styles/hover = SubResource("btn_hover")
 Button/styles/normal = SubResource("btn_normal")
 Button/styles/pressed = SubResource("btn_pressed")
+FlatButton/base_type = &"Button"
+FlatButton/font_sizes/font_size = 130
+FlatButton/styles/focus = SubResource("flat_empty")
+FlatButton/styles/hover = SubResource("flat_empty")
+FlatButton/styles/normal = SubResource("flat_empty")
+FlatButton/styles/pressed = SubResource("flat_empty")
 Label/colors/font_color = Color(0.2941, 0.2314, 0.1647, 1)
 Label/font_sizes/font_size = 20
 Label/fonts/font = SubResource("nunito_800")

@@ -17,17 +17,27 @@ func _ready() -> void:
 		$AnimationPlayer.seek($AnimationPlayer.current_animation_length, true)
 	else:
 		_intro_played = true
-	$menu/Buttons/Chill.pressed.connect(_start.bind("chill"))
-	$menu/Buttons/HeartPumper.pressed.connect(_start.bind("heartpumper"))
-	$menu/Buttons/Hardcore.pressed.connect(_start.bind("hardcore"))
-	$menu/Buttons/Editor.pressed.connect(
-		func() -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
+	# The owner's hanging-panel MenuOptions (scenes/menu_option.tscn):
+	# each emits MenuOptionSelected(text) — we route by node, not text.
+	$menu/Options/Chill.MenuOptionSelected.connect(func(_o: String) -> void: _start("chill"))
+	$menu/Options/HeartPumper.MenuOptionSelected.connect(
+		func(_o: String) -> void: _start("heartpumper")
+	)
+	$menu/Options/Hardcore.MenuOptionSelected.connect(func(_o: String) -> void: _start("hardcore"))
+	$menu/Options/Editor.MenuOptionSelected.connect(
+		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
 	)
 	# Browsers only grant fullscreen from a user tap, so it's a button —
 	# and only a web problem; desktop players have F11 and a window manager.
-	$menu/Buttons/Fullscreen.visible = OS.has_feature("web")
-	$menu/Buttons/Fullscreen.pressed.connect(_toggle_fullscreen)
-	$menu/Buttons/Quit.pressed.connect(_quit)
+	$menu/Options/Fullscreen.visible = OS.has_feature("web")
+	$menu/Options/Fullscreen.MenuOptionSelected.connect(
+		func(_o: String) -> void: _toggle_fullscreen()
+	)
+	$menu/Options/Quit.MenuOptionSelected.connect(func(_o: String) -> void: _quit())
+	# Desktop hides Fullscreen — collapse its empty slot so the sign
+	# chain hangs without a hole.
+	if not $menu/Options/Fullscreen.visible:
+		$menu/Options/Quit.position.y = $menu/Options/Fullscreen.position.y
 
 
 func _toggle_fullscreen() -> void:
