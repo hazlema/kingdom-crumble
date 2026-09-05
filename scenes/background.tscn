@@ -5,6 +5,9 @@
 [ext_resource type="Texture2D" uid="uid://b3r8urjpru1s" path="res://assets/decor/cloud-big.png" id="cb"]
 [ext_resource type="Texture2D" uid="uid://bxd73vu0d34p6" path="res://assets/decor/cloud-wisp.png" id="cw"]
 [ext_resource type="Texture2D" uid="uid://dboiladfery3s" path="res://assets/decor/cloud-rolling.png" id="cr"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/meadow-far-loop.png" id="mf"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/meadow-mid-loop.png" id="mm"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/meadow-near-loop.png" id="mn"]
 
 [sub_resource type="Gradient" id="sky_gradient"]
 offsets = PackedFloat32Array(0, 1)
@@ -97,33 +100,30 @@ travel = 200.0
 
 [node name="Far" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.15, 0.05)
-motion_mirroring = Vector2(4096, 0)
+motion_mirroring = Vector2(2845, 0)
 
-[node name="Hills" type="ColorRect" parent="Far"]
-material = SubResource("hills_far")
-offset_left = -1000.0
-offset_top = -350.0
-offset_right = 3096.0
-offset_bottom = 1400.0
+[node name="Painted" type="Sprite2D" parent="Far"]
+position = Vector2(0, 80)
+scale = Vector2(1.4, 1.4)
+texture = ExtResource("mf")
+centered = false
 
 [node name="Mid" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.3, 0.08)
-motion_mirroring = Vector2(4096, 0)
+motion_mirroring = Vector2(3048, 0)
 
-[node name="Hills" type="ColorRect" parent="Mid"]
-material = SubResource("hills_mid")
-offset_left = -1000.0
-offset_top = -250.0
-offset_right = 3096.0
-offset_bottom = 1400.0
+[node name="Painted" type="Sprite2D" parent="Mid"]
+position = Vector2(0, 100)
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("mm")
+centered = false
 
 [node name="Near" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.5, 0.12)
-motion_mirroring = Vector2(4096, 0)
+motion_mirroring = Vector2(3251, 0)
 
-[node name="Hills" type="ColorRect" parent="Near"]
-material = SubResource("hills_near")
-offset_left = -1000.0
-offset_top = -150.0
-offset_right = 3096.0
-offset_bottom = 1400.0
+[node name="Painted" type="Sprite2D" parent="Near"]
+position = Vector2(0, 34)
+scale = Vector2(1.6, 1.6)
+texture = ExtResource("mn")
+centered = false
