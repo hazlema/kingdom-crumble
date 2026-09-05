@@ -110,6 +110,19 @@ body {
 	opacity: 0.75;
 }
 
+#updatehint {
+	position: absolute;
+	bottom: 14px;
+	left: 0;
+	right: 0;
+	text-align: center;
+	font-size: 12px;
+	font-weight: 600;
+	color: #4b3b2a;
+	opacity: 0.55;
+	padding: 0 1rem;
+}
+
 #notice {
 	display: none;
 	background: #fffaf0;
@@ -143,6 +156,7 @@ body {
 				<div id="loadtext">Raising the kingdom...</div>
 			</div>
 			<div id="notice"></div>
+			<div id="updatehint">Seeing an older version? Press Ctrl+Shift+R (or close and reopen the tab on mobile) to fetch the newest build.</div>
 		</div>
 
 		<script src="$GODOT_URL"></script>
