@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cttvngc32bj6y"
+path="res://.godot/imported/Impact at Seventeen.ogg-729b64d36233b788ffbac5eb762d206f.oggvorbisstr"
+
+[deps]
+
+source_file="res://music/hardcore/Impact at Seventeen.ogg"
+dest_files=["res://.godot/imported/Impact at Seventeen.ogg-729b64d36233b788ffbac5eb762d206f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
