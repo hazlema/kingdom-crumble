@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://7f6eathlqcmy"
+path="res://.godot/imported/Impact at Seventeen.ogg-a48a3bb9c88a5c109fc9d1907c26e4ed.oggvorbisstr"
+
+[deps]
+
+source_file="res://music/heartpumper/Impact at Seventeen.ogg"
+dest_files=["res://.godot/imported/Impact at Seventeen.ogg-a48a3bb9c88a5c109fc9d1907c26e4ed.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

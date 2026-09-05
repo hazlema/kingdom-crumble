@@ -9,7 +9,7 @@ static var _intro_played := false
 func _ready() -> void:
 	# The meadow's overture (owner pick — fits the theme). Chill-tier, so
 	# starting a Chill run continues it seamlessly; other tiers switch.
-	Music.play_track("res://music/chill/Mossy-Lantern.mp3", "chill")
+	Music.play_track("res://music/chill/Mossy-Lantern.ogg", "chill")
 	# Roll the owner's logo intro — or, on a return visit, jump straight
 	# to its final frame (every track lands in the settled pose at once).
 	$AnimationPlayer.play("intro")
