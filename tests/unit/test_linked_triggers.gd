@@ -70,3 +70,42 @@ func test_trigger_events_and_actions_validate() -> void:
 	)
 	var err := LevelJson.validate(_base({"triggers": {"on_all_cleared": [42]}}))
 	assert_true(err.begins_with("trigger "), "non-string action ID rejected: %s" % err)
+
+
+func _tiny_b64() -> String:
+	var img := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	return Marshalls.raw_to_base64(img.save_png_to_buffer())
+
+
+func _layout_with_named_scenery() -> LevelLayout:
+	var l := LevelLayout.new()
+	l.title = "linked"
+	var b64 := _tiny_b64()
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	l.images[key] = b64
+	l.overlays.append({"image": key, "x": 10, "y": 20, "name": "warning"})
+	l.overlays.append({"image": key, "x": 30, "y": 40, "name": "reward", "hidden": true})
+	return l
+
+
+func test_builder_spawns_hidden_and_named_pieces() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var pieces := SceneryBuilder.spawn(host, _layout_with_named_scenery())
+	assert_eq(pieces.size(), 2)
+	assert_true(pieces[0].visible, "unhidden piece shows")
+	assert_eq(pieces[0].get_meta("overlay_name"), "warning")
+	assert_false(pieces[1].visible, "hidden piece waits for its show")
+	assert_eq(pieces[1].get_meta("overlay_name"), "reward")
+
+
+func test_crates_carry_their_json_coords() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "coords"
+	l.crates.append({"x": 320.0, "y": 512, "type": "crate-wood"})
+	var crates := LevelBuilder.spawn_crates(host, l, true, func(_id: String) -> Texture2D: return null)
+	assert_eq(crates.size(), 1)
+	assert_eq(crates[0].get_meta("json_coords"), Vector2i(320, 512), "float x still keys as int")

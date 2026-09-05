@@ -14,6 +14,8 @@ static func spawn_crates(
 	for c in layout.crates:
 		var crate: Crate = CRATE_SCENE.instantiate()
 		crate.position = Vector2(c["x"], c["y"])
+		# Linked triggers key crates by their authored coordinates.
+		crate.set_meta("json_coords", Vector2i(int(c["x"]), int(c["y"])))
 		crate.freeze = frozen
 		crate.add_to_group("crates")
 		parent.add_child(crate)
