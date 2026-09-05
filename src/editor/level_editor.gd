@@ -195,6 +195,9 @@ func _on_exit() -> void:
 
 
 func _on_test() -> void:
+	# Bake pending scenery transforms first so TEST shows exactly what
+	# save would (owner's F3 call: no untransformed ghosts in playtests).
+	_bake_scenery()
 	Level.next_layout = current
 	Level.return_to_editor = true
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
