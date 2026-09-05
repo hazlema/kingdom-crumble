@@ -1,6 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Shader" uid="uid://bqkgabtph3hko" path="res://assets/shaders/hills.gdshader" id="1"]
+[ext_resource type="Script" uid="uid://w7b3jnj44kbs" path="res://addons/narfkit/narf_decor.gd" id="nd"]
+[ext_resource type="Texture2D" uid="uid://b3r8urjpru1s" path="res://assets/decor/cloud-big.png" id="cb"]
+[ext_resource type="Texture2D" uid="uid://bxd73vu0d34p6" path="res://assets/decor/cloud-wisp.png" id="cw"]
+[ext_resource type="Texture2D" uid="uid://dboiladfery3s" path="res://assets/decor/cloud-rolling.png" id="cr"]
 
 [sub_resource type="Gradient" id="sky_gradient"]
 offsets = PackedFloat32Array(0, 1)
@@ -59,6 +63,37 @@ position = Vector2(-200, -200)
 scale = Vector2(36, 6)
 centered = false
 texture = SubResource("sky_tex")
+
+[node name="Clouds" type="ParallaxLayer" parent="."]
+motion_scale = Vector2(0.08, 0.02)
+motion_mirroring = Vector2(4096, 0)
+
+[node name="CloudBig" type="Sprite2D" parent="Clouds"]
+position = Vector2(420, 160)
+scale = Vector2(0.32, 0.32)
+texture = ExtResource("cb")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.015
+travel = 260.0
+
+[node name="CloudWisp" type="Sprite2D" parent="Clouds"]
+position = Vector2(1750, 105)
+scale = Vector2(0.45, 0.45)
+texture = ExtResource("cw")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.025
+travel = 340.0
+
+[node name="CloudRolling" type="Sprite2D" parent="Clouds"]
+position = Vector2(3050, 200)
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("cr")
+script = ExtResource("nd")
+behavior = 4
+speed = 0.02
+travel = 200.0
 
 [node name="Far" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.15, 0.05)
