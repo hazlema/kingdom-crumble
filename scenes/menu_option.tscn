@@ -3,27 +3,27 @@
 [ext_resource type="Script" uid="uid://y0rfnox6ldy0" path="res://src/ui/menu_option.gd" id="1_0w2e7"]
 [ext_resource type="Theme" uid="uid://jgac5b1aktvr" path="res://resources/ui/kingdom_theme.tres" id="2_y5ri2"]
 [ext_resource type="Texture2D" uid="uid://i0qa8mrbprg1" path="res://art/assets/menu/menu.png" id="3_jgfax"]
-[ext_resource type="Texture2D" uid="uid://dcdxf0qeynuf6" path="res://art/assets/menu/crate-sprites.png" id="4_0w2e7"]
+[ext_resource type="Texture2D" uid="uid://d1aj0pgfa8wn3" path="res://art/mockups/menu/crate-menu-sprites.png" id="4_0w2e7"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_y5ri2"]
 atlas = ExtResource("4_0w2e7")
-region = Rect2(0, 0, 434, 724)
+region = Rect2(0, 0, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_jgfax"]
 atlas = ExtResource("4_0w2e7")
-region = Rect2(434, 0, 434, 724)
+region = Rect2(100, 0, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_tp7sm"]
 atlas = ExtResource("4_0w2e7")
-region = Rect2(868, 0, 434, 724)
+region = Rect2(200, 0, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_8x1yl"]
 atlas = ExtResource("4_0w2e7")
-region = Rect2(1302, 0, 434, 724)
+region = Rect2(300, 0, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6gld7"]
 atlas = ExtResource("4_0w2e7")
-region = Rect2(1736, 0, 434, 724)
+region = Rect2(400, 0, 100, 100)
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_8x1yl"]
 animations = [{
@@ -83,9 +83,8 @@ alignment = 0
 clip_text = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=2104542471]
-position = Vector2(335, 213.99998)
-scale = Vector2(0.51152074, 0.51152074)
+position = Vector2(338.00003, 222.00002)
+scale = Vector2(2.5, 2.5)
 sprite_frames = SubResource("SpriteFrames_8x1yl")
-frame = 4
 frame_progress = 1.0
 speed_scale = 2.0
