@@ -4,6 +4,7 @@
 [ext_resource type="Theme" uid="uid://jgac5b1aktvr" path="res://resources/ui/kingdom_theme.tres" id="2_y5ri2"]
 [ext_resource type="Texture2D" uid="uid://i0qa8mrbprg1" path="res://assets/menu/menu.png" id="3_jgfax"]
 [ext_resource type="Texture2D" uid="uid://d1aj0pgfa8wn3" path="res://assets/ui/crate-menu-sprites.png" id="4_0w2e7"]
+[ext_resource type="AudioStream" uid="uid://c4ek6ufcfjjks" path="res://assets/sfx/click.ogg" id="5_y5ri2"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_y5ri2"]
 atlas = ExtResource("4_0w2e7")
@@ -75,6 +76,7 @@ offset_left = 515.0
 offset_top = 106.0
 offset_right = 1824.0
 offset_bottom = 380.0
+mouse_default_cursor_shape = 2
 theme = ExtResource("2_y5ri2")
 theme_type_variation = &"FlatButton"
 theme_override_font_sizes/font_size = 130
@@ -88,3 +90,9 @@ scale = Vector2(2.5, 2.5)
 sprite_frames = SubResource("SpriteFrames_8x1yl")
 frame_progress = 1.0
 speed_scale = 2.0
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=683554830]
+stream = ExtResource("5_y5ri2")
+volume_db = -12.772
+pitch_scale = 0.35
+bus = &"Sfx"

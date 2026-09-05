@@ -208,7 +208,7 @@ speed = 0.24
 travel = 180.0
 
 [node name="ButterflyGold" type="Sprite2D" parent="menu" unique_id=678143752]
-position = Vector2(900, 950)
+position = Vector2(1530, 565)
 scale = Vector2(0.12, 0.12)
 texture = ExtResource("bf3")
 centered = false
