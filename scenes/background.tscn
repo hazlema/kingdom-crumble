@@ -1,6 +1,6 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Shader" path="res://art/shaders/hills.gdshader" id="1"]
+[ext_resource type="Shader" uid="uid://bqkgabtph3hko" path="res://assets/shaders/hills.gdshader" id="1"]
 
 [sub_resource type="Gradient" id="sky_gradient"]
 offsets = PackedFloat32Array(0, 1)

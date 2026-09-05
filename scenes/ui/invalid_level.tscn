@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b8j045r67grbt"]
 
-[ext_resource type="Texture2D" uid="uid://bhx4l2refff38" path="res://art/assets/ui/bomb.png" id="1_tdein"]
+[ext_resource type="Texture2D" uid="uid://bhx4l2refff38" path="res://assets/ui/bomb.png" id="1_tdein"]
 [ext_resource type="Script" uid="uid://bt3lqepn320r3" path="res://src/ui/invalid_level.gd" id="1_wuevd"]
 
 [node name="InvalidLevel" type="Control" unique_id=1445745541]

@@ -1,11 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Script" path="res://src/ui/stat_card.gd" id="1"]
+[ext_resource type="Script" uid="uid://bx7rpwtbeyiyp" path="res://src/ui/stat_card.gd" id="1"]
 [ext_resource type="Script" path="res://src/ui/dashed_line.gd" id="2"]
-[ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="f_disp"]
-[ext_resource type="FontFile" path="res://art/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
-[ext_resource type="Texture2D" path="res://art/assets/ui/stone.png" id="t_stone"]
-[ext_resource type="Texture2D" path="res://art/assets/ui/info.png" id="t_info"]
+[ext_resource type="FontFile" uid="uid://guq5fi0ua7ti" path="res://assets/fonts/LilitaOne-Regular.ttf" id="f_disp"]
+[ext_resource type="FontFile" uid="uid://68kxlu8um4x1" path="res://assets/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
+[ext_resource type="Texture2D" uid="uid://b7siyxtdh5niy" path="res://assets/ui/stone.png" id="t_stone"]
+[ext_resource type="Texture2D" uid="uid://b4sh1327jurhm" path="res://assets/ui/info.png" id="t_info"]
 
 [sub_resource type="StyleBoxFlat" id="pwr_bg"]
 bg_color = Color(1, 0.9804, 0.9412, 1)

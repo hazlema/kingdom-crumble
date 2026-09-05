@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" uid="uid://beeekyyxcymsc" path="res://src/gameplay/trebuchet.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bqgknl8tthbgp" path="res://scenes/soldier.tscn" id="2"]
-[ext_resource type="Texture2D" uid="uid://c6s2suekwq5gr" path="res://art/assets/catapult/base.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://c55sbfpijwor1" path="res://art/assets/catapult/arm_frames/frame0.png" id="4"]
-[ext_resource type="Texture2D" uid="uid://bfanm43m5jn8k" path="res://art/assets/catapult/crank.png" id="5"]
-[ext_resource type="Texture2D" uid="uid://crc60xoegbidq" path="res://art/assets/catapult/axle_cap.png" id="6"]
-[ext_resource type="Texture2D" uid="uid://ovbj7mms21vj" path="res://art/assets/catapult/wheel.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://c6s2suekwq5gr" path="res://assets/catapult/base.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://c55sbfpijwor1" path="res://assets/catapult/arm_frames/frame0.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://bfanm43m5jn8k" path="res://assets/catapult/crank.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://crc60xoegbidq" path="res://assets/catapult/axle_cap.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://ovbj7mms21vj" path="res://assets/catapult/wheel.png" id="7"]
 [ext_resource type="Script" uid="uid://ci66o6xky2qgs" path="res://src/gameplay/trajectory_preview.gd" id="8"]
 
 [node name="Trebuchet" type="Node2D" unique_id=272224376]

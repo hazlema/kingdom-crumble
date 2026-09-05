@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://ddcsn1athbqsq"]
 
 [ext_resource type="Script" uid="uid://b1hlruj0uvk6p" path="res://src/gameplay/stone.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://dfsc7oq6elih4" path="res://art/assets/stones/stone-1.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dfsc7oq6elih4" path="res://assets/stones/stone-1.png" id="2"]
 
 [sub_resource type="CircleShape2D" id="shape"]
 radius = 16.0

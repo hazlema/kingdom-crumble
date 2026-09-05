@@ -1,7 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://benv5ronm3k9r"]
+[gd_scene format=3 uid="uid://benv5ronm3lar"]
 
 [ext_resource type="PackedScene" path="res://scenes/background.tscn" id="1"]
-[ext_resource type="Shader" path="res://art/shaders/grass.gdshader" id="2"]
+[ext_resource type="Shader" uid="uid://dck2vjn7yjum6" path="res://assets/shaders/grass.gdshader" id="2"]
 
 [sub_resource type="ShaderMaterial" id="grass_mat"]
 shader = ExtResource("2")

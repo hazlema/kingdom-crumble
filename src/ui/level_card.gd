@@ -23,9 +23,9 @@ func setup(entry: Dictionary, cleared: bool, unlocked: bool, is_now: bool) -> vo
 	# The icon column is always reserved so titles align across cards.
 	var state_img := ""
 	if cleared:
-		state_img = "res://art/assets/ui/state_cleared.png"
+		state_img = "res://assets/ui/state_cleared.png"
 	elif not unlocked:
-		state_img = "res://art/assets/ui/state_locked.png"
+		state_img = "res://assets/ui/state_locked.png"
 	if state_img != "" and ResourceLoader.exists(state_img):
 		%StateTex.texture = load(state_img)
 		%StateTex.visible = true

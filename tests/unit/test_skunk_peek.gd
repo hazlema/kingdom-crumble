@@ -21,8 +21,8 @@ func test_pop_spawns_and_retires_the_cameo() -> void:
 
 func test_ceremony_prefers_the_flip_reveal_when_portraits_exist() -> void:
 	if (
-		not ResourceLoader.exists("res://art/characters/skunk/photo-front.png")
-		or not ResourceLoader.exists("res://art/characters/skunk/photo-back.png")
+		not ResourceLoader.exists("res://assets/characters/skunk/photo-front.png")
+		or not ResourceLoader.exists("res://assets/characters/skunk/photo-back.png")
 	):
 		pass_test("no portrait pair authored — sheet animation is the contract")
 		return

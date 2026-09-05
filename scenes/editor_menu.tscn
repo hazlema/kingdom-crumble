@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Script" path="res://src/editor/editor_menu.gd" id="1"]
-[ext_resource type="Texture2D" path="res://art/assets/ui/burger.png" id="burger"]
+[ext_resource type="Script" uid="uid://b2nans6mydnqb" path="res://src/editor/editor_menu.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://c30oua8jmv3kd" path="res://assets/ui/burger.png" id="burger"]
 
 [node name="EditorMenu" type="CanvasLayer"]
 layer = 10

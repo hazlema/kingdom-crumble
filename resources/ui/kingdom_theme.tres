@@ -1,7 +1,7 @@
 [gd_resource type="Theme" format=3 uid="uid://jgac5b1aktvr"]
 
-[ext_resource type="FontFile" uid="uid://c6igf1bqcw851" path="res://art/fonts/Nunito-Variable.ttf" id="font_body"]
-[ext_resource type="FontFile" uid="uid://guq5fi0ua7ti" path="res://art/fonts/LilitaOne-Regular.ttf" id="font_display"]
+[ext_resource type="FontFile" uid="uid://c6igf1bqcw851" path="res://assets/fonts/Nunito-Variable.ttf" id="font_body"]
+[ext_resource type="FontFile" uid="uid://guq5fi0ua7ti" path="res://assets/fonts/LilitaOne-Regular.ttf" id="font_display"]
 
 [sub_resource type="StyleBoxFlat" id="panel_parchment"]
 content_margin_left = 18.0

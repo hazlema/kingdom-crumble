@@ -4,7 +4,7 @@ extends CanvasLayer
 signal menu_pressed
 signal info_pressed
 
-const FIRE_STONE := preload("res://art/assets/ui/stone.png")
+const FIRE_STONE := preload("res://assets/ui/stone.png")
 
 
 func _ready() -> void:

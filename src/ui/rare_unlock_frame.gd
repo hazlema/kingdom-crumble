@@ -9,9 +9,9 @@ extends Control
 # ceremony upgrades itself to the NarfFlip card reveal — flip, flip,
 # flip... skunk (owner design: "use narf to spin him in the frame").
 
-const SKUNK_SHEET := "res://art/characters/skunk/skunk-spritesheet.png"
-const PHOTO_FRONT := "res://art/characters/skunk/photo-front.png"
-const PHOTO_BACK := "res://art/characters/skunk/photo-back.png"
+const SKUNK_SHEET := "res://assets/characters/skunk/skunk-spritesheet.png"
+const PHOTO_FRONT := "res://assets/characters/skunk/photo-front.png"
+const PHOTO_BACK := "res://assets/characters/skunk/photo-back.png"
 const LINGER := 4.0
 
 

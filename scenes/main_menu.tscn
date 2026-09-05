@@ -1,17 +1,17 @@
 [gd_scene format=3 uid="uid://dlgifplw3ecbc"]
 
 [ext_resource type="Script" uid="uid://c4bbovvtgk5ql" path="res://src/ui/main_menu.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://b18mqv4d7fn0o" path="res://assets/backgrounds/logo.png" id="11_lgwnu"]
+[ext_resource type="Texture2D" uid="uid://ds7bv3ox1w47p" path="res://assets/decor/butterfly-pink.png" id="bf1"]
+[ext_resource type="Texture2D" uid="uid://n2axrdcq8bch" path="res://assets/decor/butterfly-blue.png" id="bf2"]
+[ext_resource type="Texture2D" uid="uid://w53v4pmumuca" path="res://assets/decor/butterfly-gold.png" id="bf3"]
+[ext_resource type="Texture2D" uid="uid://tefa5w5dwvhv" path="res://assets/backgrounds/main-menu.png" id="bg"]
+[ext_resource type="Texture2D" uid="uid://b3r8urjpru1s" path="res://assets/decor/cloud-big.png" id="cl1"]
+[ext_resource type="Texture2D" uid="uid://bxd73vu0d34p6" path="res://assets/decor/cloud-wisp.png" id="cl2"]
+[ext_resource type="Texture2D" uid="uid://dboiladfery3s" path="res://assets/decor/cloud-rolling.png" id="cl3"]
 [ext_resource type="PackedScene" uid="uid://ct3y36nut7lln" path="res://scenes/menu_option.tscn" id="mo"]
-[ext_resource type="Texture2D" uid="uid://b18mqv4d7fn0o" path="res://art/backgrounds/logo.png" id="11_lgwnu"]
-[ext_resource type="Texture2D" uid="uid://ds7bv3ox1w47p" path="res://art/decor/butterfly-pink.png" id="bf1"]
-[ext_resource type="Texture2D" uid="uid://n2axrdcq8bch" path="res://art/decor/butterfly-blue.png" id="bf2"]
-[ext_resource type="Texture2D" uid="uid://w53v4pmumuca" path="res://art/decor/butterfly-gold.png" id="bf3"]
-[ext_resource type="Texture2D" uid="uid://tefa5w5dwvhv" path="res://art/backgrounds/main-menu.png" id="bg"]
-[ext_resource type="Texture2D" uid="uid://b3r8urjpru1s" path="res://art/decor/cloud-big.png" id="cl1"]
-[ext_resource type="Texture2D" uid="uid://bxd73vu0d34p6" path="res://art/decor/cloud-wisp.png" id="cl2"]
-[ext_resource type="Texture2D" uid="uid://dboiladfery3s" path="res://art/decor/cloud-rolling.png" id="cl3"]
 [ext_resource type="Script" uid="uid://w7b3jnj44kbs" path="res://addons/narfkit/narf_decor.gd" id="nd"]
-[ext_resource type="Texture2D" uid="uid://d1k470ilotgc7" path="res://art/backgrounds/windmill-blades.png" id="wb"]
+[ext_resource type="Texture2D" uid="uid://d1k470ilotgc7" path="res://assets/backgrounds/windmill-blades.png" id="wb"]
 
 [sub_resource type="Animation" id="Animation_flqon"]
 length = 0.001
@@ -229,14 +229,16 @@ script = ExtResource("nd")
 behavior = 1
 speed = 0.1
 
-[node name="Options" type="Control" parent="menu"]
+[node name="Options" type="Control" parent="menu" unique_id=105177080]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
-[node name="Chill" parent="menu/Options" instance=ExtResource("mo")]
+[node name="Chill" parent="menu/Options" unique_id=1372417551 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -244,10 +246,11 @@ offset_left = 749.0
 offset_top = 490.0
 offset_right = 2669.0
 offset_bottom = 890.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Chill"
 
-[node name="HeartPumper" parent="menu/Options" instance=ExtResource("mo")]
+[node name="HeartPumper" parent="menu/Options" unique_id=1714832500 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -255,10 +258,11 @@ offset_left = 749.0
 offset_top = 578.0
 offset_right = 2669.0
 offset_bottom = 978.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Heart-Pumper"
 
-[node name="Hardcore" parent="menu/Options" instance=ExtResource("mo")]
+[node name="Hardcore" parent="menu/Options" unique_id=1023579983 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -266,10 +270,11 @@ offset_left = 749.0
 offset_top = 666.0
 offset_right = 2669.0
 offset_bottom = 1066.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Hardcore"
 
-[node name="Editor" parent="menu/Options" instance=ExtResource("mo")]
+[node name="Editor" parent="menu/Options" unique_id=687088712 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -277,10 +282,11 @@ offset_left = 749.0
 offset_top = 754.0
 offset_right = 2669.0
 offset_bottom = 1154.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Editor"
 
-[node name="Fullscreen" parent="menu/Options" instance=ExtResource("mo")]
+[node name="Fullscreen" parent="menu/Options" unique_id=1570006328 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -288,10 +294,11 @@ offset_left = 749.0
 offset_top = 842.0
 offset_right = 2669.0
 offset_bottom = 1242.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Fullscreen"
 
-[node name="Quit" parent="menu/Options" instance=ExtResource("mo")]
+[node name="Quit" parent="menu/Options" unique_id=1182060954 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -299,6 +306,7 @@ offset_left = 749.0
 offset_top = 930.0
 offset_right = 2669.0
 offset_bottom = 1330.0
+grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Quit"
 

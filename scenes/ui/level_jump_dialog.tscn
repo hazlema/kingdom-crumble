@@ -1,10 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Script" path="res://src/ui/level_jump_dialog.gd" id="1"]
+[ext_resource type="Script" uid="uid://lapqcggeoga4" path="res://src/ui/level_jump_dialog.gd" id="1"]
 [ext_resource type="Script" path="res://src/ui/dashed_line.gd" id="2"]
-[ext_resource type="FontFile" path="res://art/fonts/LilitaOne-Regular.ttf" id="f_disp"]
-[ext_resource type="FontFile" path="res://art/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
-[ext_resource type="Texture2D" path="res://art/assets/ui/close-x.png" id="closex"]
+[ext_resource type="FontFile" uid="uid://guq5fi0ua7ti" path="res://assets/fonts/LilitaOne-Regular.ttf" id="f_disp"]
+[ext_resource type="FontFile" uid="uid://68kxlu8um4x1" path="res://assets/fonts/IBMPlexMono-Medium.ttf" id="f_mono"]
+[ext_resource type="Texture2D" uid="uid://by0ennumgkn5w" path="res://assets/ui/close-x.png" id="closex"]
 
 [sub_resource type="StyleBoxFlat" id="close_bg"]
 bg_color = Color(0.7098, 0.2667, 0.1804, 1)
