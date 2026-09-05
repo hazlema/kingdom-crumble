@@ -99,6 +99,16 @@ func test_builder_spawns_hidden_and_named_pieces() -> void:
 	assert_false(pieces[1].visible, "hidden piece waits for its show")
 	assert_eq(pieces[1].get_meta("overlay_name"), "reward")
 
+	# Strict equality: integer 1 should not hide (only boolean true hides)
+	var l := LevelLayout.new()
+	l.title = "type-safety"
+	var b64 := _tiny_b64()
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	l.images[key] = b64
+	l.overlays.append({"image": key, "x": 0, "y": 0, "hidden": 1})
+	var pieces2 := SceneryBuilder.spawn(host, l)
+	assert_true(pieces2[0].visible, "integer 1 does not hide (only boolean true hides)")
+
 
 func test_crates_carry_their_json_coords() -> void:
 	var host := Node2D.new()

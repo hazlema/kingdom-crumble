@@ -77,7 +77,8 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 		piece.position = Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
 		# Linked triggers: hidden pieces wait for a show: action; named
 		# pieces are addressable by triggers.
-		if (entry as Dictionary).get("hidden", false):
+		var hidden_val = (entry as Dictionary).get("hidden", false)
+		if hidden_val is bool and hidden_val == true:
 			piece.visible = false
 		var _nm: String = str((entry as Dictionary).get("name", ""))
 		if _nm != "":
