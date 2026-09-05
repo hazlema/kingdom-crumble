@@ -71,10 +71,10 @@ patch_margin_bottom = 200
 
 [node name="btnLabel" type="Button" parent="." unique_id=767877216]
 layout_mode = 0
-offset_left = 499.0
-offset_top = 115.0
-offset_right = 1808.0
-offset_bottom = 389.0
+offset_left = 515.0
+offset_top = 106.0
+offset_right = 1824.0
+offset_bottom = 380.0
 theme = ExtResource("2_y5ri2")
 theme_type_variation = &"FlatButton"
 theme_override_font_sizes/font_size = 130
