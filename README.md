@@ -10,6 +10,8 @@ crate by crate, across a hand-painted meadow that never stops moving.
 
 No install, no account — the whole game runs on the web (and you can
 *Add to Home Screen* on mobile to install it like a native app).
+Prefer a native build? Grab **Linux, Windows, or macOS** from the
+[releases page](https://github.com/hazlema/kingdom-crumble/releases).
 
 ---
 
