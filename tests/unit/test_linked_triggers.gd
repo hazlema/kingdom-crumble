@@ -119,3 +119,68 @@ func test_crates_carry_their_json_coords() -> void:
 	var crates := LevelBuilder.spawn_crates(host, l, true, func(_id: String) -> Texture2D: return null)
 	assert_eq(crates.size(), 1)
 	assert_eq(crates[0].get_meta("json_coords"), Vector2i(320, 512), "float x still keys as int")
+
+
+func test_knocked_crate_fires_its_linked_trigger() -> void:
+	var l := _layout_with_named_scenery()
+	l.crates.append({"x": 5, "y": 1, "type": "crate-wood"})
+	l.crates.append({"x": 7, "y": 1, "type": "crate-wood"})
+	l.triggers = {"hit:5,1": ["hide:warning", "show:reward", "confetti"]}
+	l.shots = 3
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var warning: Node = null
+	var reward: Node = null
+	for p in lvl.get_tree().get_nodes_in_group("scenery"):
+		if p.get_meta("overlay_name", "") == "warning":
+			warning = p
+		elif p.get_meta("overlay_name", "") == "reward":
+			reward = p
+	assert_not_null(warning)
+	assert_true(warning.visible, "warning starts shown")
+	assert_false(reward.visible, "reward starts hidden")
+	var linked: Crate = null
+	var unlinked: Crate = null
+	for c in lvl.get_tree().get_nodes_in_group("crates"):
+		if c.get_meta("json_coords") == Vector2i(5, 1):
+			linked = c
+		else:
+			unlinked = c
+	# Unlinked crate first: nothing changes.
+	lvl._on_crate_knocked(unlinked)
+	assert_true(warning.visible, "unlinked knock leaves scenery alone")
+	# Linked crate: the whole list fires.
+	var before := lvl.get_child_count()
+	lvl._on_crate_knocked(linked)
+	assert_false(warning.visible, "hide:warning landed")
+	assert_true(reward.visible, "show:reward landed")
+	assert_gt(lvl.get_child_count(), before, "confetti particles spawned on the level")
+
+
+func test_unknown_scenery_name_warns_but_never_crashes() -> void:
+	var l := _layout_with_named_scenery()
+	l.crates.append({"x": 5, "y": 1, "type": "crate-wood"})
+	l.triggers = {"hit:5,1": ["show:no_such_sign"]}
+	l.shots = 3
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var crate: Crate = lvl.get_tree().get_nodes_in_group("crates")[0]
+	lvl._set_scenery_visible("no_such_sign", true)  # direct: warning path
+	lvl._fire_crate_triggers(crate)  # full path: still no crash
+	pass_test("warn-and-skip held")
+
+
+func test_round_trip_preserves_linked_trigger_keys() -> void:
+	var l := _layout_with_named_scenery()
+	l.crates.append({"x": 5, "y": 1, "type": "crate-wood"})
+	l.triggers = {"hit:5,1": ["hide:warning", "show:reward"]}
+	l.shots = 1
+	var back := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(back, "serialized linked level reloads: %s" % LevelJson.last_error)
+	assert_eq(back.overlays[0].get("name", ""), "warning")
+	assert_eq(back.overlays[1].get("hidden", false), true)
+	assert_true(back.triggers.has("hit:5,1"), "trigger entry survives")
