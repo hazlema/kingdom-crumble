@@ -205,19 +205,25 @@ func _advance_hint(rest: String) -> String:
 	return "%s %s" % [verb, rest]
 
 
+var _advancing := false  # the fade takes a beat; a second ENTER must not double-book it
+
+
 func _advance() -> void:
+	if _advancing:
+		return
+	_advancing = true
 	if _editor_session:
 		_back_to_editor()
 		return
 	if state == State.CLEARED:
 		if _chain_end:
-			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+			NarfFade.change_scene(get_tree(), "res://scenes/main_menu.tscn")
 			return
 		var nxt := _next_path_after_clear()
 		if nxt != "":
 			Level.next_layout_path = nxt
 		Level.carry_buffs = pending_buffs.duplicate()
-	get_tree().reload_current_scene()
+	NarfFade.change_scene(get_tree(), "")
 
 
 func _spawn_crates() -> void:
