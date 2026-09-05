@@ -23,6 +23,9 @@ static var last_error := ""
 # must degrade silently, so we pre-screen rather than let it through.
 static var _b64_rx := RegEx.create_from_string("^[A-Za-z0-9+/]*={0,2}$")
 
+# Linked-trigger event keys: on_all_cleared or hit:X,Y (ints, negatives ok).
+static var _hit_rx := RegEx.create_from_string("^hit:-?\\d+,-?\\d+$")
+
 
 # Returns the first 8 hex characters of the SHA-256 hash of the given bytes.
 static func image_key(png_bytes: PackedByteArray) -> String:
@@ -164,9 +167,17 @@ static func validate(d: Dictionary) -> String:
 	var _trig: Variant = d.get("triggers", {})
 	if _trig is Dictionary:
 		for _event in _trig:
+			var _ekey := str(_event)
+			if _ekey != "on_all_cleared" and _hit_rx.search(_ekey) == null:
+				return "trigger '%s': unknown event" % _ekey
 			var _ids: Variant = _trig[_event]
-			if _ids is Array and (_ids as Array).size() > 16:
-				return "trigger '%s': too many effects (max 16)" % _event
+			if not _ids is Array:
+				return "trigger '%s': actions must be a list" % _ekey
+			if (_ids as Array).size() > 16:
+				return "trigger '%s': too many effects (max 16)" % _ekey
+			for _id in (_ids as Array):
+				if not _id is String or not Effects.is_known(_id):
+					return "trigger '%s': bad action '%s'" % [_ekey, str(_id)]
 	var _thumb: Variant = d.get("thumb", "")
 	if not _thumb is String:
 		return "bad thumb"
@@ -195,6 +206,7 @@ static func validate(d: Dictionary) -> String:
 		return "bad overlays"
 	if (_overlays as Array).size() > MAX_OVERLAYS:
 		return "too many overlays"
+	var _seen_names: Dictionary = {}
 	for oi in (_overlays as Array).size():
 		var _entry: Variant = _overlays[oi]
 		if not _entry is Dictionary:
@@ -208,6 +220,18 @@ static func validate(d: Dictionary) -> String:
 			return "overlay %d: x/y must be numbers" % oi
 		if absf(float(_ox)) > MAX_COORD or absf(float(_oy)) > MAX_COORD:
 			return "overlay %d: out of bounds" % oi
+		var _nm: Variant = (_entry as Dictionary).get("name", "")
+		if not _nm is String:
+			return "overlay %d: bad name" % oi
+		if (_nm as String) != "":
+			if not Effects.valid_name(_nm):
+				return "overlay %d: bad name" % oi
+			if _seen_names.has(_nm):
+				return "overlay %d: duplicate name '%s'" % [oi, _nm]
+			_seen_names[_nm] = true
+		var _hd: Variant = (_entry as Dictionary).get("hidden", false)
+		if not _hd is bool:
+			return "overlay %d: hidden must be true/false" % oi
 		# Optional dials: wrong TYPES are rejected here (a typed read in
 		# the builder would abort the whole spawn); unknown NAMES are the
 		# builder's skip-with-warning department.

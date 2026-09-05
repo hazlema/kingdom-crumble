@@ -62,12 +62,11 @@ func test_shots_object_is_null():
 	assert_null(LevelJson.parse('{"format":1,"title":"T","crates":[],"shots":{}}'))
 
 
-func test_non_string_trigger_ids_dropped():
+func test_non_string_trigger_ids_rejected():
 	var l := LevelJson.parse(
 		'{"format":1,"title":"T","crates":[],"triggers":{"on_all_cleared":[5,{},"confetti"]}}'
 	)
-	assert_not_null(l)
-	assert_eq(l.triggers, {"on_all_cleared": ["confetti"]})
+	assert_null(l, "non-string action IDs cause validation to fail")
 
 
 func test_too_many_trigger_ids_is_null():

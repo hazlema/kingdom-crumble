@@ -75,6 +75,14 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 		piece.travel = clampf(float(entry.get("travel", 120.0)), 0.0, 2000.0)
 		piece.tilt = clampf(float(entry.get("tilt", 8.0)), 0.0, 45.0)
 		piece.position = Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
+		# Linked triggers: hidden pieces wait for a show: action; named
+		# pieces are addressable by triggers.
+		var hidden_val = (entry as Dictionary).get("hidden", false)
+		if hidden_val is bool and hidden_val == true:
+			piece.visible = false
+		var _nm: String = str((entry as Dictionary).get("name", ""))
+		if _nm != "":
+			piece.set_meta("overlay_name", _nm)
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
 		parent.add_child(piece)

@@ -19,5 +19,5 @@ extends Resource
 @export var triggers := {}
 # Embedded scenery art: content-hash key -> base64 PNG (spec 2026-09-02).
 @export var images := {}
-# Scenery placements: {image, x, y, behavior?, pivot?, speed?, amplitude?, axis?, travel?, tilt?}
+# Scenery placements: {image, x, y, name?, hidden?, behavior?, pivot?, speed?, amplitude?, axis?, travel?, tilt?}
 @export var overlays: Array[Dictionary] = []
