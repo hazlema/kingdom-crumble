@@ -6,6 +6,14 @@ extends RefCounted
 
 const SFX_DIR := "res://assets/sfx"
 
+# Overlay-name charset shared with LevelJson (single direction:
+# level_json calls Effects, never the reverse — no circular statics).
+static var _name_rx := RegEx.create_from_string("^[a-z0-9_-]{1,16}$")
+
+
+static func valid_name(n: String) -> bool:
+	return _name_rx.search(n) != null
+
 
 static func is_known(id: String) -> bool:
 	if id == "confetti":
@@ -15,6 +23,11 @@ static func is_known(id: String) -> bool:
 		if stem.contains("/") or stem.contains("\\") or stem.contains(".."):
 			return false
 		return true
+	# Linked-trigger actions (spec 2026-09-05): scenery show/hide by
+	# overlay name. Whether the name EXISTS is runtime's warn-skip;
+	# here we only vouch for the shape.
+	if id.begins_with("show:") or id.begins_with("hide:"):
+		return valid_name(id.split(":", true, 1)[1])
 	return false
 
 
