@@ -14,6 +14,11 @@ signal download_requested
 signal upload_requested
 
 
+# The stem the Save As dialog offers (owner: retyping the filename
+# every save got old). Editor updates it on load/save/clear/upload.
+var suggested_stem := ""
+
+
 func _ready() -> void:
 	%MenuBtn.pressed.connect(func() -> void: %Panel.visible = not %Panel.visible)
 	%TestBtn.pressed.connect(func() -> void: _pick(test_requested))
@@ -21,7 +26,7 @@ func _ready() -> void:
 	%SaveAsBtn.pressed.connect(
 		func() -> void:
 			%Panel.visible = false
-			%SaveAsDialog.popup_centered()
+			open_save_as()
 	)
 	%LoadBtn.pressed.connect(_open_load)
 	%IntroBtn.pressed.connect(
@@ -121,7 +126,10 @@ func covers_point(p: Vector2) -> bool:
 
 
 func open_save_as() -> void:
+	%StemEdit.text = suggested_stem
 	%SaveAsDialog.popup_centered()
+	%StemEdit.grab_focus()
+	%StemEdit.select_all()
 
 
 func open_intro(current_text: String) -> void:

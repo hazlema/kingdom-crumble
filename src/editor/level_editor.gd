@@ -147,6 +147,8 @@ func _on_save_as(stem: String) -> void:
 	save_path = LevelStore.save_user(current, stem)
 	if save_path == "":
 		menu.show_save_error(LevelJson.last_error)
+	else:
+		menu.suggested_stem = stem
 
 
 # Bake pending scenery edits, refresh the live scene to match, then
@@ -189,6 +191,7 @@ func _on_load(path: String) -> void:
 		return
 	current = loaded
 	save_path = path
+	menu.suggested_stem = path.get_file().get_basename()
 	_rebuild()
 
 
@@ -250,6 +253,7 @@ func _on_upload_text(args: Array) -> void:
 		return
 	current = loaded
 	save_path = ""  # imported document: Save prompts for a name
+	menu.suggested_stem = LevelStore.sanitize_stem(loaded.title)
 	_rebuild()
 
 
@@ -259,6 +263,7 @@ func _on_upload_text(args: Array) -> void:
 func _on_clear() -> void:
 	current = LevelLayout.new()
 	save_path = ""
+	menu.suggested_stem = ""
 	_rebuild()
 
 
@@ -472,14 +477,15 @@ func _rebuild_scenery() -> void:
 		s.scale = Vector2(sc, sc)
 		s.flip_h = o.get("_flip_h", false)
 		s.flip_v = o.get("_flip_v", false)
-	# Re-apply dim and behavior pause while in scenery mode (editor
-	# previews are static while editing; the dict keeps the real verb).
+	# Pieces keep their live verbs while editing (owner: adding a second
+	# image used to freeze the first one's animation). rehome() re-anchors
+	# each piece to its just-applied transform so nothing snaps.
+	for s2 in _scenery_pieces:
+		if is_instance_valid(s2):
+			s2.rehome()
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
-		for s in _scenery_pieces:
-			if is_instance_valid(s):
-				s.behavior = NarfDecor.Behavior.NONE
 
 
 # Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
@@ -815,6 +821,7 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 	_scenery_context.clear()
 	_scenery_context.add_item("Flip H", 0)
 	_scenery_context.add_item("Flip V", 1)
+	_scenery_context.add_item("Reset Transform", 4)
 	_scenery_context.add_item("Drop Background", 3)
 	_scenery_context.add_separator()
 	_scenery_context.add_item("Delete", 2)
@@ -842,6 +849,15 @@ func _on_scenery_context_item(id: int) -> void:
 			_delete_selected_piece()
 		3:  # Drop Background
 			_drop_background()
+		4:  # Reset Transform (owner: a runaway rotate/mirror had no way home)
+			for k in ["_rot", "_scale", "_flip_h", "_flip_v"]:
+				o.erase(k)
+			if piece != null:
+				piece.rotation = 0.0
+				piece.scale = Vector2.ONE
+				piece.flip_h = false
+				piece.flip_v = false
+				piece.rehome()
 
 
 # The darkroom, in-engine (owner: "drop background"): flat AI-image
