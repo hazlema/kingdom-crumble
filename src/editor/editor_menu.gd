@@ -20,6 +20,11 @@ var suggested_stem := ""
 
 
 func _ready() -> void:
+	# Long intros wrap instead of scrolling sideways off the parchment.
+	%IntroEdit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	# Enter in the name field = OK (typing a name then reaching for the
+	# mouse was one click too many).
+	%SaveAsDialog.register_text_enter(%StemEdit)
 	%MenuBtn.pressed.connect(func() -> void: %Panel.visible = not %Panel.visible)
 	%TestBtn.pressed.connect(func() -> void: _pick(test_requested))
 	%SaveBtn.pressed.connect(func() -> void: _pick(save_requested))
