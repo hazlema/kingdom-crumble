@@ -63,3 +63,10 @@ func test_trigger_events_and_actions_validate() -> void:
 		LevelJson.validate(_base({"triggers": {"hit:5,1": ["shwo:reward"]}})),
 		"trigger 'hit:5,1': bad action 'shwo:reward'"
 	)
+	assert_eq(
+		LevelJson.validate(_base({"triggers": {"on_all_cleared": ["confetti"]}})),
+		"",
+		"on_all_cleared happy path"
+	)
+	var err := LevelJson.validate(_base({"triggers": {"on_all_cleared": [42]}}))
+	assert_true(err.begins_with("trigger "), "non-string action ID rejected: %s" % err)

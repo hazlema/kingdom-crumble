@@ -176,7 +176,7 @@ static func validate(d: Dictionary) -> String:
 			if (_ids as Array).size() > 16:
 				return "trigger '%s': too many effects (max 16)" % _ekey
 			for _id in (_ids as Array):
-				if _id is String and not Effects.is_known(_id):
+				if not _id is String or not Effects.is_known(_id):
 					return "trigger '%s': bad action '%s'" % [_ekey, str(_id)]
 	var _thumb: Variant = d.get("thumb", "")
 	if not _thumb is String:
