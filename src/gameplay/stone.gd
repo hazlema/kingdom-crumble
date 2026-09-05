@@ -2,10 +2,10 @@ class_name Stone
 extends RigidBody2D
 
 const VARIANTS: Array[Texture2D] = [
-	preload("res://art/assets/stones_64/stone-1.png"),
-	preload("res://art/assets/stones_64/stone-2.png"),
-	preload("res://art/assets/stones_64/stone-3.png"),
-	preload("res://art/assets/stones_64/stone-4.png"),
+	preload("res://art/assets/stones/stone-1.png"),
+	preload("res://art/assets/stones/stone-2.png"),
+	preload("res://art/assets/stones/stone-3.png"),
+	preload("res://art/assets/stones/stone-4.png"),
 ]
 
 const BOUNCE := 0.75
