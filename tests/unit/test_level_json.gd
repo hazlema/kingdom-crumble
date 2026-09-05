@@ -62,7 +62,7 @@ func test_shots_object_is_null():
 	assert_null(LevelJson.parse('{"format":1,"title":"T","crates":[],"shots":{}}'))
 
 
-func test_non_string_trigger_ids_dropped():
+func test_non_string_trigger_ids_rejected():
 	var l := LevelJson.parse(
 		'{"format":1,"title":"T","crates":[],"triggers":{"on_all_cleared":[5,{},"confetti"]}}'
 	)

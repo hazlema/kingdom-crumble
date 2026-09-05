@@ -292,7 +292,7 @@ func _settle() -> void:
 			var center := Vector2(1400, 400)
 			if not _crates().is_empty():
 				center = _crates()[0].global_position
-			Effects.fire_all(effects, self, center)
+			_fire_action_list(effects, center)
 	elif shots_left <= 0:
 		state = State.FAILED
 		var _failed_sub := (
@@ -457,15 +457,22 @@ func _fire_crate_triggers(crate: Crate) -> void:
 	var key := "hit:%d,%d" % [jc.x, jc.y]
 	if not layout.triggers.has(key):
 		return
+	_fire_action_list(layout.triggers[key], crate.global_position)
+
+
+# Unified action router used by both crate-hit triggers and on_all_cleared.
+# show:/hide: prefixed ids go directly to _set_scenery_visible; everything
+# else is collected and forwarded to Effects.fire_all in one call.
+func _fire_action_list(ids: Array, at: Vector2) -> void:
 	var effect_ids: Array = []
-	for id in layout.triggers[key]:
+	for id in ids:
 		var s := str(id)
 		if s.begins_with("show:") or s.begins_with("hide:"):
 			_set_scenery_visible(s.split(":", true, 1)[1], s.begins_with("show:"))
 		else:
 			effect_ids.append(s)
 	if not effect_ids.is_empty():
-		Effects.fire_all(effect_ids, self, crate.global_position)
+		Effects.fire_all(effect_ids, self, at)
 
 
 func _set_scenery_visible(overlay_name: String, on: bool) -> void:

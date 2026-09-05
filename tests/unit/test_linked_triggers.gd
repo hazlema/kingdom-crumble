@@ -69,7 +69,7 @@ func test_trigger_events_and_actions_validate() -> void:
 		"on_all_cleared happy path"
 	)
 	var err := LevelJson.validate(_base({"triggers": {"on_all_cleared": [42]}}))
-	assert_true(err.begins_with("trigger "), "non-string action ID rejected: %s" % err)
+	assert_eq(err, "trigger 'on_all_cleared': bad action '42'", "non-string action ID rejected")
 
 
 func _tiny_b64() -> String:
@@ -172,6 +172,27 @@ func test_unknown_scenery_name_warns_but_never_crashes() -> void:
 	lvl._set_scenery_visible("no_such_sign", true)  # direct: warning path
 	lvl._fire_crate_triggers(crate)  # full path: still no crash
 	pass_test("warn-and-skip held")
+
+
+func test_on_all_cleared_routes_show_hide_via_action_list() -> void:
+	# Regression: on_all_cleared used to send actions raw to Effects.fire_all,
+	# silently no-op-ing show:/hide: ids. After fix 1 it uses _fire_action_list.
+	var l := _layout_with_named_scenery()
+	# No crates — count_standing([]) == 0, so _settle() fires on_all_cleared.
+	l.triggers = {"on_all_cleared": ["show:reward"]}
+	l.shots = 3
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var reward: Node = null
+	for p in lvl.get_tree().get_nodes_in_group("scenery"):
+		if p.get_meta("overlay_name", "") == "reward":
+			reward = p
+	assert_not_null(reward)
+	assert_false(reward.visible, "reward starts hidden before settle")
+	lvl._settle()
+	assert_true(reward.visible, "show:reward via on_all_cleared routed correctly")
 
 
 func test_round_trip_preserves_linked_trigger_keys() -> void:
