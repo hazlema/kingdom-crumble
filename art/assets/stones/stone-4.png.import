@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://clrbygr4eb0jr"
-path="res://.godot/imported/boot_back.png-c30c647f0dbc0d7cfd694987518fc870.ctex"
+uid="uid://ccbwo15vylvjb"
+path="res://.godot/imported/stone-4.png-943981ecd8287767d426e53fd9c30751.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/characters/soldier_parts/boot_back.png"
-dest_files=["res://.godot/imported/boot_back.png-c30c647f0dbc0d7cfd694987518fc870.ctex"]
+source_file="res://art/assets/stones/stone-4.png"
+dest_files=["res://.godot/imported/stone-4.png-943981ecd8287767d426e53fd9c30751.ctex"]
 
 [params]
 

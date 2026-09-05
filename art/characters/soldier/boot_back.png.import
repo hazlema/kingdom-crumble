@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bll8f4vuywn74"
-path="res://.godot/imported/Layer 3.png-5a730e17137a8786e22e6287024f84b9.ctex"
+uid="uid://clrbygr4eb0jr"
+path="res://.godot/imported/boot_back.png-f07afc4d19b3b68086c9d36a11db8d2b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/mockups/menu/Layer 3.png"
-dest_files=["res://.godot/imported/Layer 3.png-5a730e17137a8786e22e6287024f84b9.ctex"]
+source_file="res://art/characters/soldier/boot_back.png"
+dest_files=["res://.godot/imported/boot_back.png-f07afc4d19b3b68086c9d36a11db8d2b.ctex"]
 
 [params]
 

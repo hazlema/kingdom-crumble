@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bmebg1ibmm0x5"
-path="res://.godot/imported/crate-master-3.png-b31eeefde057c41a14e9e7a78a53351a.ctex"
+uid="uid://cpoiqlmtjcmro"
+path="res://.godot/imported/head.png-da6c730c7196f0ee704fca022a860c5b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/mockups/menu/crate-master-3.png"
-dest_files=["res://.godot/imported/crate-master-3.png-b31eeefde057c41a14e9e7a78a53351a.ctex"]
+source_file="res://art/characters/soldier/head.png"
+dest_files=["res://.godot/imported/head.png-da6c730c7196f0ee704fca022a860c5b.ctex"]
 
 [params]
 

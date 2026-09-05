@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dec5ujat1sx8v"
-path="res://.godot/imported/flower-open.png-9b79203979f26b4d41331560d46083fe.ctex"
+uid="uid://us3rbvqvtxot"
+path="res://.godot/imported/stone-3.png-ab2eb53eb16f6b1e65457b0f65fe3d1c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/mockups/menu/flower-open.png"
-dest_files=["res://.godot/imported/flower-open.png-9b79203979f26b4d41331560d46083fe.ctex"]
+source_file="res://art/assets/stones/stone-3.png"
+dest_files=["res://.godot/imported/stone-3.png-ab2eb53eb16f6b1e65457b0f65fe3d1c.ctex"]
 
 [params]
 

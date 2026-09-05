@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cvinff1t6fu78"
-path="res://.godot/imported/midMiddle.png-a473e803804e438433b515629c96c672.ctex"
+uid="uid://x0s6lktf784b"
+path="res://.godot/imported/torso.png-da1b94397ac866b7d9afcafec8516e7b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/mockups/menu/midMiddle.png"
-dest_files=["res://.godot/imported/midMiddle.png-a473e803804e438433b515629c96c672.ctex"]
+source_file="res://art/characters/soldier/torso.png"
+dest_files=["res://.godot/imported/torso.png-da1b94397ac866b7d9afcafec8516e7b.ctex"]
 
 [params]
 

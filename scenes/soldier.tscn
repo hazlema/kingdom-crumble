@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://bqgknl8tthbgp"]
 
-[ext_resource type="Texture2D" uid="uid://dkj2a0ggwqfi4" path="res://art/characters/soldier_parts/boot_front.png" id="1_ajv6t"]
-[ext_resource type="Texture2D" uid="uid://clrbygr4eb0jr" path="res://art/characters/soldier_parts/boot_back.png" id="2_50ktg"]
-[ext_resource type="Texture2D" uid="uid://b5thk1dvqrs1e" path="res://art/characters/soldier_parts/arm_front.png" id="3_8qfth"]
-[ext_resource type="Texture2D" uid="uid://x0s6lktf784b" path="res://art/characters/soldier_parts/torso.png" id="4_8jak6"]
-[ext_resource type="Texture2D" uid="uid://bi2h844btguu1" path="res://art/characters/soldier_parts/arm_back.png" id="5_kv0so"]
-[ext_resource type="Texture2D" uid="uid://cpoiqlmtjcmro" path="res://art/characters/soldier_parts/head.png" id="6_se1ou"]
+[ext_resource type="Texture2D" uid="uid://dkj2a0ggwqfi4" path="res://art/characters/soldier/boot_front.png" id="1_ajv6t"]
+[ext_resource type="Texture2D" uid="uid://clrbygr4eb0jr" path="res://art/characters/soldier/boot_back.png" id="2_50ktg"]
+[ext_resource type="Texture2D" uid="uid://b5thk1dvqrs1e" path="res://art/characters/soldier/arm_front.png" id="3_8qfth"]
+[ext_resource type="Texture2D" uid="uid://x0s6lktf784b" path="res://art/characters/soldier/torso.png" id="4_8jak6"]
+[ext_resource type="Texture2D" uid="uid://bi2h844btguu1" path="res://art/characters/soldier/arm_back.png" id="5_kv0so"]
+[ext_resource type="Texture2D" uid="uid://cpoiqlmtjcmro" path="res://art/characters/soldier/head.png" id="6_se1ou"]
 
 [sub_resource type="Animation" id="Animation_ajv6t"]
 length = 0.001
