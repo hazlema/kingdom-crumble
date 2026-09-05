@@ -18,6 +18,12 @@ func _level_for_first_builtin() -> Level:
 	Level.next_layout_path = LevelStore.list_builtin()[0]
 	var l: Level = load("res://scenes/level.tscn").instantiate()
 	add_child_autofree(l)
+	# Shipped levels may open an intro, which PAUSES the tree — and
+	# physics-based waits deadlock under pause (banked lesson). Tests
+	# dismiss the greeter and get on with it.
+	var intro := l.get_node_or_null("%IntroDialog")
+	if intro != null and intro.visible:
+		intro.dismiss()
 	return l
 
 
