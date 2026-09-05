@@ -29,7 +29,10 @@ static func _list_dir(dir_path: String) -> Array[String]:
 
 static func load_level(path: String) -> LevelLayout:
 	var text := _read(path)
-	return null if text == "" else LevelJson.parse(text)
+	if text == "":
+		LevelJson.last_error = "couldn't read the file"
+		return null
+	return LevelJson.parse(text)
 
 
 static func save_user(layout: LevelLayout, stem: String) -> String:

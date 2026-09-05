@@ -12,6 +12,10 @@ const MAX_IMAGES := 8
 const MAX_IMAGE_CHARS := 600_000
 const MAX_OVERLAYS := 16
 
+# Why the last parse() said no -- shown to the level author verbatim,
+# so every message names the suspect ("crate 13: missing type").
+static var last_error := ""
+
 # Compiled once for the class; validates base64 alphabet before decoding.
 # Marshalls.base64_to_raw emits an engine error on bad chars — untrusted data
 # must degrade silently, so we pre-screen rather than let it through.
@@ -66,12 +70,17 @@ static func parse(text: String) -> LevelLayout:
 	var json := JSON.new()
 	var error := json.parse(text)
 	if error != OK:
+		last_error = "line %d: %s" % [json.get_error_line() + 1, json.get_error_message()]
 		return null
 	var data: Variant = json.data
 	if not data is Dictionary:
+		last_error = "top level must be an object"
 		return null
-	if validate(data) != "":
+	var verdict := validate(data)
+	if verdict != "":
+		last_error = verdict
 		return null
+	last_error = ""
 	var l := LevelLayout.new()
 	l.title = data["title"]
 	l.author = data.get("author", "")
@@ -111,27 +120,27 @@ static func validate(d: Dictionary) -> String:
 		return "crates must be a list"
 	if (d["crates"] as Array).size() > MAX_CRATES:
 		return "too many crates"
-	for c in d["crates"]:
-		if (
-			not c is Dictionary
-			or not c.has("x")
-			or not c.has("y")
-			or not c.get("type", null) is String
-		):
-			return "bad crate entry"
+	for ci in (d["crates"] as Array).size():
+		var c: Variant = d["crates"][ci]
+		if not c is Dictionary:
+			return "crate %d: not an object" % ci
+		if not c.has("x") or not c.has("y"):
+			return "crate %d: missing x or y" % ci
+		if not c.get("type", null) is String:
+			return "crate %d: missing or non-text type" % ci
 		if not (c["x"] is float or c["x"] is int) or not (c["y"] is float or c["y"] is int):
-			return "bad crate coords"
+			return "crate %d: x/y must be numbers" % ci
 		if absf(float(c["x"])) > MAX_COORD or absf(float(c["y"])) > MAX_COORD:
-			return "crate out of bounds"
+			return "crate %d: out of bounds" % ci
 	var _shots: Variant = d.get("shots", 0)
 	if not (_shots is int or _shots is float):
-		return "bad shots"
+		return "shots must be a number"
 	var _trig: Variant = d.get("triggers", {})
 	if _trig is Dictionary:
 		for _event in _trig:
 			var _ids: Variant = _trig[_event]
 			if _ids is Array and (_ids as Array).size() > 16:
-				return "too many effects"
+				return "trigger '%s': too many effects (max 16)" % _event
 	var _thumb: Variant = d.get("thumb", "")
 	if not _thumb is String:
 		return "bad thumb"
@@ -149,45 +158,48 @@ static func validate(d: Dictionary) -> String:
 		return "too many images"
 	for _key in (_images as Dictionary):
 		if not _key is String or (_key as String).length() > 16:
-			return "bad images"
+			return "images: bad key '%s'" % str(_key)
 		var _val: Variant = (_images as Dictionary)[_key]
-		if not _val is String or (_val as String).length() > MAX_IMAGE_CHARS:
-			return "image too large"
+		if not _val is String:
+			return "image '%s': not base64 text" % _key
+		if (_val as String).length() > MAX_IMAGE_CHARS:
+			return "image '%s': too large" % _key
 	var _overlays: Variant = d.get("overlays", [])
 	if not _overlays is Array:
 		return "bad overlays"
 	if (_overlays as Array).size() > MAX_OVERLAYS:
 		return "too many overlays"
-	for _entry in (_overlays as Array):
+	for oi in (_overlays as Array).size():
+		var _entry: Variant = _overlays[oi]
 		if not _entry is Dictionary:
-			return "bad overlay"
+			return "overlay %d: not an object" % oi
 		var _img: Variant = (_entry as Dictionary).get("image", null)
 		if not _img is String:
-			return "bad overlay"
+			return "overlay %d: missing or non-text image key" % oi
 		var _ox: Variant = (_entry as Dictionary).get("x", null)
 		var _oy: Variant = (_entry as Dictionary).get("y", null)
 		if not (_ox is float or _ox is int) or not (_oy is float or _oy is int):
-			return "bad overlay"
+			return "overlay %d: x/y must be numbers" % oi
 		if absf(float(_ox)) > MAX_COORD or absf(float(_oy)) > MAX_COORD:
-			return "bad overlay"
+			return "overlay %d: out of bounds" % oi
 		# Optional dials: wrong TYPES are rejected here (a typed read in
 		# the builder would abort the whole spawn); unknown NAMES are the
 		# builder's skip-with-warning department.
 		var _b: Variant = (_entry as Dictionary).get("behavior", "NONE")
 		var _p: Variant = (_entry as Dictionary).get("pivot", "CENTER")
 		if not _b is String or not _p is String:
-			return "bad overlay"
+			return "overlay %d: behavior/pivot must be text" % oi
 		var _sp: Variant = (_entry as Dictionary).get("speed", 0.0)
 		var _am: Variant = (_entry as Dictionary).get("amplitude", 0.0)
 		if not (_sp is float or _sp is int) or not (_am is float or _am is int):
-			return "bad overlay"
+			return "overlay %d: speed/amplitude must be numbers" % oi
 		var _ax: Variant = (_entry as Dictionary).get("axis", "HORIZONTAL")
 		if not _ax is String:
-			return "bad overlay"
+			return "overlay %d: axis must be text" % oi
 		var _tr: Variant = (_entry as Dictionary).get("travel", 0.0)
 		var _ti: Variant = (_entry as Dictionary).get("tilt", 0.0)
 		if not (_tr is float or _tr is int) or not (_ti is float or _ti is int):
-			return "bad overlay"
+			return "overlay %d: travel/tilt must be numbers" % oi
 	return ""
 
 

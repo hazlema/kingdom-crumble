@@ -118,7 +118,12 @@ func open_intro(current_text: String) -> void:
 	%IntroDialog.popup_centered()
 
 
-func show_load_error() -> void:
+func show_load_error(reason: String = "") -> void:
+	# The lint verdict, verbatim -- "crate 13: missing type" beats a shrug.
+	%LoadError.dialog_text = (
+		"Couldn't load that level file." if reason == ""
+		else "Couldn't load that level file:\n%s" % reason
+	)
 	%LoadError.popup_centered()
 
 

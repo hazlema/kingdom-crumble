@@ -174,7 +174,7 @@ func _capture_thumb() -> void:
 func _on_load(path: String) -> void:
 	var loaded := LevelStore.load_level(path)
 	if loaded == null:
-		menu.show_load_error()
+		menu.show_load_error(LevelJson.last_error)
 		return
 	current = loaded
 	save_path = path
