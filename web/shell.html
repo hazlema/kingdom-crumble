@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>$GODOT_PROJECT_NAME</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: #4b3b2a;
+	background-color: black;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+/* ---- The kingdom's front door ---- */
+#gate {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(#6bc7d4, #cbeeea 60%, #8fd06f);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	gap: 22px;
+	font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+	z-index: 2;
+}
+
+#gate img {
+	width: 128px;
+	height: 128px;
+	image-rendering: auto;
+	filter: drop-shadow(0 6px 8px rgba(40, 30, 10, 0.25));
+}
+
+#gate h1 {
+	margin: 0;
+	font-size: 44px;
+	font-weight: 800;
+	letter-spacing: 1px;
+	color: #4b3b2a;
+	text-shadow: 0 2px 0 rgba(255, 250, 230, 0.7);
+}
+
+#play {
+	font: inherit;
+	font-size: 30px;
+	font-weight: 800;
+	letter-spacing: 3px;
+	color: #4b3b2a;
+	background: #f4e7c8;
+	border: 3px solid #4b3b2a;
+	border-bottom-width: 6px;
+	border-radius: 16px;
+	padding: 14px 64px;
+	cursor: pointer;
+}
+
+#play:hover {
+	background: #fff3d1;
+}
+
+#play:active {
+	border-bottom-width: 3px;
+	transform: translateY(3px);
+}
+
+#loadwrap {
+	display: none;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+#loadbar {
+	width: 340px;
+	max-width: 70vw;
+	height: 18px;
+	background: #fffaf0;
+	border: 3px solid #4b3b2a;
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+#loadfill {
+	height: 100%;
+	width: 0%;
+	background: #c9a24b;
+	transition: width 0.15s;
+}
+
+#loadtext {
+	font-size: 14px;
+	font-weight: 600;
+	color: #4b3b2a;
+	opacity: 0.75;
+}
+
+#notice {
+	display: none;
+	background: #fffaf0;
+	border: 3px solid #b5442e;
+	border-radius: 10px;
+	color: #4b3b2a;
+	line-height: 1.3;
+	margin: 0 2rem;
+	max-width: 560px;
+	padding: 1rem;
+	text-align: center;
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="gate">
+			<img src="index.512x512.png" alt="">
+			<h1>Kingdom Crumble</h1>
+			<button id="play">PLAY</button>
+			<div id="loadwrap">
+				<div id="loadbar"><div id="loadfill"></div></div>
+				<div id="loadtext">Raising the kingdom...</div>
+			</div>
+			<div id="notice"></div>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const gate = document.getElementById('gate');
+	const playBtn = document.getElementById('play');
+	const loadWrap = document.getElementById('loadwrap');
+	const loadFill = document.getElementById('loadfill');
+	const loadText = document.getElementById('loadtext');
+	const notice = document.getElementById('notice');
+
+	function showNotice(text) {
+		while (notice.lastChild) {
+			notice.removeChild(notice.lastChild);
+		}
+		text.split('\n').forEach((line) => {
+			notice.appendChild(document.createTextNode(line));
+			notice.appendChild(document.createElement('br'));
+		});
+		notice.style.display = 'block';
+		playBtn.style.display = 'none';
+		loadWrap.style.display = 'none';
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			showNotice(err.message);
+		} else if (typeof err === 'string') {
+			showNotice(err);
+		} else {
+			showNotice('An unknown error occurred.');
+		}
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			showNotice('This browser is missing features the game needs:\n' + missing.join('\n'));
+		}
+	} else {
+		// Warm the engine while the player admires the crate: the wasm
+		// downloads and compiles behind the gate, so PLAY feels quick.
+		const warmup = engine.init(GODOT_CONFIG['executable'] || 'index').catch(displayFailureNotice);
+
+		playBtn.addEventListener('click', () => {
+			// This click is the user gesture the browser wants before it
+			// allows audio -- the whole reason the gate exists.
+			playBtn.style.display = 'none';
+			loadWrap.style.display = 'flex';
+			warmup.then(() => engine.startGame({
+				'onProgress': function (current, total) {
+					if (current > 0 && total > 0) {
+						const pct = Math.min(100, Math.round((current / total) * 100));
+						loadFill.style.width = pct + '%';
+						loadText.textContent = 'Raising the kingdom... ' + pct + '%';
+					} else {
+						loadFill.style.width = '100%';
+						loadText.textContent = 'Raising the kingdom...';
+					}
+				},
+			})).then(() => {
+				gate.remove();
+			}, displayFailureNotice);
+		}, { once: true });
+	}
+}());
+		</script>
+	</body>
+</html>
