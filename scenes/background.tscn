@@ -77,7 +77,7 @@ centered = false
 
 [node name="Near" type="ParallaxLayer" parent="." unique_id=752847696]
 position = Vector2(0, -48)
-motion_mirroring = Vector2(1016, 0)
+motion_mirroring = Vector2(2032, 0)
 
 [node name="Painted" type="Sprite2D" parent="Near" unique_id=1795747450]
 position = Vector2(0, 304)
