@@ -14,9 +14,17 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 	if layout.overlays.is_empty():
 		return out
 
-	# Decode each distinct image once.
+	# Decode each REFERENCED image once (audit: decoding unused blobs
+	# lets a hostile file spend memory on images nothing displays).
+	var referenced: Dictionary = {}
+	for entry in layout.overlays:
+		var rk: String = (entry as Dictionary).get("image", "")
+		if rk != "":
+			referenced[rk] = true
 	var tex_cache: Dictionary = {}
 	for key in layout.images:
+		if not referenced.has(key):
+			continue
 		var img := LevelJson.decode_png_b64(layout.images[key])
 		if img == null:
 			continue

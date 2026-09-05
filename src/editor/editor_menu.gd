@@ -118,6 +118,15 @@ func open_intro(current_text: String) -> void:
 	%IntroDialog.popup_centered()
 
 
+func show_save_error(reason: String = "") -> void:
+	# Same dialog, save flavor (audit: failed saves were silent).
+	%LoadError.dialog_text = (
+		"Couldn't save the level." if reason == ""
+		else "Couldn't save the level:\n%s" % reason
+	)
+	%LoadError.popup_centered()
+
+
 func show_load_error(reason: String = "") -> void:
 	# The lint verdict, verbatim -- "crate 13: missing type" beats a shrug.
 	%LoadError.dialog_text = (

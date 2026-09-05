@@ -19,6 +19,7 @@ func test_missing_png_shows_no_image() -> void:
 
 
 func test_sibling_png_becomes_thumb() -> void:
+	DirAccess.make_dir_recursive_absolute("user://levels")  # fresh profiles have no levels dir (audit)
 	var img := Image.create(8, 8, false, Image.FORMAT_RGB8)
 	img.fill(Color.RED)
 	img.save_png("user://levels/card_png_probe.png")

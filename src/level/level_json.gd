@@ -10,6 +10,8 @@ const MAX_THUMB_CHARS := 600_000  # ~450 KB decoded — a 416x256 PNG fits many 
 const MAX_INTRO_CHARS := 600  # a hearty paragraph; hard wall for blobs
 const MAX_IMAGES := 8
 const MAX_IMAGE_CHARS := 600_000
+const MAX_IMAGE_DIM := 1024
+const MAX_IMAGE_PIXELS := 1048576  # 1024x1024 budget, pre-decode
 const MAX_OVERLAYS := 16
 
 # Why the last parse() said no -- shown to the level author verbatim,
@@ -59,6 +61,15 @@ static func decode_png_b64(b64: String) -> Image:
 	for i in PNG_MAGIC.size():
 		if buf[i] != PNG_MAGIC[i]:
 			return null
+	# Dimension gate BEFORE decoding (audit: a 28KB base64 blob can
+	# decode to a 16MB bitmap -- allocation amplification). PNG stores
+	# width/height big-endian at bytes 16-23 of the IHDR chunk.
+	if buf.size() < 24:
+		return null
+	var pw := (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19]
+	var ph := (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23]
+	if pw <= 0 or ph <= 0 or pw > MAX_IMAGE_DIM or ph > MAX_IMAGE_DIM or pw * ph > MAX_IMAGE_PIXELS:
+		return null
 	var img := Image.new()
 	if img.load_png_from_buffer(buf) != OK:
 		return null
@@ -81,6 +92,17 @@ static func parse(text: String) -> LevelLayout:
 		last_error = verdict
 		return null
 	last_error = ""
+	# Edit-session keys (underscore-prefixed) are editor scratch state --
+	# never trust them from disk (audit: hostile files could smuggle
+	# typed transform values the editor reads back).
+	for _entry in data.get("overlays", []):
+		if _entry is Dictionary:
+			var stale: Array = []
+			for k in _entry:
+				if (k as String).begins_with("_"):
+					stale.append(k)
+			for k in stale:
+				(_entry as Dictionary).erase(k)
 	var l := LevelLayout.new()
 	l.title = data["title"]
 	l.author = data.get("author", "")
@@ -116,6 +138,10 @@ static func validate(d: Dictionary) -> String:
 		return "unsupported or missing format"
 	if not d.get("title", "") is String or d.get("title", "") == "":
 		return "missing title"
+	if not d.get("author", "") is String:
+		return "author must be text"
+	if not d.get("background", "meadow") is String:
+		return "background must be text"
 	if not d.get("crates") is Array:
 		return "crates must be a list"
 	if (d["crates"] as Array).size() > MAX_CRATES:

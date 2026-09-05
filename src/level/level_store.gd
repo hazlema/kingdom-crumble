@@ -35,17 +35,40 @@ static func load_level(path: String) -> LevelLayout:
 	return LevelJson.parse(text)
 
 
+# Saves set LevelJson.last_error on failure so callers can tell the
+# author WHY. The document is validated before any file is opened
+# (audit P1: the editor could save levels its own loader refused),
+# and an existing file is only replaced via a temp+rename so a failed
+# write never destroys the previous good save (audit P2).
 static func save_user(layout: LevelLayout, stem: String) -> String:
 	var safe := sanitize_stem(stem)
 	if safe == "":
+		LevelJson.last_error = "that name has no usable characters"
+		return ""
+	var text := LevelJson.serialize(layout)
+	var parsed: Variant = JSON.parse_string(text)
+	if not parsed is Dictionary:
+		LevelJson.last_error = "internal: serialize produced non-JSON"
+		return ""
+	var verdict := LevelJson.validate(parsed)
+	if verdict != "":
+		LevelJson.last_error = verdict
 		return ""
 	DirAccess.make_dir_recursive_absolute(USER_DIR)
 	var path := "%s/%s.json" % [USER_DIR, safe]
-	var f := FileAccess.open(path, FileAccess.WRITE)
+	var tmp := path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
+		LevelJson.last_error = "couldn't open the file for writing"
 		return ""
-	f.store_string(LevelJson.serialize(layout))
+	f.store_string(text)
 	f.close()
+	var err := DirAccess.rename_absolute(tmp, path)
+	if err != OK:
+		LevelJson.last_error = "couldn't replace the previous save"
+		DirAccess.remove_absolute(tmp)
+		return ""
+	LevelJson.last_error = ""
 	return path
 
 

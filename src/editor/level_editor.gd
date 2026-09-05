@@ -132,7 +132,8 @@ func _on_save() -> void:
 		return
 	var stem := save_path.get_file().get_basename()
 	await _bake_and_capture()
-	LevelStore.save_user(current, stem)
+	if LevelStore.save_user(current, stem) == "":
+		menu.show_save_error(LevelJson.last_error)
 
 
 # Save As IS the naming act — the dialog stem is the editor's only title
@@ -142,13 +143,21 @@ func _on_save_as(stem: String) -> void:
 	current.title = stem
 	await _bake_and_capture()
 	save_path = LevelStore.save_user(current, stem)
+	if save_path == "":
+		menu.show_save_error(LevelJson.last_error)
 
 
 # Bake pending scenery edits, refresh the live scene to match, then
 # capture the thumb over a CLEAN view (gizmo hidden, crates undimmed) —
 # shared by Save and Save As.
 func _bake_and_capture() -> void:
-	_bake_scenery()
+	var skipped := _bake_scenery()
+	if skipped > 0:
+		# Honest failure (audit: the cap-skip used to vanish silently at
+		# save while the editor preview kept showing the edit).
+		menu.show_save_error(
+			"%d scenery change(s) hit the image limit and will NOT be saved" % skipped
+		)
 	_rebuild_scenery()
 	_refresh_pieces()
 	_reopen_inspector()
@@ -197,7 +206,11 @@ func _on_exit() -> void:
 func _on_test() -> void:
 	# Bake pending scenery transforms first so TEST shows exactly what
 	# save would (owner's F3 call: no untransformed ghosts in playtests).
-	_bake_scenery()
+	var skipped := _bake_scenery()
+	if skipped > 0:
+		menu.show_save_error(
+			"%d scenery change(s) hit the image limit and won't appear in TEST" % skipped
+		)
 	Level.next_layout = current
 	Level.return_to_editor = true
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
@@ -471,8 +484,18 @@ func import_scenery_image(img: Image) -> String:
 	return key
 
 
+# The overlay cap, enforced at the door (audit P1: adding a REUSED
+# image dodged the distinct-image cap, minting levels the loader
+# refuses to open).
+func can_add_overlay() -> bool:
+	return current.overlays.size() < LevelJson.MAX_OVERLAYS
+
+
 # Wired to SceneryPanel.image_chosen signal.
 func _on_image_chosen(path: String) -> void:
+	if not can_add_overlay():
+		push_warning("SceneryPanel: overlay cap reached (%d)" % LevelJson.MAX_OVERLAYS)
+		return
 	var img := Image.load_from_file(path)
 	if img == null:
 		return
@@ -886,7 +909,8 @@ func _drop_background() -> void:
 # Unedited overlays (no underscore keys) are left unchanged — no re-encode churn.
 # ---------------------------------------------------------------------------
 
-func _bake_scenery() -> void:
+func _bake_scenery() -> int:
+	var skipped := 0
 	# Build reference counts for all image keys.
 	var ref_count: Dictionary = {}
 	for entry in current.overlays:
@@ -946,13 +970,17 @@ func _bake_scenery() -> void:
 			if not current.images.has(new_key) and old_still_needed and current.images.size() >= LevelJson.MAX_IMAGES:
 				# Cap hit: skip bake for this overlay, keep its underscore edit-state.
 				push_warning("SceneryBake: skipping overlay %d — image cap full" % i)
+				skipped += 1
 				continue
 			# Store the new blob (dedup: might already exist under new_key).
 			if not current.images.has(new_key):
 				current.images[new_key] = new_b64
 			# Update this overlay's key.
 			o["image"] = new_key
-			# Decrement refcount on old key; erase if orphaned.
+			# Move the reference in the ledger: +new, -old. (Audit P1:
+			# forgetting the increment let a later bake orphan-erase an
+			# image this overlay still pointed at.)
+			ref_count[new_key] = ref_count.get(new_key, 0) + 1
 			ref_count[old_key] = ref_count.get(old_key, 1) - 1
 			if ref_count.get(old_key, 0) <= 0:
 				current.images.erase(old_key)
@@ -968,6 +996,7 @@ func _bake_scenery() -> void:
 			piece.scale = Vector2.ONE
 			piece.flip_h = false
 			piece.flip_v = false
+	return skipped
 
 
 static func _strip_edit_keys(o: Dictionary) -> void:

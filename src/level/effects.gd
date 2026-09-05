@@ -70,6 +70,7 @@ static func _sound(host: Node2D, stem: String) -> bool:
 		push_warning("No such sound effect: %s" % stem)
 		return false
 	var player := AudioStreamPlayer.new()
+	player.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
 	player.stream = load(path)
 	host.add_child(player)
 	player.finished.connect(player.queue_free)

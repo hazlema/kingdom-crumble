@@ -77,6 +77,26 @@ func preview_end_global() -> Vector2:
 	return Vector2.INF
 
 
+## Abandon a held charge outright: no shot, no residue. The tree
+## pausing (menu, intro dialog) or the window losing focus means the
+## player is NOT releasing the sling on purpose (audit: resuming from
+## pause used to fire the stored charge as a surprise shot).
+func cancel_charge() -> void:
+	_charging = false
+	charge = 0.0
+	if has_node("TrajectoryPreview"):
+		$TrajectoryPreview.visible = false
+
+
+func _notification(what: int) -> void:
+	if (
+		what == NOTIFICATION_PAUSED
+		or what == NOTIFICATION_APPLICATION_FOCUS_OUT
+		or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT
+	):
+		cancel_charge()
+
+
 func process_aim(delta: float) -> void:
 	var dir := Input.get_axis("aim_left", "aim_right")
 	aim_angle_deg = clampf(aim_angle_deg - dir * AIM_SPEED_DEG * delta, AIM_MIN_DEG, AIM_MAX_DEG)

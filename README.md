@@ -77,8 +77,9 @@ level, thumbnail and all.
 - **NarfKit** — the game's tiny reusable component library
   (`addons/narfkit/`): living scenery, card flips, confetti bursts,
   and scene-fade transitions, all host-agnostic
-- Shareable levels are **inert JSON** — data, never code, so opening a
-  stranger's level is always safe
+- Shareable levels are **inert JSON** — data, never code — with typed
+  validation, size caps, and pre-decode image budgets on everything a
+  stranger's file can carry
 - Full design history in [docs/design.md](docs/design.md) and
   `docs/superpowers/` (every feature was specced, planned, and
   reviewed before it shipped)
