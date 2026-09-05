@@ -10,6 +10,8 @@ signal test_requested
 signal intro_edited(text: String)
 signal open_intro_requested
 signal scenery_requested
+signal download_requested
+signal upload_requested
 
 
 func _ready() -> void:
@@ -38,6 +40,15 @@ func _ready() -> void:
 			OS.shell_open(ProjectSettings.globalize_path(LevelStore.USER_DIR))
 	)
 	%ExitBtn.pressed.connect(func() -> void: _pick(exit_requested))
+	# Browser level sharing (audit: the README's one-file story had no
+	# web path). Download hands the JSON to the browser; Upload takes a
+	# friend's file in. The OS Folder button is meaningless in a tab.
+	var web := OS.has_feature("web")
+	%DownloadBtn.visible = web
+	%UploadBtn.visible = web
+	%FolderBtn.visible = not web
+	%DownloadBtn.pressed.connect(func() -> void: _pick(download_requested))
+	%UploadBtn.pressed.connect(func() -> void: _pick(upload_requested))
 	%SceneryBtn.pressed.connect(func() -> void: _pick(scenery_requested))
 	%SaveAsDialog.confirmed.connect(
 		func() -> void:

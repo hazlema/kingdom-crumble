@@ -14,10 +14,12 @@ func after_each() -> void:
 
 
 func _fruit_chain() -> Array:
+	# Ids are namespaced (audit: user aim.json vs builtin aim.json
+	# used to share completion) -- the ledger speaks "user:apple".
 	return [
-		{"stem": "apple", "path": "user://levels/apple.json", "title": "Apple"},
-		{"stem": "pineapple", "path": "user://levels/pineapple.json", "title": "Pineapple"},
-		{"stem": "watermelon", "path": "user://levels/watermelon.json", "title": "Watermelon"},
+		{"stem": "apple", "id": "user:apple", "path": "user://levels/apple.json", "title": "Apple"},
+		{"stem": "pineapple", "id": "user:pineapple", "path": "user://levels/pineapple.json", "title": "Pineapple"},
+		{"stem": "watermelon", "id": "user:watermelon", "path": "user://levels/watermelon.json", "title": "Watermelon"},
 	]
 
 
@@ -27,7 +29,7 @@ func test_entries_structure_and_order() -> void:
 	var seen_user := false
 	var prev_stem := ""
 	for e in chain:
-		assert_true(e.has("stem") and e.has("path") and e.has("title") and e.has("thumb"))
+		assert_true(e.has("stem") and e.has("id") and e.has("path") and e.has("title") and e.has("thumb"))
 		var is_user: bool = e["path"].begins_with("user://")
 		if seen_user:
 			assert_true(is_user, "built-ins never follow user levels")
@@ -46,7 +48,7 @@ func test_first_level_always_unlocked() -> void:
 func test_pineapple_rule() -> void:
 	var chain := _fruit_chain()
 	assert_false(LevelChain.is_unlocked(chain, 1, "chill"), "apple uncleared locks pineapple")
-	Progress.mark_cleared("chill", "apple")
+	Progress.mark_cleared("chill", "user:apple")
 	assert_true(
 		LevelChain.is_unlocked(chain, 1, "chill"),
 		"apple cleared unlocks pineapple — even inserted later"
@@ -59,18 +61,18 @@ func test_pineapple_rule() -> void:
 func test_frontier() -> void:
 	var chain := _fruit_chain()
 	assert_eq(LevelChain.frontier(chain, "chill"), 0, "fresh log starts at 0")
-	Progress.mark_cleared("chill", "apple")
+	Progress.mark_cleared("chill", "user:apple")
 	assert_eq(LevelChain.frontier(chain, "chill"), 1)
-	Progress.mark_cleared("chill", "pineapple")
-	Progress.mark_cleared("chill", "watermelon")
+	Progress.mark_cleared("chill", "user:pineapple")
+	Progress.mark_cleared("chill", "user:watermelon")
 	assert_eq(LevelChain.frontier(chain, "chill"), 2, "all cleared parks at last")
 
 
 func test_next_index_after() -> void:
 	var chain := _fruit_chain()
-	assert_eq(LevelChain.next_index_after(chain, "apple"), 1)
-	assert_eq(LevelChain.next_index_after(chain, "watermelon"), -1, "end of chain")
-	assert_eq(LevelChain.next_index_after(chain, "durian"), -1, "unknown stem")
+	assert_eq(LevelChain.next_index_after(chain, "user:apple"), 1)
+	assert_eq(LevelChain.next_index_after(chain, "user:watermelon"), -1, "end of chain")
+	assert_eq(LevelChain.next_index_after(chain, "user:durian"), -1, "unknown stem")
 
 
 func test_frontier_of_empty_chain_is_minus_one() -> void:

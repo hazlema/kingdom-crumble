@@ -6,6 +6,14 @@ extends RefCounted
 # call — add/delete/rename in the folders is instantly reflected.
 
 
+# Progress identity: namespaced so a user level named "aim" never
+# shares completion with the built-in "aim" (audit P2). Display keeps
+# using the bare stem; only the ledger speaks namespaced.
+static func level_id(path: String) -> String:
+	var ns := "builtin" if path.begins_with("res://") else "user"
+	return "%s:%s" % [ns, path.get_file().get_basename()]
+
+
 static func entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for path in LevelStore.list_builtin() + LevelStore.list_user():
@@ -18,6 +26,7 @@ static func entries() -> Array[Dictionary]:
 			. append(
 				{
 					"stem": path.get_file().get_basename(),
+					"id": level_id(path),
 					"path": path,
 					"title": layout.title,
 					"thumb": layout.thumb,
@@ -32,19 +41,19 @@ static func is_unlocked(chain: Array, index: int, tier: String) -> bool:
 		return false
 	if index == 0:
 		return true
-	return Progress.is_cleared(tier, chain[index - 1]["stem"])
+	return Progress.is_cleared(tier, chain[index - 1]["id"])
 
 
 # -1 for an empty chain — callers guard with is_empty() first.
 static func frontier(chain: Array, tier: String) -> int:
 	for i in chain.size():
-		if not Progress.is_cleared(tier, chain[i]["stem"]):
+		if not Progress.is_cleared(tier, chain[i]["id"]):
 			return i
 	return chain.size() - 1
 
 
-static func next_index_after(chain: Array, stem: String) -> int:
+static func next_index_after(chain: Array, id: String) -> int:
 	for i in chain.size():
-		if chain[i]["stem"] == stem:
+		if chain[i]["id"] == id:
 			return i + 1 if i + 1 < chain.size() else -1
 	return -1

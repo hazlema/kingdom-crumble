@@ -24,13 +24,13 @@ func open(tier: String) -> void:
 	var current := _current_stem()
 	var cleared_count := 0
 	for i in chain.size():
-		var stem: String = chain[i]["stem"]
-		var cleared := Progress.is_cleared(tier, stem)
+		var lid: String = chain[i]["id"]
+		var cleared := Progress.is_cleared(tier, lid)
 		if cleared:
 			cleared_count += 1
 		var card: LevelCard = LEVEL_CARD.instantiate()
 		%List.add_child(card)
-		card.setup(chain[i], cleared, LevelChain.is_unlocked(chain, i, tier), stem == current)
+		card.setup(chain[i], cleared, LevelChain.is_unlocked(chain, i, tier), lid == current)
 		card.picked.connect(func(path: String) -> void:
 			level_picked.emit(path)
 			hide())

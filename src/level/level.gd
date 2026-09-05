@@ -66,9 +66,9 @@ func _ready() -> void:
 		if layout == null:
 			layout = LevelStore.load_level(DEFAULT_LAYOUT)
 			if layout != null:
-				current_stem = DEFAULT_LAYOUT.get_file().get_basename()
+				current_stem = LevelChain.level_id(DEFAULT_LAYOUT)
 		else:
-			current_stem = path.get_file().get_basename()
+			current_stem = LevelChain.level_id(path)
 	if layout == null:
 		# even the default failed (e.g. hand-edited to invalid) — the
 		# owner's dialog tells the player, then exits; empty field
@@ -89,7 +89,7 @@ func _ready() -> void:
 	var _chain := LevelChain.entries()
 	var _pos := -1
 	for i in _chain.size():
-		if _chain[i]["stem"] == current_stem and current_stem != "":
+		if _chain[i]["id"] == current_stem and current_stem != "":
 			_pos = i + 1
 			break
 	hud.set_level_info(layout.title, _pos, layout.intro != "")
@@ -136,6 +136,7 @@ func _physics_process(delta: float) -> void:
 		State.AIMING:
 			trebuchet.process_aim(delta)
 			hud.set_power(trebuchet.charge)
+			hud.set_angle(trebuchet.aim_angle_deg)
 			cam.aim_focus = trebuchet.preview_end_global()
 			if Input.get_axis("scout_left", "scout_right") != 0.0:
 				cam.set_mode(CameraDirector.next_mode(cam.mode, "scout_input"))

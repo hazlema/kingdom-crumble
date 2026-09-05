@@ -61,6 +61,8 @@ func _ready() -> void:
 	menu.intro_edited.connect(func(t: String) -> void: current.intro = t)
 	menu.open_intro_requested.connect(func() -> void: menu.open_intro(current.intro))
 	menu.scenery_requested.connect(_enter_scenery)
+	menu.download_requested.connect(_on_download)
+	menu.upload_requested.connect(_on_upload)
 	%SceneryPanel.background_picked.connect(_on_background_picked)
 	%SceneryPanel.image_chosen.connect(_on_image_chosen)
 	%SceneryPanel.done.connect(_exit_scenery)
@@ -187,6 +189,67 @@ func _on_load(path: String) -> void:
 		return
 	current = loaded
 	save_path = path
+	_rebuild()
+
+
+# --- Browser level sharing (audit #6): the one-file story, web edition ---
+
+var _upload_cb: JavaScriptObject  # held so it isn't garbage-collected
+
+
+# Hand the current level to the browser as a JSON download. Bakes and
+# validates through the same gate as Save -- never share what the
+# loader would refuse.
+func _on_download() -> void:
+	await _bake_and_capture()
+	var text := LevelJson.serialize(current)
+	var parsed: Variant = JSON.parse_string(text)
+	if not parsed is Dictionary or LevelJson.validate(parsed) != "":
+		menu.show_save_error(LevelJson.last_error)
+		return
+	var stem := LevelStore.sanitize_stem(current.title)
+	if stem == "":
+		stem = "level"
+	var b64 := Marshalls.utf8_to_base64(text)
+	JavaScriptBridge.eval(
+		(
+			"(function(){var a=document.createElement('a');"
+			+ "a.href='data:application/json;base64,%s';" % b64
+			+ "a.download='%s.json';" % stem
+			+ "a.click();})();"
+		),
+		true
+	)
+
+
+# Take a friend's level file in. Same trust posture as any load:
+# parse+validate or a spoken refusal, never a crash.
+func _on_upload() -> void:
+	_upload_cb = JavaScriptBridge.create_callback(_on_upload_text)
+	var window := JavaScriptBridge.get_interface("window")
+	window.kcLevelUploadCallback = _upload_cb
+	JavaScriptBridge.eval(
+		(
+			"(function(){var inp=document.createElement('input');"
+			+ "inp.type='file';inp.accept='.json';"
+			+ "inp.onchange=function(e){var f=e.target.files[0];if(!f)return;"
+			+ "var r=new FileReader();"
+			+ "r.onload=function(){window.kcLevelUploadCallback(f.name,r.result);};"
+			+ "r.readAsText(f);};inp.click();})();"
+		),
+		true
+	)
+
+
+func _on_upload_text(args: Array) -> void:
+	if args.size() < 2:
+		return
+	var loaded := LevelJson.parse(str(args[1]))
+	if loaded == null:
+		menu.show_load_error(LevelJson.last_error)
+		return
+	current = loaded
+	save_path = ""  # imported document: Save prompts for a name
 	_rebuild()
 
 

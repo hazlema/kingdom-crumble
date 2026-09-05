@@ -19,6 +19,20 @@ func _ready() -> void:
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
 	%FireButton.icon = FIRE_STONE
 	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
+	# Touch angle controls (audit: touch players were stuck at 45
+	# degrees). Hold-to-adjust via the same Input bridge as FIRE; the
+	# readout keeps aiming predictable. Desktop keeps its arrow keys.
+	var touch := DisplayServer.is_touchscreen_available()
+	%AngleUp.visible = touch
+	%AngleDown.visible = touch
+	%AngleReadout.visible = touch
+	for btn: Button in [%AngleUp, %AngleDown]:
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	%AngleUp.button_down.connect(func() -> void: Input.action_press("aim_left"))
+	%AngleUp.button_up.connect(func() -> void: Input.action_release("aim_left"))
+	%AngleDown.button_down.connect(func() -> void: Input.action_press("aim_right"))
+	%AngleDown.button_up.connect(func() -> void: Input.action_release("aim_right"))
 	%StatCard.info_pressed.connect(func() -> void: info_pressed.emit())
 	# The crates row is touch's H key — same Input bridge as FIRE.
 	%StatCard.check_held.connect(
@@ -35,6 +49,8 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		Input.action_release("fire")
 		Input.action_release("check")
+		Input.action_release("aim_left")
+		Input.action_release("aim_right")
 
 
 func set_shots(n: int) -> void:
@@ -95,3 +111,7 @@ func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
 	if kinds.has(&"multishot"):
 		return EditorAssets.texture_for("crate-blue")
 	return FIRE_STONE
+
+
+func set_angle(deg: float) -> void:
+	%AngleReadout.text = str(roundi(deg))

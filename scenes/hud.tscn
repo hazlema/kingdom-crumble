@@ -81,6 +81,47 @@ theme_override_colors/font_disabled_color = Color(0.2941, 0.2314, 0.1647, 1)
 icon = ExtResource("burger")
 text = "MENU"
 
+[node name="AngleDown" type="Button" parent="."]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -412.0
+offset_top = -100.0
+offset_right = -336.0
+offset_bottom = -24.0
+theme_override_font_sizes/font_size = 34
+text = "-"
+
+[node name="AngleReadout" type="Label" parent="."]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -336.0
+offset_top = -100.0
+offset_right = -304.0
+offset_bottom = -24.0
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "45"
+
+[node name="AngleUp" type="Button" parent="."]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -304.0
+offset_top = -100.0
+offset_right = -228.0
+offset_bottom = -24.0
+theme_override_font_sizes/font_size = 34
+text = "+"
+
 [node name="FireButton" type="Button" parent="."]
 unique_name_in_owner = true
 anchor_left = 1.0

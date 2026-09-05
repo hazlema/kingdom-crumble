@@ -23,8 +23,8 @@ func _level_for_first_builtin() -> Level:
 
 func test_current_stem_derived_from_path() -> void:
 	var l := _level_for_first_builtin()
-	var expected: String = LevelStore.list_builtin()[0].get_file().get_basename()
-	assert_eq(l.current_stem, expected)
+	var expected: String = LevelChain.level_id(LevelStore.list_builtin()[0])
+	assert_eq(l.current_stem, expected, "identity is the namespaced id (audit 4)")
 
 
 func test_record_clear_writes_tier_and_stem() -> void:
@@ -64,7 +64,7 @@ func test_deleted_level_falls_back_to_demo_stem() -> void:
 	Level.next_layout_path = "user://levels/definitely_deleted_ghost.json"
 	var l: Level = load("res://scenes/level.tscn").instantiate()
 	add_child_autofree(l)
-	assert_eq(l.current_stem, "demo", "fallback must use demo's stem, not the ghost path")
+	assert_eq(l.current_stem, "builtin:demo", "fallback must use demo id, not the ghost path")
 	assert_not_null(l.layout, "layout must not be null after fallback")
 
 func test_level_title_toast_shows_then_clears() -> void:

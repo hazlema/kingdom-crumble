@@ -109,3 +109,25 @@ func test_trigger_sounds_ride_the_sfx_bus() -> void:
 			found = true
 			assert_eq(c.bus, &"Sfx", "trigger sound honors the Sound slider")
 	assert_true(found, "the sound player spawned")
+
+
+func test_progress_migrates_bare_stems_favoring_builtins() -> void:
+	# Audit 4: pre-namespace records were bare stems. "aim" is a real
+	# built-in -> builtin:aim; "myfort" is not -> user:myfort.
+	var tmp := "user://test_migrate_progress.cfg"
+	var cfg := ConfigFile.new()
+	cfg.set_value("chill", "aim", true)
+	cfg.set_value("chill", "myfort", true)
+	cfg.save(tmp)
+	Progress.use_path(tmp)
+	Progress._migrate_bare_stems()
+	assert_true(Progress.is_cleared("chill", "builtin:aim"), "known built-in claims the record")
+	assert_true(Progress.is_cleared("chill", "user:myfort"), "unknown stem goes to user")
+	assert_false(Progress.is_cleared("chill", "aim"), "bare stem retired")
+	DirAccess.remove_absolute(tmp)
+	Progress.use_path("user://progress.cfg")
+
+
+func test_level_id_namespaces_by_source() -> void:
+	assert_eq(LevelChain.level_id("res://levels/aim.json"), "builtin:aim")
+	assert_eq(LevelChain.level_id("user://levels/aim.json"), "user:aim")
