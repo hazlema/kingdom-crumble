@@ -246,7 +246,10 @@ func test_crate_cannot_land_on_prop_cell() -> void:
 func test_prop_delete_frees_all_cells() -> void:
 	ed.carrying = "tramp-flat"
 	ed._press(Vector2i(4, 0))
-	ed.overlay.selected_cell = Vector2i(5, 0)  # select via the SECOND cell
+	# OLD: ed.overlay.selected_cell = Vector2i(5, 0)  # direct view-write (bypassed selection)
+	# NEW: arrange selection state via the public API — intent is "select via the SECOND cell"
+	#      for a pure-state arrangement (not a click simulation) select_cell is correct.
+	ed.select_cell(Vector2i(5, 0), Vector2i(1, 1), ed.occupancy[Vector2i(5, 0)] as Node2D)
 	ed._delete_selected()
 	assert_eq(ed.current.props.size(), 0)
 	assert_false(ed.occupancy.has(Vector2i(4, 0)))
@@ -295,7 +298,10 @@ func test_delete_prop_with_unknown_registry_id_does_not_crash() -> void:
 	ed._press(Vector2i(3, 2))
 	var body: Node2D = ed.occupancy[Vector2i(3, 2)]
 	body.set_meta("prop_id", "gone:piece")
-	ed.overlay.selected_cell = Vector2i(3, 2)
+	# OLD: ed.overlay.selected_cell = Vector2i(3, 2)  # direct view-write (bypassed selection)
+	# NEW: arrange selection state via the public API — intent is pure state arrangement,
+	#      not a click simulation, so select_cell is correct (not _press).
+	ed.select_cell(Vector2i(3, 2), Vector2i(1, 1), ed.occupancy[Vector2i(3, 2)] as Node2D)
 	ed._delete_selected()
 	# All occupancy cells pointing at the body are erased, even with unknown id.
 	assert_false(ed.occupancy.has(Vector2i(3, 2)), "anchor cell erased after unknown-id delete")

@@ -451,3 +451,40 @@ func test_bake_skips_cap_hit_and_preserves_pending_edits() -> void:
 		"overlay_b1 still has _rot (cap-skipped)"
 	)
 	assert_almost_eq(piece_b1.rotation, PI / 4.0, 0.001, "piece_b1 rotation preserved (guard held)")
+
+
+# ---------------------------------------------------------------------------
+# Task 1 pin: selected_overlay derived property — setter routes through real
+# selection machinery; -1 deselects (inspector hidden, gizmo hidden).
+# ---------------------------------------------------------------------------
+
+func test_selected_overlay_derived_setter_syncs_views() -> void:
+	# Arrange: one overlay piece in scenery mode.
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.TOMATO)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	var gizmo: SceneryGizmo = ed.gizmo()
+
+	# Act: write a valid index via the derived setter.
+	ed.selected_overlay = 0
+
+	# Assert: selection fact matches, getter agrees, inspector visible, gizmo pointed.
+	assert_eq(ed.selection.get("kind"), "overlay", "selection.kind == overlay")
+	assert_eq(ed.selection.get("index"), 0, "selection.index == 0")
+	assert_eq(ed.selected_overlay, 0, "getter returns 0")
+	assert_true(insp.visible, "inspector open after write")
+	assert_not_null(gizmo.piece, "gizmo pointed at a piece")
+
+	# Act: write -1 to deselect.
+	ed.selected_overlay = -1
+
+	# Assert: selection cleared, inspector hidden, gizmo unpointed.
+	assert_eq(ed.selection.get("kind"), "none", "selection.kind == none after -1 write")
+	assert_eq(ed.selected_overlay, -1, "getter returns -1 when no overlay selected")
+	assert_false(insp.visible, "inspector hidden after deselect")
+	assert_null(gizmo.piece, "gizmo piece null after deselect")
