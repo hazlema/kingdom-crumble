@@ -112,7 +112,7 @@ func _process(_delta: float) -> void:
 			_rmb_down = false
 			if not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD:
 				var cell := _mouse_cell()
-				if occupancy.has(cell):
+				if occupancy.has(cell) and occupancy.get(cell) is Crate:
 					overlay.selected_cell = cell
 					overlay.refresh()
 					_show_crate_context(mouse, cell)
@@ -126,7 +126,10 @@ func _press(cell: Vector2i) -> void:
 		return
 	if occupancy.has(cell):
 		overlay.selected_cell = cell
-		_drag_from = cell
+		if occupancy.get(cell) is Crate:
+			_drag_from = cell
+		else:
+			_drag_from = Vector2i(-1, -1)
 	else:
 		overlay.selected_cell = Vector2i(-1, -1)
 		_drag_from = Vector2i(-1, -1)
@@ -148,9 +151,26 @@ func _release(cell: Vector2i, over_ui: bool) -> void:
 
 
 func _try_place(cell: Vector2i) -> void:
-	if EditorGrid.in_zone(cell) and not occupancy.has(cell):
-		_place(carrying, cell)
-		carrying = ""
+	var e := Pieces.entry(carrying)
+	if e.is_empty():
+		return
+	if e["class"] == "crate":
+		if EditorGrid.in_zone(cell) and not occupancy.has(cell):
+			_place(carrying, cell)
+			carrying = ""
+		return
+	var cells: Vector2i = e["cells"]
+	for c in footprint(cell, cells):
+		if not EditorGrid.in_zone(c) or occupancy.has(c):
+			return  # whole footprint or nothing; keep carrying
+	var w := EditorGrid.cell_to_world(cell)
+	var prop := {"id": carrying, "x": w.x, "y": w.y}
+	current.props.append(prop)
+	var body := PropBuilder.spawn_one(self, prop)
+	for c in footprint(cell, cells):
+		occupancy[c] = body
+	carrying = ""
+	overlay.refresh()
 
 
 func _on_save() -> void:
@@ -371,6 +391,28 @@ func _rebuild() -> void:
 	_spawned = LevelBuilder.spawn_crates(self, current, true, Pieces.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
+	var kept_props: Array[Dictionary] = []
+	for p in current.props:
+		var anchor := EditorGrid.world_to_cell(Vector2(p["x"], p["y"]))
+		var e := Pieces.entry(str(p["id"]))
+		if e.is_empty() or e["class"] == "crate":
+			push_warning("editor: dropping unknown prop '%s'" % p.get("id"))
+			continue
+		var blocked := false
+		for c in LevelEditor.footprint(anchor, e["cells"]):
+			if not EditorGrid.in_zone(c) or occupancy.has(c):
+				blocked = true
+				break
+		if blocked:
+			push_warning("editor: dropping overlapping prop '%s'" % p["id"])
+			continue
+		var snapped := EditorGrid.cell_to_world(anchor)
+		var kept := {"id": str(p["id"]), "x": snapped.x, "y": snapped.y}
+		kept_props.append(kept)
+		var body := PropBuilder.spawn_one(self, kept)
+		for c in LevelEditor.footprint(anchor, e["cells"]):
+			occupancy[c] = body
+	current.props = kept_props
 	# One spawn path for scenery: _rebuild_scenery owns z-order, pending
 	# edit-state, hidden-piece ghosting, and rehome (load used to spawn
 	# inline and skipped the ghost pass — hidden pieces were invisible
@@ -426,16 +468,28 @@ func _clamp_camera() -> void:
 func _update_ghost() -> void:
 	var id := carrying
 	if id == "" and _drag_from.x >= 0 and _lmb_down:
-		var held: Crate = occupancy.get(_drag_from)
-		if held != null:
-			id = held.type_id
+		var held: Variant = occupancy.get(_drag_from)
+		if held != null and held is Crate:
+			id = (held as Crate).type_id
 	if id == "":
 		if overlay.ghost_cell != Vector2i(-1, -1):
 			overlay.ghost_cell = Vector2i(-1, -1)
 			overlay.refresh()
 		return
 	var cell := _mouse_cell()
-	var ok := EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
+	var e := Pieces.entry(id)
+	var ghost_cells := Vector2i(1, 1)
+	var ok := false
+	if not e.is_empty() and e["class"] != "crate":
+		ghost_cells = e["cells"] as Vector2i
+		ok = true
+		for c in footprint(cell, ghost_cells):
+			if not EditorGrid.in_zone(c) or occupancy.has(c):
+				ok = false
+				break
+	else:
+		ok = EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
+	overlay.ghost_cells = ghost_cells
 	if cell == overlay.ghost_cell and ok == overlay.ghost_ok:
 		return
 	overlay.ghost_cell = cell
@@ -451,6 +505,8 @@ func _place(id: String, cell: Vector2i) -> void:
 
 
 func _move(from: Vector2i, to: Vector2i) -> void:
+	if not occupancy.get(from) is Crate:
+		return
 	var fw := EditorGrid.cell_to_world(from)
 	var tw := EditorGrid.cell_to_world(to)
 	for c in current.crates:
@@ -466,6 +522,10 @@ func _delete_selected() -> void:
 	var cell: Vector2i = overlay.selected_cell
 	if cell.x < 0:
 		return
+	var node: Variant = occupancy.get(cell)
+	if node != null and not node is Crate:
+		_delete_prop(node)
+		return
 	var w := EditorGrid.cell_to_world(cell)
 	for i in current.crates.size():
 		var c: Dictionary = current.crates[i]
@@ -475,6 +535,22 @@ func _delete_selected() -> void:
 	overlay.selected_cell = Vector2i(-1, -1)
 	_drag_from = Vector2i(-1, -1)
 	_rebuild()
+
+
+func _delete_prop(body: Node2D) -> void:
+	var anchor: Vector2i = body.get_meta("anchor_cell")
+	var pid: String = body.get_meta("prop_id")
+	for i in current.props.size():
+		var pw := EditorGrid.world_to_cell(Vector2(current.props[i]["x"], current.props[i]["y"]))
+		if current.props[i]["id"] == pid and pw == anchor:
+			current.props.remove_at(i)
+			break
+	var cells: Vector2i = Pieces.entry(pid)["cells"]
+	for c in footprint(anchor, cells):
+		occupancy.erase(c)
+	body.queue_free()
+	overlay.selected_cell = Vector2i(-1, -1)
+	overlay.refresh()
 
 
 # Frees and respawns ONLY the _scenery_pieces array — crates untouched.
@@ -841,6 +917,14 @@ func _delete_selected_piece() -> void:
 # ---------------------------------------------------------------------------
 # Right-click Info menu for crates
 # ---------------------------------------------------------------------------
+
+
+static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for i in cells.x:
+		for j in cells.y:
+			out.append(Vector2i(anchor.x + i, anchor.y + j))
+	return out
 
 
 # The trigger event key this cell's crate answers to (matches what save

@@ -6,6 +6,7 @@ extends Node2D
 var ghost_cell := Vector2i(-1, -1)
 var ghost_ok := false
 var ghost_tex: Texture2D
+var ghost_cells := Vector2i(1, 1)
 var selected_cell := Vector2i(-1, -1)
 
 
@@ -25,7 +26,9 @@ func _draw() -> void:
 	if ghost_cell.x >= 0 and ghost_tex:
 		var p := EditorGrid.cell_to_world(ghost_cell)
 		var tint := Color(0.6, 1.0, 0.6, 0.6) if ghost_ok else Color(1.0, 0.4, 0.4, 0.6)
-		draw_texture_rect(ghost_tex, Rect2(p - Vector2(32, 32), Vector2(64, 64)), false, tint)
+		var size := Vector2(ghost_cells.x * 64.0, ghost_cells.y * 63.0)
+		var top_left := Vector2(p.x - 32.0, p.y - 31.5 - (ghost_cells.y - 1) * 63.0)
+		draw_texture_rect(ghost_tex, Rect2(top_left, size), false, tint)
 	if selected_cell.x >= 0:
 		var s := EditorGrid.cell_to_world(selected_cell)
 		draw_rect(
