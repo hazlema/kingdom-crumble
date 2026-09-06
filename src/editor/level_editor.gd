@@ -69,10 +69,16 @@ var _crate_info: AcceptDialog:
 var _info_key: String:
 	get: return _grid_tool._info_key
 
-# Scenery forwarder — tests write/read selected_overlay via the editor.
+# Derived property — no shadow field; the selection dict is the only truth.
+# get: index when an overlay is selected, -1 otherwise.
+# set: routes writes through the real setters so _sync_views fires.
 var selected_overlay: int:
-	get: return _scenery_tool.selected_overlay
-	set(v): _scenery_tool.selected_overlay = v
+	get: return selection["index"] if selection.get("kind") == "overlay" else -1
+	set(v):
+		if v >= 0:
+			select_overlay(v)
+		else:
+			deselect()
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -392,7 +398,6 @@ func _on_load(path: String) -> void:
 	save_path = path
 	menu.suggested_stem = path.get_file().get_basename()
 	selection = {"kind": "none"}
-	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -456,7 +461,6 @@ func _on_upload_text(args: Array) -> void:
 	save_path = ""  # imported document: Save prompts for a name
 	menu.suggested_stem = LevelStore.sanitize_stem(loaded.title)
 	selection = {"kind": "none"}
-	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -468,7 +472,6 @@ func _on_clear() -> void:
 	save_path = ""
 	menu.suggested_stem = ""
 	selection = {"kind": "none"}
-	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -729,10 +732,9 @@ func _on_image_chosen(path: String) -> void:
 	var cam_pos: Vector2 = ($Camera as Camera2D).position
 	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
 	var new_idx := current.overlays.size() - 1
-	_scenery_tool.selected_overlay = new_idx
 	_rebuild_scenery()
 	_refresh_pieces()
-	# After rebuild, route through select_overlay so _sync_views opens the inspector.
+	# Route through select_overlay so _sync_views opens the inspector.
 	select_overlay(new_idx)
 
 
