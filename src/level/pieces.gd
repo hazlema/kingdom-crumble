@@ -8,8 +8,9 @@ extends RefCounted
 # packs; wave 2 will call _scan_dir(<other root>) beside the existing root inside scan().
 
 const ROOT := "res://pieces"
-const TOYBOX_ROOT := "user://toybox"
 const TOYBOX_CFG := "user://toybox.cfg"
+## Test seam: override in tests to redirect toybox scans to a sandbox dir (mirrors clock_month).
+static var toybox_root := "user://toybox"
 const CLASSES := ["crate", "static", "trampoline", "wormhole"]
 const TILTS := [-45, 0, 45]
 const MAX_CELL := 4
@@ -79,7 +80,7 @@ static func _scan_dir(dir_path: String) -> void:
 
 ## Scan user://toybox for pack folders. Reads cfg for enabled state.
 static func _scan_toybox(cfg: ConfigFile) -> void:
-	var toybox_dir := DirAccess.open(TOYBOX_ROOT)
+	var toybox_dir := DirAccess.open(toybox_root)
 	if toybox_dir == null:
 		# user://toybox absent or inaccessible (web, first run) — silent
 		return
@@ -90,7 +91,7 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 		if not _folder_rx.search(folder):
 			push_warning("Pieces toybox: folder '%s' has invalid chars — skipping" % folder)
 			continue
-		var pack_path := "%s/%s" % [TOYBOX_ROOT, folder]
+		var pack_path := "%s/%s" % [toybox_root, folder]
 		var manifest_path := "%s/pack.json" % pack_path
 		if not FileAccess.file_exists(manifest_path):
 			push_warning("Pieces toybox: '%s' has no pack.json — skipping" % folder)
@@ -154,7 +155,7 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 			_save_active_theme("")
 	# If there is still an active theme, load its textures into _theme_textures
 	if _active_theme != "":
-		_load_theme_textures("%s/%s" % [TOYBOX_ROOT, _active_theme])
+		_load_theme_textures("%s/%s" % [toybox_root, _active_theme])
 
 
 ## Scan an object pack folder for PNGs + optional JSON sidecars.

@@ -1,9 +1,10 @@
 extends GutTest
 
 # Task 1: Pack discovery — manifests, namespaced pieces, persistence, seasons.
-# All fake packs are written under user://toybox/ and cleaned up in after_each.
+# All fake packs are written under user://toybox_gut/ (sandbox) and cleaned up in after_each.
+# The REAL user://toybox dir is never touched — Pieces.toybox_root seam redirects all scans.
 
-const TOYBOX_DIR := "user://toybox"
+const TOYBOX_DIR := "user://toybox_gut"
 const TOYBOX_CFG := "user://toybox.cfg"
 
 var _created_folders: Array[String] = []
@@ -11,6 +12,8 @@ var _cfg_before: String = ""
 
 
 func before_each() -> void:
+	# Redirect toybox scans to the sandbox so the real user://toybox dir is never touched.
+	Pieces.toybox_root = TOYBOX_DIR
 	# Capture any existing toybox.cfg so we can restore it after_each.
 	if FileAccess.file_exists(TOYBOX_CFG):
 		_cfg_before = FileAccess.open(TOYBOX_CFG, FileAccess.READ).get_as_text()
@@ -35,6 +38,8 @@ func after_each() -> void:
 		if f:
 			f.store_string(_cfg_before)
 	Pieces.clock_month = -1
+	# Restore toybox_root seam BEFORE scan so the final scan uses the real dir.
+	Pieces.toybox_root = "user://toybox"
 	Pieces.scan()
 
 
