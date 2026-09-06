@@ -10,6 +10,15 @@ var carrying := ""  # asset id while placing, "" = none
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _drag_prop: Node2D = null  # prop being drag-moved, null = none/crate
 var _lmb_down := false
+
+
+# Called by SceneryTool.enter() and .exit() to reset stale input state so
+# a held drag/carry in CRATES mode does not ghost into SCENERY mode and back.
+func reset_input_state() -> void:
+	carrying = ""
+	_drag_from = Vector2i(-1, -1)
+	_drag_prop = null
+	_lmb_down = false
 var _crate_context: PopupMenu = null
 var _crate_info: AcceptDialog = null
 var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
@@ -122,12 +131,10 @@ func _move(from: Vector2i, to: Vector2i) -> void:
 
 
 func _delete_selected() -> void:
-	# Read selection cell from the selection dict (or fall back to overlay for compat).
-	var cell: Vector2i
-	if ed.selection.get("kind") == "cell":
-		cell = ed.selection["cell"]
-	else:
-		cell = ed.overlay.selected_cell
+	# Read selection cell exclusively from ed.selection — the view-as-fact fallback is gone.
+	if ed.selection.get("kind") != "cell":
+		return
+	var cell: Vector2i = ed.selection["cell"]
 	if cell.x < 0:
 		return
 	var node: Variant = ed.occupancy.get(cell)

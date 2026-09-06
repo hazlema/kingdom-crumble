@@ -17,12 +17,9 @@ var _lmb_down := false
 
 
 func enter() -> void:
-	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
-	ed._grid_tool.carrying = ""
-	# Stale-input hygiene: clear drag/lmb state on the grid tool.
-	ed._grid_tool._drag_from = Vector2i(-1, -1)
-	ed._grid_tool._drag_prop = null
-	ed._grid_tool._lmb_down = false
+	# Drop any in-flight carry and clear stale drag/lmb state on the grid tool
+	# so a held crate doesn't ghost in scenery mode.
+	ed._grid_tool.reset_input_state()
 	_lmb_down = false
 	ed._rmb_down = false  # a held right-click must not menu on re-entry
 	ed.deselect()
@@ -36,7 +33,7 @@ func enter() -> void:
 
 func exit() -> void:
 	_lmb_down = false
-	ed._grid_tool._lmb_down = false
+	ed._grid_tool.reset_input_state()
 	ed._rmb_down = false  # a held right-click must not menu on mode return
 	ed.deselect()
 	ed.get_node("%SceneryPanel").visible = false
