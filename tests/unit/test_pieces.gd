@@ -502,6 +502,7 @@ func test_exit_trajectory_rotated_by_exit_sprite() -> void:
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
 	stone.gravity_scale = 0.0
 	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE  # test control: isolate from air drag
+	stone.linear_damp = 0.0
 	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
 	stone.linear_velocity = Vector2(600, 0)
 	host.add_child(stone)

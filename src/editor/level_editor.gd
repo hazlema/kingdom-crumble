@@ -399,6 +399,7 @@ func _exit_scenery() -> void:
 
 
 func _rebuild() -> void:
+	%PieceInspector.close()
 	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()

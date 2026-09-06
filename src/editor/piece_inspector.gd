@@ -122,6 +122,8 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_reduced = reduced
 	var full := not reduced
 
+	_updating = true
+
 	# Apply mode — hide/show advanced controls and rebuild verb list.
 	# Nodes are direct children of Box (VBoxContainer), addressed by stored refs.
 	_pivot_label.visible = full
@@ -134,8 +136,6 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_tilt_slider.visible = full
 	_amplitude_slider.max_value = 60.0 if full else 12.0
 	_rebuild_behavior_options(full)
-
-	_updating = true
 
 	# --- Pre-populate behavior ---
 	var b_name: String = overlay.get("behavior", "NONE")
@@ -185,6 +185,9 @@ func close() -> void:
 func set_behavior_by_name(verb_name: String) -> void:
 	if _overlay.is_empty():
 		return
+	var b_idx := BEHAVIOR_NAMES.find(verb_name)
+	if _reduced and b_idx >= 4:
+		return
 	_overlay["behavior"] = verb_name
 	# Apply to the live piece.
 	# NOTE: the editor's _rebuild_scenery will re-zero behavior to NONE on
@@ -199,9 +202,6 @@ func set_behavior_by_name(verb_name: String) -> void:
 			_piece.rehome()
 			_piece.behavior = idx as NarfDecor.Behavior
 	# Sync the UI without triggering the signal callback.
-	var b_idx := BEHAVIOR_NAMES.find(verb_name)
-	if _reduced and b_idx >= 4:
-		return
 	if b_idx >= 0 and _behavior_option.selected != b_idx:
 		_updating = true
 		_behavior_option.selected = b_idx
