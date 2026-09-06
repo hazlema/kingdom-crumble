@@ -50,3 +50,16 @@ func test_scan_finds_obstacles_with_metadata() -> void:
 func test_unknown_id_is_empty_and_null() -> void:
 	assert_true(Pieces.entry("no-such-piece").is_empty())
 	assert_null(Pieces.texture_for("no-such-piece"))
+
+
+func test_all_crate_ids_resolve_through_pieces() -> void:
+	# Migration pin: every shipped crate face must be served by Pieces.
+	for id in ["crate-wood", "crate-blue", "crate-gold", "crate-green", "crate-ghost", "skull"]:
+		var e := Pieces.entry(id)
+		assert_false(e.is_empty(), "%s registered" % id)
+		assert_eq(e["class"], "crate", "%s is a crate" % id)
+		assert_not_null(e["texture"], "%s has art" % id)
+
+
+func test_crate_tooltips_survived_txt_to_sidecar() -> void:
+	assert_ne(Pieces.entry("crate-gold")["tip"], "crate-gold", "gold kept its .txt tooltip text")

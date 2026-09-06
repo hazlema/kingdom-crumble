@@ -11,7 +11,7 @@ func _float_one(arena: Node2D) -> Crate:
 	var layout := LevelLayout.new()
 	var p := EditorGrid.cell_to_world(Vector2i(10, 4))
 	layout.crates.append({"x": p.x, "y": p.y, "type": "crate-wood"})
-	return LevelBuilder.spawn_crates(arena, layout, false, EditorAssets.texture_for)[0]
+	return LevelBuilder.spawn_crates(arena, layout, false, Pieces.texture_for)[0]
 
 
 func after_each() -> void:

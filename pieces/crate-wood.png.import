@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://4e0wsvjqdnj0"
-path="res://.godot/imported/skull.png-e7832917a6563c945896d72cc680a5c8.ctex"
+uid="uid://cifkngq4ncvpa"
+path="res://.godot/imported/crate-wood.png-b6da5dbddcbf17d9aadd30818875134b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/editor/crates/skull.png"
-dest_files=["res://.godot/imported/skull.png-e7832917a6563c945896d72cc680a5c8.ctex"]
+source_file="res://pieces/crate-wood.png"
+dest_files=["res://.godot/imported/crate-wood.png-b6da5dbddcbf17d9aadd30818875134b.ctex"]
 
 [params]
 

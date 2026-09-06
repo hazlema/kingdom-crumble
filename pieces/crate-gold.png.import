@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cbx4vbii4s7g2"
-path="res://.godot/imported/crate-blue.png-f2669b91d12fd90ef9457c6a7bab2966.ctex"
+uid="uid://c6wb3lglyuafc"
+path="res://.godot/imported/crate-gold.png-d0e9c1157015aa59ff4ca2895fbbc5aa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/editor/crates/crate-blue.png"
-dest_files=["res://.godot/imported/crate-blue.png-f2669b91d12fd90ef9457c6a7bab2966.ctex"]
+source_file="res://pieces/crate-gold.png"
+dest_files=["res://.godot/imported/crate-gold.png-d0e9c1157015aa59ff4ca2895fbbc5aa.ctex"]
 
 [params]
 

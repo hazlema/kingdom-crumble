@@ -57,7 +57,7 @@ func test_fire_icon_tracks_queue() -> void:
 	h.set_buffs([&"exploding"] as Array[StringName])
 	assert_ne(fire.icon, plain, "exploding queue changes the FIRE icon")
 	h.set_buffs([&"exploding", &"super_bounce"] as Array[StringName])
-	assert_eq(fire.icon, EditorAssets.texture_for("crate-gold"), "2+ types = gold")
+	assert_eq(fire.icon, Pieces.texture_for("crate-gold"), "2+ types = gold")
 	h.set_buffs([] as Array[StringName])
 	assert_eq(fire.icon, plain, "empty queue restores the stone")
 

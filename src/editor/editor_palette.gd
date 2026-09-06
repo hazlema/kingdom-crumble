@@ -8,12 +8,12 @@ var _drag_off := Vector2.ZERO
 
 
 func _ready() -> void:
-	for entry in EditorAssets.crates():
+	for entry in Pieces.by_class("crate"):
 		var b := Button.new()
 		b.icon = entry["texture"]
 		b.expand_icon = true
 		b.custom_minimum_size = Vector2(72, 72)
-		b.tooltip_text = entry["description"]
+		b.tooltip_text = entry["tip"]
 		b.focus_mode = Control.FOCUS_NONE
 		var id: String = entry["id"]
 		b.button_down.connect(func() -> void: asset_picked.emit(id))

@@ -25,7 +25,7 @@ func _stack(arena: Node2D, col: int, rows: int) -> Array[Crate]:
 	for row in rows:
 		var p := EditorGrid.cell_to_world(Vector2i(col, row))
 		layout.crates.append({"x": p.x, "y": p.y, "type": "crate-wood"})
-	return LevelBuilder.spawn_crates(arena, layout, false, EditorAssets.texture_for)
+	return LevelBuilder.spawn_crates(arena, layout, false, Pieces.texture_for)
 
 
 func test_super_bounce_stone_bounces_off_ground() -> void:

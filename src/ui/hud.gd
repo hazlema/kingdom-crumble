@@ -18,7 +18,7 @@ func _ready() -> void:
 	%FireButton.button_down.connect(func() -> void: Input.action_press("fire"))
 	%FireButton.button_up.connect(func() -> void: Input.action_release("fire"))
 	%FireButton.icon = FIRE_STONE
-	%StatCard.get_node("%CrateIcon").texture = EditorAssets.texture_for("crate-wood")
+	%StatCard.get_node("%CrateIcon").texture = Pieces.texture_for("crate-wood")
 	# Touch angle controls (audit: touch players were stuck at 45
 	# degrees). Hold-to-adjust via the same Input bridge as FIRE; the
 	# readout keeps aiming predictable. Desktop keeps its arrow keys.
@@ -103,13 +103,13 @@ func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
 	for b in buffs:
 		kinds[b] = true
 	if kinds.size() >= 2:
-		return EditorAssets.texture_for("crate-gold")
+		return Pieces.texture_for("crate-gold")
 	if kinds.has(&"exploding"):
-		return EditorAssets.texture_for("skull")
+		return Pieces.texture_for("skull")
 	if kinds.has(&"super_bounce"):
-		return EditorAssets.texture_for("crate-green")
+		return Pieces.texture_for("crate-green")
 	if kinds.has(&"multishot"):
-		return EditorAssets.texture_for("crate-blue")
+		return Pieces.texture_for("crate-blue")
 	return FIRE_STONE
 
 

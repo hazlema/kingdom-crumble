@@ -51,7 +51,7 @@ const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
 
 
 func _ready() -> void:
-	EditorAssets.scan()
+	Pieces.scan()
 	palette.asset_picked.connect(
 		func(id: String) -> void:
 			carrying = id
@@ -368,7 +368,7 @@ func _rebuild() -> void:
 		seen_cells.append(cell)
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
-	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
+	_spawned = LevelBuilder.spawn_crates(self, current, true, Pieces.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
 	# One spawn path for scenery: _rebuild_scenery owns z-order, pending
@@ -439,7 +439,7 @@ func _update_ghost() -> void:
 	if cell == overlay.ghost_cell and ok == overlay.ghost_ok:
 		return
 	overlay.ghost_cell = cell
-	overlay.ghost_tex = EditorAssets.texture_for(id)
+	overlay.ghost_tex = Pieces.texture_for(id)
 	overlay.ghost_ok = ok
 	overlay.refresh()
 

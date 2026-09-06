@@ -234,7 +234,7 @@ func _spawn_crates() -> void:
 
 
 func _crate_texture(id: String) -> Texture2D:
-	return EditorAssets.texture_for(id)
+	return Pieces.texture_for(id)
 
 
 func _on_fired(velocity: Vector2) -> void:
