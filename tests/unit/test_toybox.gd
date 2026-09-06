@@ -167,6 +167,82 @@ func test_web_absent_toybox_is_silent() -> void:
 		assert_ne(p.get("folder", ""), "", "any pack has a non-empty folder")
 
 
+# ---------------------------------------------------------------------------
+# Task 2 Tests: Theme resolution
+# ---------------------------------------------------------------------------
+
+func test_theme_reskins_base_id() -> void:
+	# Build a correctly-sized theme PNG for "crate-wood" (64x64, distinctive red pixel at 0,0)
+	# First scan to get the baked texture's size
+	Pieces.scan()
+	var baked_tex := Pieces.texture_for("crate-wood")
+	assert_not_null(baked_tex, "baked crate-wood must exist for this test")
+	var baked_w: int = baked_tex.get_width()
+	var baked_h: int = baked_tex.get_height()
+	# Make a theme image matching baked dimensions but with a distinctive pixel
+	var theme_img := Image.create(baked_w, baked_h, false, Image.FORMAT_RGBA8)
+	theme_img.fill(Color(0.5, 0.1, 0.9, 1.0))  # distinctive purple — unlikely to match baked
+	_make_pack("wintertest", {"title": "Winter Test", "kind": "theme", "months": []}, {"crate-wood.png": theme_img})
+	# Scan so the pack appears in _packs, then set active
+	Pieces.scan()
+	Pieces.set_active_theme("wintertest")
+	# texture_for should now return the themed texture
+	var themed_tex := Pieces.texture_for("crate-wood")
+	assert_not_null(themed_tex, "themed texture non-null")
+	assert_ne(themed_tex, baked_tex, "themed texture differs from baked")
+	# entry()'s texture should match themed too
+	var e := Pieces.entry("crate-wood")
+	assert_eq(e.get("texture"), themed_tex, "entry() texture matches themed texture")
+
+
+func test_theme_dimension_mismatch_falls_back() -> void:
+	# A 32x32 PNG when baked is a different size → dimension mismatch → warn, fall back to baked  # warns
+	Pieces.scan()
+	var baked_tex := Pieces.texture_for("crate-wood")
+	assert_not_null(baked_tex, "baked crate-wood must exist for this test")
+	# Build a mismatched theme: use 32x32 (baked is unlikely to be 32x32 — verify)
+	var baked_w: int = baked_tex.get_width()
+	var baked_h: int = baked_tex.get_height()
+	# Force a size that differs
+	var bad_w := 32 if baked_w != 32 else 16
+	var bad_h := 32 if baked_h != 32 else 16
+	var mismatch_img := Image.create(bad_w, bad_h, false, Image.FORMAT_RGBA8)
+	mismatch_img.fill(Color.RED)
+	_make_pack("badtheme", {"title": "Bad Theme", "kind": "theme", "months": []}, {"crate-wood.png": mismatch_img})
+	# Scan so the pack appears in _packs, then set active
+	Pieces.scan()
+	Pieces.set_active_theme("badtheme")
+	var tex := Pieces.texture_for("crate-wood")
+	assert_eq(tex, baked_tex, "dimension mismatch falls back to baked texture")
+
+
+func test_out_of_season_theme_reverts_at_scan() -> void:
+	# months [11], clock_month = 3 → out of season. Write active directly to cfg to bypass setter guard.  # warns
+	_make_pack("autumntest", {"title": "Autumn Test", "kind": "theme", "months": [11]}, {})
+	# Write cfg directly to bypass set_active_theme's in-season guard
+	var cfg := ConfigFile.new()
+	cfg.load("user://toybox.cfg")
+	cfg.set_value("theme", "active", "autumntest")
+	cfg.save("user://toybox.cfg")
+	Pieces.clock_month = 3
+	Pieces.scan()
+	assert_eq(Pieces.active_theme(), "", "out-of-season theme reverts to Default at scan")
+
+
+func test_default_theme_is_bakeware() -> void:
+	# With "" active theme, texture_for returns the identical baked texture object
+	Pieces.scan()
+	# Ensure no theme is active
+	Pieces.set_active_theme("")
+	var tex_default := Pieces.texture_for("crate-wood")
+	var e := Pieces.entry("crate-wood")
+	var tex_entry: Texture2D = e.get("texture")
+	var baked_tex: Texture2D = load("res://pieces/crate-wood.png")
+	assert_not_null(tex_default, "texture_for returns non-null for default theme")
+	assert_eq(tex_default, baked_tex, "default theme: texture_for returns baked texture")
+	assert_eq(tex_entry, baked_tex, "default theme: entry() texture is baked texture")
+
+
 func test_hostile_ihdr_blocked_before_decode() -> void:
 	# PIN TEST: Write a file with valid 8-byte PNG magic + hostile IHDR (20000x20000)
 	# → assert piece absent, warning fired, no giant allocation.

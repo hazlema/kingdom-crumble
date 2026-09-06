@@ -21,6 +21,10 @@ const FOLDER_PATTERN := "^[a-z0-9_-]{1,32}$"
 static var _cache := {}  # id -> entry Dictionary
 static var _packs: Array[Dictionary] = []  # discovered pack metadata
 static var _active_theme: String = ""
+## Theme textures: base id → Texture2D, populated at scan from the active in-season theme.
+## Read-overlay design: cache entries are never mutated; texture_for/entry overlay at read time.
+## Cleared at the start of every scan to prevent stale textures surviving deactivation.
+static var _theme_textures := {}  # base id -> Texture2D
 ## Test seam: -1 = system clock
 static var clock_month: int = -1
 static var _folder_rx := RegEx.create_from_string(FOLDER_PATTERN)
@@ -29,6 +33,7 @@ static var _folder_rx := RegEx.create_from_string(FOLDER_PATTERN)
 static func scan() -> void:
 	_cache = {}
 	_packs = []
+	_theme_textures = {}  # clear stale theme overrides; repopulated by _scan_toybox
 	# Read active theme from cfg before scanning packs
 	var cfg := _toybox_cfg()
 	_active_theme = cfg.get_value("theme", "active", "") as String
@@ -130,8 +135,8 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 		# Object packs: contribute pieces if enabled and in season
 		if kind == "objects" and enabled and pack_in_season:
 			_scan_object_pack(pack_path, folder)
-		# Theme packs: no pieces contributed here (Task 2)
-	# After all packs are scanned: check active theme validity
+		# Theme packs: textures loaded in the post-scan phase below
+	# After all packs are scanned: check active theme validity, then load theme textures
 	if _active_theme != "":
 		var theme_ok := false
 		for p in _packs:
@@ -147,6 +152,9 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 			push_warning("Pieces toybox: active theme '%s' not found — reverting to Default" % _active_theme)
 			_active_theme = ""
 			_save_active_theme("")
+	# If there is still an active theme, load its textures into _theme_textures
+	if _active_theme != "":
+		_load_theme_textures("%s/%s" % [TOYBOX_ROOT, _active_theme])
 
 
 ## Scan an object pack folder for PNGs + optional JSON sidecars.
@@ -183,6 +191,41 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		meta["pack"] = folder
 		meta["texture"] = tex
 		_cache[namespaced_id] = meta
+
+
+## Load all PNGs from the active theme folder into _theme_textures.
+## Only PNGs named for existing BASE ids (no ":" in id) are loaded.
+## Dimension mismatch vs the baked texture → named warning + id skipped.
+static func _load_theme_textures(theme_path: String) -> void:
+	var dir := DirAccess.open(theme_path)
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if f.get_extension() != "png":
+			continue
+		var base_id := f.get_basename()
+		# Must match a BASE id (no colon — namespaced ids are object-pack territory)
+		if ":" in base_id:
+			push_warning("Pieces toybox: theme PNG '%s' looks namespaced — only base ids allowed, skipping" % f)
+			continue
+		var baked_entry: Dictionary = _cache.get(base_id, {})
+		if baked_entry.is_empty():
+			push_warning("Pieces toybox: theme PNG '%s' has no matching base id '%s' — skipping" % [f, base_id])
+			continue
+		var baked_tex: Texture2D = baked_entry.get("texture")
+		var tex := _load_user_texture("%s/%s" % [theme_path, f])
+		if tex == null:
+			continue  # _load_user_texture already warned
+		# Dimension guard: theme PNG must exactly match the baked texture's size
+		if baked_tex != null and (tex.get_width() != baked_tex.get_width() or tex.get_height() != baked_tex.get_height()):
+			push_warning(
+				"Pieces toybox: theme PNG '%s' size %dx%d doesn't match baked %dx%d for '%s' — skipping" % [
+					f, tex.get_width(), tex.get_height(),
+					baked_tex.get_width(), baked_tex.get_height(), base_id
+				]
+			)
+			continue
+		_theme_textures[base_id] = tex
 
 
 ## Load a PNG from a user:// path safely.
@@ -285,10 +328,19 @@ static func by_class(cls: String) -> Array[Dictionary]:
 static func entry(id: String) -> Dictionary:
 	if _cache.is_empty():
 		scan()
-	return _cache.get(id, {})
+	var e: Dictionary = _cache.get(id, {})
+	# Overlay theme texture if present (read-time overlay — never mutates the cache)
+	if not e.is_empty() and _theme_textures.has(id):
+		var overlay: Dictionary = e.duplicate()
+		overlay["texture"] = _theme_textures[id]
+		return overlay
+	return e
 
 
 static func texture_for(id: String) -> Texture2D:
+	# Check theme textures first (single authority)
+	if _theme_textures.has(id):
+		return _theme_textures[id]
 	var e := entry(id)
 	return e.get("texture") if not e.is_empty() else null
 
