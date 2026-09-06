@@ -96,3 +96,9 @@ preserve velocity exactly; pairing by id ("colors"), two colors in V1.
 Crate transit (future sidecar flag), portal sounds/particles beyond
 idle spin, exit-aiming "cannon" variants, GADGETS palette section,
 editor pair-validation hints.
+
+- **Camera handling on warp (owner, 2026-09-06):** the flight camera
+  follows the stone, so a warp to an off-screen exit is a hard cut
+  today. Future: a fast pan (or a brief zoom-out-and-in) to the exit
+  portal so the player keeps spatial context. Not critical for V1 —
+  evaluate the cut in playtest first.
