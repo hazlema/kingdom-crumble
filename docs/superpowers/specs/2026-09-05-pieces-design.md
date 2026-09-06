@@ -59,12 +59,21 @@ texture/metadata authority for everything placeable:
 
 - **No sidecar → plain 1×1 crate.** Every existing palette PNG stays
   valid with zero edits.
+- **(2026-09-06 amendment)** The schema has grown since this table was
+  written — `powerup` (curated set, crates), `animatable` (strict
+  bool), and the `wormhole` class shipped in wave 1.5. **`parts.md` at
+  the repo root is the canonical, maintained schema reference**; this
+  table is historical.
 - Sidecar hygiene (asset metadata, not level data, so the object —
   not the game — is the blast radius): unknown `class` or malformed
   JSON → named `push_warning`, object skipped; out-of-range numbers →
   clamped; unknown keys → ignored (forward compatibility).
 - Pack PNGs pass the existing decode gates (PNG magic bytes, dimension
   caps from `decode_png_b64`'s budget) before becoming textures.
+  **(2026-09-06 amendment)** user:// pack files are NOT Godot-imported
+  resources — they load at runtime via `Image.load` +
+  `ImageTexture.create_from_image` (behind the gates), not `load()`.
+  The wave-1 registry's res:// path keeps using `load()`.
 - Single image only. No spritesheets in this system (user authors
   should never need our sheet layout); if an object ever needs
   animation frames, the sidecar may grow an optional `frames` key —
@@ -116,6 +125,14 @@ ship dormant — code in the update, content in a later pack.
   crates. Props are geometry.
 
 ## 5. Packs (wave 2)
+
+**(2026-09-06 status)** Wave-1.5 shipped the enablers this section
+assumed: pack crates can carry `powerup` (curated, safe), pack
+wormholes pair by namespaced id automatically (two placements of
+`thanksgiving:turkey-portal` link like any pair), the whoosh auto-tints
+from pack art, and the editor's class-fed palette/registries absorb
+pack pieces with zero UI work. The editor split + selection authority
+mean pack pieces inherit all editor behavior for free.
 
 A pack = `user://toybox/<folder>/` containing `pack.json` +
 content. Two kinds, declared by manifest:
