@@ -197,3 +197,19 @@ func test_hidden_overlay_ghosts_in_editor_but_stays_hidden_in_data() -> void:
 	assert_true(piece.visible, "editor ghosts the hidden piece")
 	assert_almost_eq(piece.modulate.a, 0.4, 0.001, "ghost alpha")
 	assert_eq(ed.current.overlays[0].get("hidden"), true, "data untouched — save still writes hidden")
+
+
+func test_load_path_ghosts_hidden_overlays_immediately() -> void:
+	# Regression: _rebuild (the load/clear path) used to spawn scenery
+	# inline, skipping the ghost pass — hidden pieces stayed invisible
+	# until the first EDIT SCENERY visit.
+	var img := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLUE)
+	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	ed.current.images[key] = b64
+	ed.current.overlays.append({"image": key, "x": 100, "y": 100, "name": "sign2", "hidden": true})
+	ed._rebuild()
+	var piece: NarfDecor = ed._scenery_pieces[0]
+	assert_true(piece.visible, "ghost visible straight from load")
+	assert_almost_eq(piece.modulate.a, 0.4, 0.001, "ghost alpha on the load path")

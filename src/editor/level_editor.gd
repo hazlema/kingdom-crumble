@@ -368,13 +368,14 @@ func _rebuild() -> void:
 		seen_cells.append(cell)
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
-	_scenery_pieces = SceneryBuilder.spawn(self, current)
-	# Behind the whole stage in the editor preview too (below trebuchet).
-	for _zi in _scenery_pieces.size():
-		move_child(_scenery_pieces[_zi], 1 + _zi)
 	_spawned = LevelBuilder.spawn_crates(self, current, true, EditorAssets.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
+	# One spawn path for scenery: _rebuild_scenery owns z-order, pending
+	# edit-state, hidden-piece ghosting, and rehome (load used to spawn
+	# inline and skipped the ghost pass — hidden pieces were invisible
+	# until the first EDIT SCENERY visit).
+	_rebuild_scenery()
 	overlay.refresh()
 
 
