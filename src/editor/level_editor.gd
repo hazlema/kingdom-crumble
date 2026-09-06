@@ -334,9 +334,9 @@ func _bake_and_capture() -> void:
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
-	_sync_views()
+	_gizmo.visible = false  # clean capture frame (not an authority write — restored below)
 	await _capture_thumb()
-	_sync_views()
+	_sync_views()  # authority restores the correct state
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
