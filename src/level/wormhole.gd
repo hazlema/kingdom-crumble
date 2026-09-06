@@ -6,17 +6,26 @@ extends Area2D
 # placed exactly twice; odd counts stay inert (partner == null).
 # Arrival immunity: a teleported-in stone is ignored by this portal
 # until it fully leaves once — no timers, framerate-proof.
+#
+# Implementation note: body_entered fires inside PhysicsServer2D::flush_queries(),
+# after the physics server has run body integration for this frame. Any position
+# change via Node2D.global_position does NOT reliably update the physics server
+# for the current step. The fix: call PhysicsServer2D.body_set_state() directly
+# on the RigidBody's RID, which atomically sets the body transform in the server,
+# combined with the deferred node sync via global_position for rendering.
 
 const SPIN_RAD_PER_SEC := 0.6
 
 var partner: Wormhole = null
 var _arrivals := {}  # body -> true while it must exit before re-trigger
 var _sprite: Sprite2D = null
+var _pending_teleport: Node = null  # body queued for next-frame teleport
 
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+	set_physics_process(false)  # only enable when there's work to do
 	for c in get_children():
 		if c is Sprite2D:
 			_sprite = c
@@ -28,12 +37,23 @@ func _process(delta: float) -> void:
 		_sprite.rotation += SPIN_RAD_PER_SEC * delta
 
 
+func _physics_process(_delta: float) -> void:
+	if _pending_teleport == null:
+		set_physics_process(false)
+		return
+	var body := _pending_teleport
+	_pending_teleport = null
+	set_physics_process(false)
+	_teleport(body)
+
+
 func _on_body_entered(body: Node) -> void:
 	if partner == null or not body is Stone:
 		return
 	if _arrivals.has(body):
 		return
 	partner.expect_arrival(body)
+	_pending_teleport = body
 	_teleport.call_deferred(body)
 
 
@@ -42,6 +62,20 @@ func _on_body_entered(body: Node) -> void:
 func _teleport(body: Node) -> void:
 	if not is_instance_valid(body) or partner == null or not is_instance_valid(partner):
 		return
+	# PhysicsServer2D.body_set_state is used directly here rather than
+	# Node2D.global_position = ... because body_entered (and its call_deferred
+	# chain) fires after the physics integration step has completed. The Node2D
+	# property setter routes through body_set_state internally, but the physics
+	# server may discard the new transform when it writes the just-integrated
+	# position back to the node. Calling body_set_state directly on the RID
+	# updates the server's canonical body record, which is then picked up in
+	# the next integration step.
+	var rb := body as RigidBody2D
+	PhysicsServer2D.body_set_state(
+		rb.get_rid(),
+		PhysicsServer2D.BODY_STATE_TRANSFORM,
+		Transform2D(rb.global_rotation, partner.global_position)
+	)
 	(body as Node2D).global_position = partner.global_position
 	body.reset_physics_interpolation()
 

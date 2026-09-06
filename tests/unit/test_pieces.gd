@@ -278,3 +278,70 @@ func test_teleport_guards_freed_partner() -> void:
 
 	# Assert stone did NOT teleport (x should stay near original, not jump to b's x=500).
 	assert_lt(abs(stone.global_position.x - stone_x_before), 50.0, "stone x near original after freed-partner teleport")
+
+
+func _warp_pair(host: Node2D) -> Array:
+	var l := LevelLayout.new()
+	l.title = "e2e"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	var b := EditorGrid.cell_to_world(Vector2i(24, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	l.props.append({"id": "wormhole-blue", "x": b.x, "y": b.y})
+	return [PropBuilder.spawn_props(host, l), a, b]
+
+
+func test_stone_warps_with_velocity_preserved() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var a: Vector2 = parts[1]
+	var b: Vector2 = parts[2]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.global_position = a + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(40)
+	assert_gt(stone.global_position.x, b.x, "stone crossed the map via the warp")
+	assert_almost_eq(stone.linear_velocity.x, 600.0, 30.0, "speed preserved (minor damp tolerated)")
+	assert_almost_eq(stone.linear_velocity.y, 0.0, 5.0, "direction preserved")
+
+
+func test_arrival_immunity_blocks_instant_return() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var exit_hole: Wormhole = spawned[1]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	host.add_child(stone)
+	autofree(stone)
+	exit_hole.expect_arrival(stone)
+	stone.global_position = exit_hole.global_position
+	stone.linear_velocity = Vector2.ZERO
+	await wait_physics_frames(20)
+	assert_almost_eq(
+		stone.global_position.x, exit_hole.global_position.x, 2.0,
+		"arrived stone parks in the exit portal — no ping-pong back"
+	)
+
+
+func test_crates_do_not_warp() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var a: Vector2 = parts[1]
+	var crate := RigidBody2D.new()  # any non-Stone body
+	var cshape := CollisionShape2D.new()
+	var crect := RectangleShape2D.new()
+	crect.size = Vector2(40, 40)
+	cshape.shape = crect
+	crate.add_child(cshape)
+	crate.gravity_scale = 0.0
+	crate.global_position = a
+	host.add_child(crate)
+	autofree(crate)
+	await wait_physics_frames(15)
+	assert_almost_eq(crate.global_position.x, a.x, 5.0, "non-stones stay put")
