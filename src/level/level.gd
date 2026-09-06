@@ -82,6 +82,7 @@ func _ready() -> void:
 	for i in _pieces.size():
 		move_child(_pieces[i], 1 + i)
 	_spawn_crates()
+	PropBuilder.spawn_props(self, layout)
 	if layout.title != "":
 		hud.toast(layout.title)
 	if layout.intro != "":

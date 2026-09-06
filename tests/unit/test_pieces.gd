@@ -109,3 +109,32 @@ func test_level_without_props_still_parses() -> void:
 	var legacy := LevelJson.parse('{"format":1,"title":"legacy","background":"meadow","crates":[]}')
 	assert_not_null(legacy, "doc with no props key parses")
 	assert_eq(legacy.props.size(), 0)
+
+
+func test_spawn_props_builds_static_geometry() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "geo"
+	var anchor := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "block-stone", "x": anchor.x, "y": anchor.y})
+	l.props.append({"id": "tramp-left", "x": anchor.x + 128.0, "y": anchor.y})
+	var spawned := PropBuilder.spawn_props(host, l)
+	assert_eq(spawned.size(), 2)
+	assert_true(spawned[0] is StaticBody2D)
+	assert_true(spawned[0].is_in_group("props"))
+	assert_false(spawned[0].is_in_group("crates"), "props are unscored")
+	assert_eq(spawned[1].get_meta("prop_id"), "tramp-left")
+	assert_eq(spawned[1].physics_material_override.bounce, 1.5, "sidecar bounce applied")
+	# 2x1 footprint: body centered half a cell right of the anchor
+	assert_almost_eq(spawned[1].position.x, anchor.x + 128.0 + 32.0, 0.01)
+
+
+func test_spawn_props_skips_unknown_id_with_warning() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "orphan"
+	l.props.append({"id": "thanksgiving:turkey", "x": 700.0, "y": 569.0})
+	var spawned := PropBuilder.spawn_props(host, l)  # warns (missing pack) — GUT-safe
+	assert_eq(spawned.size(), 0, "unknown id warn-skips, never crashes")
