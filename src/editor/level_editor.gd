@@ -271,9 +271,7 @@ func _process(_delta: float) -> void:
 	# Geometry, not gui_get_hovered_control(): during a drag that began
 	# on a palette Button the Control keeps mouse capture, so the hover
 	# API still reports UI at release and would veto the drop.
-	# over_ui_at() folds in dialogs, panels, and registered popups;
-	# SceneryTool recomputes the same answer internally (its process
-	# ignores the argument — test contract).
+	# over_ui_at() folds in dialogs, panels, and registered popups.
 	_tool.process(mouse, over_ui_at(mouse))
 
 
