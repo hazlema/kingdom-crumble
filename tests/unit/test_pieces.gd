@@ -1,0 +1,45 @@
+extends GutTest
+
+# Wave-1 Pieces registry: PNG + JSON sidecar, clamped, warn-skip on junk.
+
+
+func before_all() -> void:
+	Pieces.scan()
+
+
+func test_parse_sidecar_defaults_to_plain_crate() -> void:
+	var meta := Pieces.parse_sidecar("crate-wood", {})
+	assert_eq(meta["class"], "crate")
+	assert_eq(meta["cells"], Vector2i(1, 1))
+	assert_eq(meta["tip"], "crate-wood")
+
+
+func test_parse_sidecar_clamps_and_curates() -> void:
+	var meta := Pieces.parse_sidecar(
+		"t", {"class": "trampoline", "cells": [9, 0], "tilt": 30, "bounce": 99.0, "tip": "x".repeat(500)}
+	)
+	assert_eq(meta["cells"], Vector2i(4, 1), "cells clamped 1-4")
+	assert_eq(meta["tilt"], 0, "tilt outside curated set falls back to 0")
+	assert_eq(meta["bounce"], 2.0, "bounce clamped to 2.0")
+	assert_eq(meta["tip"].length(), 200, "tip capped")
+
+
+func test_parse_sidecar_rejects_unknown_class() -> void:
+	var meta := Pieces.parse_sidecar("t", {"class": "cannon"})
+	assert_true(meta.is_empty(), "unknown class = skip signal (empty dict)")
+
+
+func test_scan_finds_obstacles_with_metadata() -> void:
+	var tramp := Pieces.entry("tramp-left")
+	assert_eq(tramp["class"], "trampoline")
+	assert_eq(tramp["cells"], Vector2i(2, 1))
+	assert_eq(tramp["tilt"], -45)
+	assert_not_null(tramp["texture"])
+	var block := Pieces.entry("block-stone")
+	assert_eq(block["class"], "static")
+	assert_eq(block["cells"], Vector2i(1, 1))
+
+
+func test_unknown_id_is_empty_and_null() -> void:
+	assert_true(Pieces.entry("no-such-piece").is_empty())
+	assert_null(Pieces.texture_for("no-such-piece"))
