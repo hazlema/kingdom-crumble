@@ -182,11 +182,18 @@ func _pick_piece(world_pos: Vector2) -> int:
 	return _scenery_tool._pick_piece(world_pos)
 
 
-func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
-	for p in _scenery_pieces:
+# Pure iteration logic — shared by editor and tool to avoid duplication.
+# Arguments: pieces array and index to search for.
+static func _piece_for_overlay_from_array(pieces: Array, overlay_idx: int) -> NarfDecor:
+	for p in pieces:
 		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
 			return p
 	return null
+
+
+# Instance wrapper for test contract — tests call ed._piece_for_overlay(idx).
+func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
+	return LevelEditor._piece_for_overlay_from_array(_scenery_pieces, overlay_idx)
 
 
 func _on_save() -> void:
@@ -362,7 +369,6 @@ func _exit_scenery() -> void:
 		switch_tool(_grid_tool)
 	else:
 		_scenery_tool.exit()
-		_tool = _grid_tool
 
 
 func _rebuild() -> void:
@@ -610,7 +616,7 @@ func _bake_scenery() -> int:
 	# Reset the live piece transform so the visual matches the baked image.
 	# Only reset pieces whose bake succeeded (no pending underscore edit keys).
 	for i in current.overlays.size():
-		var live_piece := _piece_for_overlay(i)
+		var live_piece := LevelEditor._piece_for_overlay_from_array(_scenery_pieces, i)
 		if live_piece != null:
 			# Guard: only reset if the bake consumed the edit keys.
 			var still_pending := false

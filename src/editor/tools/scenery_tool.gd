@@ -37,10 +37,12 @@ func enter() -> void:
 
 func exit() -> void:
 	_lmb_down = false
+	ed._grid_tool._lmb_down = false
 	ed._rmb_down = false  # a held right-click must not menu on mode return
 	selected_overlay = -1
 	ed.gizmo().piece = null
 	ed.gizmo().queue_redraw()
+	ed.gizmo().visible = false
 	ed.inspector().close()
 	ed.get_node("%SceneryPanel").visible = false
 	ed.palette.visible = true
@@ -77,7 +79,7 @@ func process(mouse: Vector2, _over_ui: bool) -> void:
 			_show_scenery_context(mouse)
 
 	# Keep gizmo pointed at the selected piece.
-	var _selected_piece := _piece_for_overlay(selected_overlay) if selected_overlay >= 0 else null
+	var _selected_piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay) if selected_overlay >= 0 else null
 	if _selected_piece != null:
 		ed.gizmo().piece = _selected_piece
 		ed.gizmo().queue_redraw()
@@ -93,7 +95,7 @@ func _scenery_press(world: Vector2) -> void:
 	if selected_overlay >= 0:
 		var h := _hit_handle(world, zoom)
 		if h >= 0:
-			var piece := _piece_for_overlay(selected_overlay)
+			var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
 			if piece == null:
 				return
 			_scenery_handle = h
@@ -107,7 +109,7 @@ func _scenery_press(world: Vector2) -> void:
 	# Pick a new piece.
 	var idx := _pick_piece(world)
 	if idx >= 0:
-		var piece := _piece_for_overlay(idx)
+		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, idx)
 		if piece == null:
 			return
 		selected_overlay = idx
@@ -127,7 +129,7 @@ func _scenery_press(world: Vector2) -> void:
 
 func _scenery_release() -> void:
 	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < ed.current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
+		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
 		if piece != null:
 			var o: Dictionary = ed.current.overlays[selected_overlay]
 			o["x"] = piece.position.x
@@ -139,7 +141,7 @@ func _scenery_release() -> void:
 func _scenery_drag(world: Vector2) -> void:
 	if selected_overlay < 0 or selected_overlay >= ed.current.overlays.size():
 		return
-	var piece := _piece_for_overlay(selected_overlay)
+	var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
 	if piece == null:
 		return
 	var o: Dictionary = ed.current.overlays[selected_overlay]
@@ -178,12 +180,6 @@ func _scenery_drag(world: Vector2) -> void:
 			o["_scale"] = new_scale
 
 
-# Returns the NarfDecor piece for the given overlay source index, or null.
-func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
-	for p in ed._scenery_pieces:
-		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
-			return p
-	return null
 
 
 # Returns the index of the topmost piece whose world-space rect contains `world_pos`,
@@ -208,10 +204,10 @@ func _pick_piece(world_pos: Vector2) -> int:
 func _hit_handle(world_pos: Vector2, zoom: float) -> int:
 	if selected_overlay < 0:
 		return -1
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null or piece.texture == null:
-		return -1
 	var radius := SceneryGizmo.HANDLE_RADIUS / zoom
+	var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
+	if piece == null:
+		return -1
 	var corners := SceneryGizmo._rect_corners(
 		piece.get_rect(), piece.position, piece.rotation, piece.scale
 	)
@@ -277,7 +273,7 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 func _on_scenery_context_item(id: int) -> void:
 	if selected_overlay < 0 or selected_overlay >= ed.current.overlays.size():
 		return
-	var piece := _piece_for_overlay(selected_overlay)
+	var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
 	if piece == null and id != 2:
 		return
 	var o: Dictionary = ed.current.overlays[selected_overlay]
@@ -348,7 +344,7 @@ func _drop_background() -> void:
 # it displays one overlay while selection means another.
 func _reopen_inspector() -> void:
 	if selected_overlay >= 0 and selected_overlay < ed.current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
+		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
 		ed.inspector().open(ed.current.overlays[selected_overlay], piece)
 	else:
 		ed.inspector().close()
