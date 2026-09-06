@@ -125,6 +125,7 @@ func _process(_delta: float) -> void:
 
 func _press(cell: Vector2i) -> void:
 	if carrying != "":
+		%PieceInspector.close()
 		_try_place(cell)
 		return
 	if occupancy.has(cell):
@@ -134,6 +135,7 @@ func _press(cell: Vector2i) -> void:
 			overlay.selected_cells = Vector2i(1, 1)
 			_drag_from = cell
 			_drag_prop = null
+			%PieceInspector.close()
 		else:
 			var e := Pieces.entry(str(node.get_meta("prop_id")))
 			overlay.selected_cell = node.get_meta("anchor_cell")
@@ -440,7 +442,10 @@ func _rebuild() -> void:
 			push_warning("editor: dropping overlapping prop '%s'" % p["id"])
 			continue
 		var snapped := EditorGrid.cell_to_world(anchor)
-		var kept := {"id": str(p["id"]), "x": snapped.x, "y": snapped.y}
+		var kept := (p as Dictionary).duplicate()
+		kept["id"] = str(p["id"])
+		kept["x"] = snapped.x
+		kept["y"] = snapped.y
 		kept_props.append(kept)
 		var body := PropBuilder.spawn_one(self, kept)
 		_spawned_props.append(body)

@@ -373,3 +373,18 @@ func test_move_prop_preserves_animation_keys() -> void:
 	assert_eq(float(ed.current.props[0].get("amplitude")), 8.0)
 	var w := EditorGrid.cell_to_world(Vector2i(9, 0))
 	assert_eq(float(ed.current.props[0]["x"]), w.x, "and still moved")
+
+
+func test_rebuild_preserves_animation_keys() -> void:
+	# Regression: _rebuild() discarded animation keys (behavior, speed, amplitude)
+	# on every rebuild (any crate place/move/delete). After fix: all keys preserved.
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed.current.props[0]["behavior"] = "SPIN"
+	ed.current.props[0]["speed"] = 2.5
+	ed.current.props[0]["amplitude"] = 12.0
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))  # Placing a crate triggers _rebuild
+	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "behavior survives rebuild")
+	assert_eq(float(ed.current.props[0].get("speed")), 2.5, "speed survives rebuild")
+	assert_eq(float(ed.current.props[0].get("amplitude")), 12.0, "amplitude survives rebuild")

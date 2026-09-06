@@ -200,6 +200,8 @@ func set_behavior_by_name(verb_name: String) -> void:
 			_piece.behavior = idx as NarfDecor.Behavior
 	# Sync the UI without triggering the signal callback.
 	var b_idx := BEHAVIOR_NAMES.find(verb_name)
+	if _reduced and b_idx >= 4:
+		return
 	if b_idx >= 0 and _behavior_option.selected != b_idx:
 		_updating = true
 		_behavior_option.selected = b_idx
