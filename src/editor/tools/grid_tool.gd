@@ -19,6 +19,8 @@ func reset_input_state() -> void:
 	_drag_from = Vector2i(-1, -1)
 	_drag_prop = null
 	_lmb_down = false
+
+
 var _crate_context: PopupMenu = null
 var _crate_info: AcceptDialog = null
 var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
