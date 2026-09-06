@@ -12,6 +12,7 @@ const CLASSES := ["crate", "static", "trampoline", "wormhole"]
 const TILTS := [-45, 0, 45]
 const MAX_CELL := 4
 const TIP_CAP := 200
+const POWERUPS := ["free_shot", "exploding", "multishot", "super_bounce", "mystery"]
 
 static var _cache := {}  # id -> entry Dictionary
 
@@ -77,7 +78,11 @@ static func parse_sidecar(id: String, raw: Dictionary) -> Dictionary:
 	if raw_bounce is float or raw_bounce is int:
 		bounce = clampf(float(raw_bounce), 0.5, 2.0)
 	var tip := str(raw.get("tip", id)).left(TIP_CAP)
-	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip}
+	var power := str(raw.get("powerup", ""))
+	if power != "" and power not in POWERUPS:
+		push_warning("Pieces: %s has unknown powerup '%s' — plain crate" % [id, power])
+		power = ""
+	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip, "powerup": power}
 
 
 static func entries() -> Array[Dictionary]:
