@@ -372,3 +372,82 @@ func test_setting_behavior_rehomes_a_dragged_piece() -> void:
 	piece.position = Vector2(777, 333)  # simulate the editor drag
 	insp.set_behavior_by_name("DRIFT")
 	assert_eq(piece._home_pos, Vector2(777, 333), "verb anchors to the dragged spot")
+
+
+func test_bake_skips_cap_hit_and_preserves_pending_edits() -> void:
+	# Pin: when SceneryBake.bake() cap-skips an overlay (images at MAX_IMAGES,
+	# new key would be net-new), the forwarder must NOT reset that piece's live
+	# transforms. Deleting the guard at level_editor.gd ~line 1188-1195 fails
+	# this test (RED without guard, GREEN with guard).
+	#
+	# Arrangement:
+	#   6 filler images + key_a + key_b = 8 (cap).
+	#   overlay_a: flip_h=true, ref_count[key_a]=1 → old_still_needed=false
+	#              → cap check skipped → bakes fine.
+	#   overlay_b1: _rot=PI/4, ref_count[key_b]=2 → old_still_needed=true,
+	#               images.size()=8 → SceneryBake cap-skips it.
+	#   overlay_b2: no edits, only present to hold ref_count[key_b]=2.
+
+	# --- 6 filler images / overlays (no edits) ---
+	for fi in 6:
+		var fimg := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+		fimg.fill(Color(float(fi + 1) / 7.0, 0.15, 0.85))
+		var fbytes := fimg.save_png_to_buffer()
+		var fk := LevelJson.image_key(fbytes)
+		ed.current.images[fk] = Marshalls.raw_to_base64(fbytes)
+		ed.current.overlays.append({"image": fk, "x": float(fi) * 60.0, "y": 0.0})
+
+	# key_a: 2×1 RED|BLUE — flip_h changes it to a distinct key.
+	var img_a := Image.create(2, 1, false, Image.FORMAT_RGBA8)
+	img_a.set_pixel(0, 0, Color.RED)
+	img_a.set_pixel(1, 0, Color.BLUE)
+	var bytes_a := img_a.save_png_to_buffer()
+	var key_a := LevelJson.image_key(bytes_a)
+	ed.current.images[key_a] = Marshalls.raw_to_base64(bytes_a)
+
+	# key_b: 4×2 with RED corner — rotation produces a distinct new key.
+	var img_b := Image.create(4, 2, false, Image.FORMAT_RGBA8)
+	img_b.fill(Color.GREEN)
+	img_b.set_pixel(0, 0, Color.RED)
+	var bytes_b := img_b.save_png_to_buffer()
+	var key_b := LevelJson.image_key(bytes_b)
+	ed.current.images[key_b] = Marshalls.raw_to_base64(bytes_b)
+
+	assert_eq(ed.current.images.size(), LevelJson.MAX_IMAGES, "images at cap")
+
+	var idx_a := ed.current.overlays.size()
+	ed.current.overlays.append({"image": key_a, "x": 400.0, "y": 0.0, "_flip_h": true})
+	var idx_b1 := ed.current.overlays.size()
+	ed.current.overlays.append({"image": key_b, "x": 500.0, "y": 0.0, "_rot": PI / 4.0})
+	# overlay_b2: no edits — only to make ref_count[key_b] = 2.
+	ed.current.overlays.append({"image": key_b, "x": 600.0, "y": 0.0})
+
+	ed._rebuild_scenery()
+
+	var piece_a := ed._piece_for_overlay(idx_a)
+	var piece_b1 := ed._piece_for_overlay(idx_b1)
+	assert_not_null(piece_a, "piece_a exists")
+	assert_not_null(piece_b1, "piece_b1 exists")
+	# Simulate editor-assigned live rotations (non-identity).
+	piece_a.rotation = PI / 6.0
+	piece_b1.rotation = PI / 4.0
+
+	# --- Act: ONE real call through the production path ---
+	var skipped := ed._bake_scenery()
+
+	# --- Assert ---
+	assert_eq(skipped, 1, "exactly one overlay cap-skipped")
+
+	# overlay_a baked: edit keys stripped, piece reset.
+	assert_false(
+		(ed.current.overlays[idx_a] as Dictionary).has("_flip_h"),
+		"overlay_a edit keys consumed"
+	)
+	assert_almost_eq(piece_a.rotation, 0.0, 0.001, "piece_a reset (bake succeeded)")
+
+	# overlay_b1 cap-skipped: edit key survives, piece NOT reset.
+	assert_true(
+		(ed.current.overlays[idx_b1] as Dictionary).has("_rot"),
+		"overlay_b1 still has _rot (cap-skipped)"
+	)
+	assert_almost_eq(piece_b1.rotation, PI / 4.0, 0.001, "piece_b1 rotation preserved (guard held)")

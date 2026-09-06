@@ -388,3 +388,94 @@ func test_rebuild_preserves_animation_keys() -> void:
 	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "behavior survives rebuild")
 	assert_eq(float(ed.current.props[0].get("speed")), 2.5, "speed survives rebuild")
 	assert_eq(float(ed.current.props[0].get("amplitude")), 12.0, "amplitude survives rebuild")
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — ONE selection rule
+# ---------------------------------------------------------------------------
+
+func test_clear_path_resets_selection_and_hides_inspector() -> void:
+	# (a) clear-path: select an animatable prop, then clear the level.
+	# After the clear+rebuild, selection must be "none" and inspector hidden.
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))  # select it — opens inspector
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_true(insp.visible, "inspector open after selecting animatable prop")
+	# Simulate clear (same as _on_clear)
+	ed.current = LevelLayout.new()
+	ed._rebuild()
+	assert_false(insp.visible, "inspector hidden after clear+rebuild")
+	assert_eq(ed.selection.get("kind", ""), "none", "selection kind is none after clear")
+
+
+func test_inspector_survives_rebuild_after_selecting_animatable_prop() -> void:
+	# (b) rebuild re-resolution: select an animatable prop, then place a
+	# crate (triggers _rebuild). Inspector must STILL be open and writes must
+	# land in the CURRENT (fresh) props entry.
+	#
+	# This test MUST FAIL against today's close-on-rebuild code; it will
+	# pass only after _sync_views re-resolution is implemented.
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))  # select wormhole → opens inspector (reduced mode)
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	assert_true(insp.visible, "inspector open before rebuild")
+	# Trigger a rebuild by placing a crate in a different cell.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))
+	# After rebuild, inspector must still be open (re-resolved to fresh prop).
+	assert_true(insp.visible, "inspector still open after rebuild (re-resolution)")
+	# Writes after rebuild must land in the CURRENT props entry.
+	insp.set_behavior_by_name("SPIN")
+	insp.set_speed(1.5)
+	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "write lands in fresh props entry")
+	assert_almost_eq(float(ed.current.props[0].get("speed", 0.0)), 1.5, 0.001, "speed write lands in fresh entry")
+
+
+func test_document_swap_clears_selection_no_adoption() -> void:
+	# Pin: select a crate at cell (3,0), then load a different document
+	# that has a different crate at the same cell. The new crate must NOT
+	# be auto-adopted by the stale selection — selection must clear first,
+	# so the ring and inspector stay clean until an explicit re-click.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(3, 0))
+	ed._press(Vector2i(3, 0))  # select it
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_eq(ed.selection.get("kind"), "cell", "crate selected before load")
+
+	# Create a different document with a different crate type at the same cell.
+	var doc2 := LevelLayout.new()
+	doc2.title = "other"
+	var w := EditorGrid.cell_to_world(Vector2i(3, 0))
+	doc2.crates.append({"x": w.x, "y": w.y, "type": "skull"})
+
+	# Save doc2 to disk and load it through the real _on_load path.
+	var path := LevelStore.save_user(doc2, "test_doc_swap_pin")
+	assert_ne(path, "", "save succeeded")
+
+	# Load doc2 (triggers clear + _rebuild).
+	ed._on_load(path)
+
+	# Verify: selection cleared, inspector hidden, but crate occupies the cell.
+	assert_eq(ed.selection.get("kind"), "none", "selection cleared on document swap")
+	assert_false(insp.visible, "inspector hidden after load")
+	assert_true(ed.occupancy.has(Vector2i(3, 0)), "new crate occupies the cell")
+	# Verify the new crate is skull, not the old wood.
+	var c: Crate = ed.occupancy[Vector2i(3, 0)]
+	assert_eq(c.type_id, "skull", "new document's crate adopted, not old selection")
+
+	# Clean up.
+	DirAccess.remove_absolute(path)
+
+
+func test_exit_scenery_restores_crate_modulate_to_full() -> void:
+	# Pin: crates must be dimmed (α=0.8) while in SCENERY mode and fully
+	# restored (α=1.0) after leaving — the switch_tool ordering fix ensures
+	# _rebuild_scenery() sees CRATES mode when called from exit().
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))
+	ed._enter_scenery()
+	assert_almost_eq(ed._spawned[0].modulate.a, 0.8, 0.001, "crate dimmed in SCENERY mode")
+	ed._exit_scenery()
+	assert_almost_eq(ed._spawned[0].modulate.a, 1.0, 0.001, "crate restored after leaving SCENERY")

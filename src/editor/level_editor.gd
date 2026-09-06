@@ -16,35 +16,63 @@ static var resume_layout: LevelLayout = null
 
 var current := LevelLayout.new()
 var occupancy := {}  # Vector2i -> Crate
-var carrying := ""  # asset id while placing, "" = none
 var save_path := ""  # last saved path, "" = unsaved
-var mode := Mode.CRATES
-var selected_overlay := -1
 var _spawned: Array[Crate] = []
 var _spawned_props: Array[Node2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
-var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
-var _drag_prop: Node2D = null  # prop being drag-moved, null = none/crate
-var _lmb_down := false
 var _last_mouse := Vector2.ZERO
-# Scenery drag state
-var _scenery_dragging := false  # true while LMB drags a selected piece
-var _scenery_drag_start_world := Vector2.ZERO  # world pos when drag began
-var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
-var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
-var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
-# Right-click context menu for scenery pieces
-var _scenery_context: PopupMenu = null
-# Right-click Info menu for crates (crate mode)
-var _crate_context: PopupMenu = null
-var _crate_info: AcceptDialog = null
-var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
-var _info_key := ""  # trigger key shown in the open Info dialog
-# RMB context menu state (scenery mode)
-var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed (scenery mode)
-var _rmb_down := false              # RMB was pressed this frame in scenery mode
+# RMB context menu state (shared between crate and scenery modes)
+var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed
+var _rmb_down := false              # RMB was pressed this frame
 const _CONTEXT_MENU_MOTION_THRESHOLD := 6.0  # px; below this RMB release opens menu
 const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
+
+var _grid_tool: GridTool
+var _scenery_tool: SceneryTool
+var _tool: EditorTool  # the active tool
+
+# THE rule (owner doctrine, 2026-09-06): selection is one fact; views
+# render it. Nothing opens/closes/re-points the inspector, selection
+# ring, or gizmo except _sync_views(). Tools WRITE the fact via the
+# three setters; _rebuild re-resolves it; everything else just reads.
+var selection := {"kind": "none"}
+# kinds: none | cell {cell, cells, node} | overlay {index}
+
+# Editor-side popups (context menus, the crate Info dialog) — the tools
+# create them lazily and register them here at creation time. BOTH
+# modes' over_ui consults this list: input is polled, so an open popup
+# must veto field clicks by registry membership — window routing alone
+# does not protect the field.
+var _popups: Array[Window] = []
+
+# UI panels whose geometry blocks field clicks — registered once in
+# _ready. "blocks_hidden" preserves the palette's long-standing
+# behavior: its rect vetoes clicks even while the palette is hidden
+# (scenery mode).
+var _ui_panels: Array[Dictionary] = []
+
+
+# Derived property — tests and _unhandled_input read this; it stays as the
+# single authoritative mode indicator, driven by which tool is active.
+var mode: Mode:
+	get: return Mode.SCENERY if _tool == _scenery_tool else Mode.CRATES
+
+
+# Forwarders — tests access these as editor properties/methods:
+var carrying: String:
+	get: return _grid_tool.carrying
+	set(v): _grid_tool.carrying = v
+
+var _crate_info: AcceptDialog:
+	get: return _grid_tool._crate_info
+
+var _info_key: String:
+	get: return _grid_tool._info_key
+
+# Scenery forwarder — tests write/read selected_overlay via the editor.
+var selected_overlay: int:
+	get: return _scenery_tool.selected_overlay
+	set(v): _scenery_tool.selected_overlay = v
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -52,14 +80,166 @@ const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
 @onready var menu: EditorMenu = $Ui/EditorMenu
 
 
+func inspector() -> PieceInspector:
+	return %PieceInspector
+
+
+# ---------------------------------------------------------------------------
+# Selection authority — ONE rule
+# Tools write the fact; _sync_views is the ONLY view writer.
+# ---------------------------------------------------------------------------
+
+func select_cell(cell: Vector2i, cells: Vector2i, node: Node2D) -> void:
+	selection = {"kind": "cell", "cell": cell, "cells": cells, "node": node}
+	_sync_views()
+
+
+func select_overlay(index: int) -> void:
+	selection = {"kind": "overlay", "index": index}
+	_sync_views()
+
+
+func deselect() -> void:
+	selection = {"kind": "none"}
+	_sync_views()
+
+
+func _sync_views() -> void:
+	# The single choke point for all view writes. Reads selection, re-resolves
+	# nodes against fresh occupancy/overlays, and renders the result.
+	var insp_opened := false
+	match selection.get("kind"):
+		"cell":
+			# Ring at the piece's anchor, spanning its footprint; reduced
+			# inspector for animatable props — assembled verbatim from
+			# today's GridTool._press occupied-branch decisions.
+			var cell: Vector2i = selection["cell"]
+			var cells: Vector2i = selection["cells"]
+			# Always re-resolve node via occupancy (the node in the dict may be
+			# stale after a rebuild — queue_free makes it technically valid but
+			# no longer the current occupant of this cell).
+			var fresh: Variant = occupancy.get(cell)
+			if fresh == null or not (fresh is Node2D):
+				# Cell no longer occupied — downgrade selection to none.
+				selection = {"kind": "none"}
+				_sync_views()
+				return
+			var node: Node2D = fresh as Node2D
+			# Re-resolve cells from registry if it's a prop.
+			if not (fresh is Crate):
+				var e_def := Pieces.entry(str(node.get_meta("prop_id", "")))
+				if not e_def.is_empty():
+					cells = e_def["cells"]
+			selection["node"] = node
+			selection["cells"] = cells
+			overlay.selected_cell = cell
+			overlay.selected_cells = cells
+			_gizmo.piece = null
+			_gizmo.visible = false
+			# Open reduced inspector for animatable props only.
+			if node != null and not (node is Crate):
+				var e := _grid_tool._prop_entry_for(node)
+				var entry_def := Pieces.entry(str(node.get_meta("prop_id", "")))
+				if not e.is_empty() and entry_def.get("animatable", false) == true:
+					var sprite: NarfDecor = null
+					for sc in node.get_children():
+						if sc is NarfDecor:
+							sprite = sc
+					if sprite != null:
+						inspector().open(e, sprite, true)
+						insp_opened = true
+		"overlay":
+			# Gizmo point + full inspector open via _reopen_inspector logic.
+			var index: int = selection["index"]
+			# Re-resolve: check if index is still valid.
+			if index < 0 or index >= current.overlays.size():
+				# Index out of range — downgrade to none.
+				selection = {"kind": "none"}
+				_sync_views()
+				return
+			var piece := LevelEditor._piece_for_overlay_from_array(_scenery_pieces, index)
+			overlay.selected_cell = Vector2i(-1, -1)
+			overlay.selected_cells = Vector2i(1, 1)
+			_gizmo.piece = piece
+			_gizmo.visible = piece != null
+			if piece != null:
+				inspector().open(current.overlays[index], piece)
+				insp_opened = true
+		_:
+			overlay.selected_cell = Vector2i(-1, -1)
+			overlay.selected_cells = Vector2i(1, 1)
+			_gizmo.piece = null
+			_gizmo.visible = false
+	if not insp_opened:
+		inspector().close()
+	overlay.refresh()
+
+
+func gizmo() -> SceneryGizmo:
+	return _gizmo
+
+
+func camera() -> Camera2D:
+	return $Camera
+
+
+# Shared by all tools: true exactly when this frame is an RMB release
+# without significant motion (a moving RMB is a camera pan).
+func rmb_menu_release(mouse: Vector2, over_ui: bool) -> bool:
+	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if rmb and not _rmb_down:
+		_rmb_press_pos = mouse
+		_rmb_down = true
+	elif not rmb and _rmb_down:
+		_rmb_down = false
+		return not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD
+	return false
+
+
+func switch_tool(next: EditorTool) -> void:
+	var prev := _tool
+	_tool = next
+	prev.exit()
+	_tool.enter()
+
+
+# Tools call this once, at the moment they lazily create a popup.
+func register_popup(p: Window) -> void:
+	_popups.append(p)
+
+
+func any_popup_open() -> bool:
+	for p in _popups:
+		if is_instance_valid(p) and p.visible:
+			return true
+	return false
+
+
+func _register_ui_panel(c: Control, blocks_hidden := false) -> void:
+	_ui_panels.append({"node": c, "blocks_hidden": blocks_hidden})
+
+
+# THE over-UI answer, shared by both modes: menu dialogs, panel
+# geometry, and every registered popup.
+func over_ui_at(mouse: Vector2) -> bool:
+	return menu.any_dialog_open() or _mouse_over_ui(mouse) or any_popup_open()
+
+
 func _ready() -> void:
+	_grid_tool = GridTool.new(self)
+	_scenery_tool = SceneryTool.new(self)
+	_tool = _grid_tool  # start in CRATES mode
+	# Palette blocks even while hidden — preserved behavior, see _ui_panels.
+	_register_ui_panel(palette, true)
+	_register_ui_panel(%SceneryPanel)
+	_register_ui_panel(%PieceInspector)
 	Pieces.scan()
 	palette.asset_picked.connect(
 		func(id: String) -> void:
-			carrying = id
-			_drag_from = Vector2i(-1, -1)
-			_drag_prop = null
-			overlay.selected_cell = Vector2i(-1, -1)
+			_grid_tool.carrying = id
+			_grid_tool._drag_from = Vector2i(-1, -1)
+			_grid_tool._drag_prop = null
+			deselect()
 	)
 	menu.save_requested.connect(_on_save)
 	menu.save_as_requested.connect(_on_save_as)
@@ -88,118 +268,63 @@ func _process(_delta: float) -> void:
 		_clamp_camera()
 	_last_mouse = mouse
 
-	if mode == Mode.CRATES:
-		var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-		# Geometry, not gui_get_hovered_control(): during a drag that began
-		# on a palette Button the Control keeps mouse capture, so the hover
-		# API still reports UI at release and would veto the drop.
-		var over_ui := (
-			menu.any_dialog_open()
-			or _mouse_over_ui(mouse)
-			or (_crate_info != null and _crate_info.visible)
-		)
-		if lmb and not _lmb_down and not over_ui:
-			_press(_mouse_cell())
-		elif not lmb and _lmb_down:
-			_release(_mouse_cell(), over_ui)
-		_lmb_down = lmb
-		_update_ghost()
+	# Geometry, not gui_get_hovered_control(): during a drag that began
+	# on a palette Button the Control keeps mouse capture, so the hover
+	# API still reports UI at release and would veto the drop.
+	# over_ui_at() folds in dialogs, panels, and registered popups.
+	_tool.process(mouse, over_ui_at(mouse))
 
-		# RMB Info menu: open only on release without significant motion
-		# (a moving RMB is a camera pan — same rule as scenery mode).
-		var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-		if rmb and not _rmb_down:
-			_rmb_press_pos = mouse
-			_rmb_down = true
-		elif not rmb and _rmb_down:
-			_rmb_down = false
-			if not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD:
-				var cell := _mouse_cell()
-				if occupancy.has(cell) and occupancy.get(cell) is Crate:
-					overlay.selected_cell = cell
-					overlay.refresh()
-					_show_crate_context(mouse, cell)
-	else:
-		_scenery_process(mouse)
 
+# ---------------------------------------------------------------------------
+# Forwarders — GridTool owns these; editor exposes them so tests and
+# _unhandled_input can call them on the editor directly.
+# ---------------------------------------------------------------------------
 
 func _press(cell: Vector2i) -> void:
-	if carrying != "":
-		%PieceInspector.close()
-		_try_place(cell)
-		return
-	if occupancy.has(cell):
-		var node: Node2D = occupancy[cell]
-		if node is Crate:
-			overlay.selected_cell = cell
-			overlay.selected_cells = Vector2i(1, 1)
-			_drag_from = cell
-			_drag_prop = null
-			%PieceInspector.close()
-		else:
-			var e := Pieces.entry(str(node.get_meta("prop_id")))
-			overlay.selected_cell = node.get_meta("anchor_cell")
-			overlay.selected_cells = e["cells"] if not e.is_empty() else Vector2i(1, 1)
-			_drag_from = cell
-			_drag_prop = node
-			if e.get("animatable", false) == true:
-				var sprite: NarfDecor = null
-				for sc in node.get_children():
-					if sc is NarfDecor:
-						sprite = sc
-				var entry := _prop_entry_for(node)
-				if not entry.is_empty() and sprite != null:
-					%PieceInspector.open(entry, sprite, true)
-			else:
-				%PieceInspector.close()
-	else:
-		overlay.selected_cell = Vector2i(-1, -1)
-		overlay.selected_cells = Vector2i(1, 1)
-		_drag_from = Vector2i(-1, -1)
-		_drag_prop = null
-		%PieceInspector.close()
-	overlay.refresh()
+	_grid_tool._press(cell)
 
 
 func _release(cell: Vector2i, over_ui: bool) -> void:
-	if carrying != "" and not over_ui:
-		_try_place(cell)
-	elif _drag_prop != null and _drag_from.x >= 0 and not over_ui and cell != _drag_from:
-		_move_prop(_drag_prop, cell - _drag_from)
-	elif (
-		_drag_from.x >= 0
-		and not over_ui
-		and cell != _drag_from
-		and EditorGrid.in_zone(cell)
-		and not occupancy.has(cell)
-	):
-		_move(_drag_from, cell)
-	_drag_from = Vector2i(-1, -1)
-	_drag_prop = null
+	_grid_tool._release(cell, over_ui)
 
 
-func _try_place(cell: Vector2i) -> void:
-	var e := Pieces.entry(carrying)
-	if e.is_empty():
-		return
-	if e["class"] == "crate":
-		if EditorGrid.in_zone(cell) and not occupancy.has(cell):
-			_place(carrying, cell)
-			carrying = ""
-		return
-	var cells: Vector2i = e["cells"]
-	for c in footprint(cell, cells):
-		if not EditorGrid.in_zone(c) or occupancy.has(c):
-			return  # whole footprint or nothing; keep carrying
-	var w := EditorGrid.cell_to_world(cell)
-	var prop := {"id": carrying, "x": w.x, "y": w.y}
-	current.props.append(prop)
-	var body := PropBuilder.spawn_one(self, prop)
-	_spawned_props.append(body)
-	for c in footprint(cell, cells):
-		occupancy[c] = body
-	carrying = ""
-	overlay.refresh()
+func _delete_selected() -> void:
+	_grid_tool._delete_selected()
+
+
+func _show_crate_info(cell: Vector2i) -> void:
+	_grid_tool._show_crate_info(cell)
+
+
+# ---------------------------------------------------------------------------
+# Forwarders — SceneryTool owns these; editor exposes them so tests can
+# call them on the editor directly.
+# ---------------------------------------------------------------------------
+
+func _delete_selected_piece() -> void:
+	_scenery_tool._delete_selected_piece()
+
+
+func _drop_background() -> void:
+	_scenery_tool._drop_background()
+
+
+func _pick_piece(world_pos: Vector2) -> int:
+	return _scenery_tool._pick_piece(world_pos)
+
+
+# Pure iteration logic — shared by editor and tool to avoid duplication.
+# Arguments: pieces array and index to search for.
+static func _piece_for_overlay_from_array(pieces: Array, overlay_idx: int) -> NarfDecor:
+	for p in pieces:
+		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
+			return p
+	return null
+
+
+# Instance wrapper for test contract — tests call ed._piece_for_overlay(idx).
+func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
+	return LevelEditor._piece_for_overlay_from_array(_scenery_pieces, overlay_idx)
 
 
 func _on_save() -> void:
@@ -238,13 +363,13 @@ func _bake_and_capture() -> void:
 		)
 	_rebuild_scenery()
 	_refresh_pieces()
-	_reopen_inspector()
+	# _rebuild_scenery() calls _sync_views() which re-resolves the inspector.
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
-	_gizmo.visible = false
+	_gizmo.visible = false  # clean capture frame (not an authority write — restored below)
 	await _capture_thumb()
-	_gizmo.visible = mode == Mode.SCENERY
+	_sync_views()  # authority restores the correct state
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
@@ -266,6 +391,8 @@ func _on_load(path: String) -> void:
 	current = loaded
 	save_path = path
 	menu.suggested_stem = path.get_file().get_basename()
+	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -328,6 +455,8 @@ func _on_upload_text(args: Array) -> void:
 	current = loaded
 	save_path = ""  # imported document: Save prompts for a name
 	menu.suggested_stem = LevelStore.sanitize_stem(loaded.title)
+	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -338,6 +467,8 @@ func _on_clear() -> void:
 	current = LevelLayout.new()
 	save_path = ""
 	menu.suggested_stem = ""
+	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -362,44 +493,22 @@ func _on_background_picked(id: String) -> void:
 	current.background = id
 
 
+# Thin forwarders — kept for test-contract and signal wiring.
 func _enter_scenery() -> void:
-	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
-	carrying = ""
-	# Stale-input hygiene: clear drag/lmb state so a leftover press can't
-	# fire a spurious release as a crate move once we return to CRATES mode.
-	_drag_from = Vector2i(-1, -1)
-	_drag_prop = null
-	_lmb_down = false
-	_rmb_down = false  # a held right-click must not menu on re-entry
-	%PieceInspector.close()
-	mode = Mode.SCENERY
-	palette.visible = false
-	%SceneryPanel.visible = true
-	overlay.visible = false
-	_rebuild_scenery()  # dims crates + pauses behaviors (mode is SCENERY)
-	_refresh_pieces()
-	_gizmo.visible = true
+	switch_tool(_scenery_tool)
 
 
 func _exit_scenery() -> void:
-	_rmb_down = false  # a held right-click must not menu on mode return
-	selected_overlay = -1
-	_gizmo.piece = null
-	_gizmo.visible = false
-	%PieceInspector.close()
-	mode = Mode.CRATES
-	%SceneryPanel.visible = false
-	palette.visible = true
-	overlay.visible = true
-	for c in _spawned:
-		c.modulate.a = 1.0
-	# Respawn scenery in CRATES mode: behaviors come back to life (the
-	# pause above was editor-session-only; the dict never forgot them).
-	_rebuild_scenery()
+	# Always run the full exit cleanup, even if already in CRATES mode,
+	# to preserve test-contract behavior (some tests call _exit_scenery
+	# without a preceding _enter_scenery to clean up inspector state).
+	if _tool != _grid_tool:
+		switch_tool(_grid_tool)
+	else:
+		_scenery_tool.exit()
 
 
 func _rebuild() -> void:
-	%PieceInspector.close()
 	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()
@@ -458,7 +567,9 @@ func _rebuild() -> void:
 	# inline and skipped the ghost pass — hidden pieces were invisible
 	# until the first EDIT SCENERY visit).
 	_rebuild_scenery()
-	overlay.refresh()
+	# Re-resolve selection against the fresh nodes/dicts. If the selected
+	# thing no longer exists, downgrade to none. _sync_views calls overlay.refresh().
+	_sync_views()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -485,14 +596,13 @@ func _mouse_cell() -> Vector2i:
 
 
 func _mouse_over_ui(p: Vector2) -> bool:
-	var sp: Node = %SceneryPanel
-	var insp: Node = %PieceInspector
-	return (
-		palette.get_global_rect().has_point(p)
-		or menu.covers_point(p)
-		or (sp.visible and (sp as Control).get_global_rect().has_point(p))
-		or (insp.visible and (insp as Control).get_global_rect().has_point(p))
-	)
+	if menu.covers_point(p):
+		return true
+	for e in _ui_panels:
+		var c: Control = e["node"]
+		if (c.visible or e["blocks_hidden"]) and c.get_global_rect().has_point(p):
+			return true
+	return false
 
 
 # Clamp pan POSITION to the camera limits — past the bounds the display
@@ -503,162 +613,6 @@ func _clamp_camera() -> void:
 	var half := get_viewport_rect().size * 0.5 / cam.zoom
 	cam.position.x = clampf(cam.position.x, cam.limit_left + half.x, cam.limit_right - half.x)
 	cam.position.y = clampf(cam.position.y, cam.limit_top + half.y, cam.limit_bottom - half.y)
-
-
-func _update_ghost() -> void:
-	var id := carrying
-	if id == "" and _drag_from.x >= 0 and _lmb_down:
-		var held: Variant = occupancy.get(_drag_from)
-		if held != null and held is Crate:
-			id = (held as Crate).type_id
-		elif _drag_prop != null:
-			id = str(_drag_prop.get_meta("prop_id"))
-	if id == "":
-		if overlay.ghost_cell != Vector2i(-1, -1):
-			overlay.ghost_cell = Vector2i(-1, -1)
-			overlay.refresh()
-		overlay.ghost_cells = Vector2i(1, 1)
-		return
-	var cell := _mouse_cell()
-	if _drag_prop != null and _lmb_down:
-		cell += (_drag_prop.get_meta("anchor_cell") as Vector2i) - _drag_from
-	var e := Pieces.entry(id)
-	var ghost_cells := Vector2i(1, 1)
-	var ok := false
-	if not e.is_empty() and e["class"] != "crate":
-		ghost_cells = e["cells"] as Vector2i
-		ok = true
-		for c in footprint(cell, ghost_cells):
-			var occ: Variant = occupancy.get(c)
-			if not EditorGrid.in_zone(c) or (occ != null and occ != _drag_prop):
-				ok = false
-				break
-	else:
-		ok = EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
-	overlay.ghost_cells = ghost_cells
-	if cell == overlay.ghost_cell and ok == overlay.ghost_ok and overlay.ghost_tex == Pieces.texture_for(id):
-		return
-	overlay.ghost_cell = cell
-	overlay.ghost_tex = Pieces.texture_for(id)
-	overlay.ghost_ok = ok
-	overlay.refresh()
-
-
-func _place(id: String, cell: Vector2i) -> void:
-	var w := EditorGrid.cell_to_world(cell)
-	current.crates.append({"x": w.x, "y": w.y, "type": id})
-	_rebuild()
-
-
-func _move(from: Vector2i, to: Vector2i) -> void:
-	if not occupancy.get(from) is Crate:
-		return
-	var fw := EditorGrid.cell_to_world(from)
-	var tw := EditorGrid.cell_to_world(to)
-	for c in current.crates:
-		if is_equal_approx(c["x"], fw.x) and is_equal_approx(c["y"], fw.y):
-			c["x"] = tw.x
-			c["y"] = tw.y
-			break
-	overlay.selected_cell = to
-	_rebuild()
-
-
-func _delete_selected() -> void:
-	var cell: Vector2i = overlay.selected_cell
-	if cell.x < 0:
-		return
-	var node: Variant = occupancy.get(cell)
-	if node != null and not node is Crate:
-		_delete_prop(node)
-		return
-	var w := EditorGrid.cell_to_world(cell)
-	for i in current.crates.size():
-		var c: Dictionary = current.crates[i]
-		if is_equal_approx(c["x"], w.x) and is_equal_approx(c["y"], w.y):
-			current.crates.remove_at(i)
-			break
-	overlay.selected_cell = Vector2i(-1, -1)
-	_drag_from = Vector2i(-1, -1)
-	_rebuild()
-
-
-# Delta-based footprint move: data, occupancy, node, and meta in lockstep.
-# A blocked target (out of zone / any foreign occupant) is a no-op.
-func _move_prop(body: Node2D, delta: Vector2i) -> void:
-	var pid := str(body.get_meta("prop_id"))
-	var e := Pieces.entry(pid)
-	if e.is_empty():
-		return
-	var old_anchor: Vector2i = body.get_meta("anchor_cell")
-	var new_anchor := old_anchor + delta
-	var cells: Vector2i = e["cells"]
-	for c in footprint(new_anchor, cells):
-		if not EditorGrid.in_zone(c):
-			return
-		var occ: Variant = occupancy.get(c)
-		if occ != null and occ != body:
-			return
-	var old_w := EditorGrid.cell_to_world(old_anchor)
-	var new_w := EditorGrid.cell_to_world(new_anchor)
-	for i in current.props.size():
-		var p: Dictionary = current.props[i]
-		if (
-			p["id"] == pid
-			and is_equal_approx(float(p["x"]), old_w.x)
-			and is_equal_approx(float(p["y"]), old_w.y)
-		):
-			var moved := (current.props[i] as Dictionary).duplicate()
-			moved["x"] = new_w.x
-			moved["y"] = new_w.y
-			current.props[i] = moved
-			# Refresh the inspector reference if it was open on this prop,
-			# or close it — closing is simpler and avoids a stale-dict write.
-			%PieceInspector.close()
-			break
-	for c in footprint(old_anchor, cells):
-		occupancy.erase(c)
-	for c in footprint(new_anchor, cells):
-		occupancy[c] = body
-	body.position = PropBuilder.footprint_center(new_w, cells)
-	body.set_meta("anchor_cell", new_anchor)
-	overlay.selected_cell = new_anchor
-	overlay.selected_cells = cells
-	overlay.refresh()
-
-
-func _prop_entry_for(body: Node2D) -> Dictionary:
-	var pid := str(body.get_meta("prop_id"))
-	var w := EditorGrid.cell_to_world(body.get_meta("anchor_cell"))
-	for p in current.props:
-		if p["id"] == pid and is_equal_approx(float(p["x"]), w.x) and is_equal_approx(float(p["y"]), w.y):
-			return p
-	return {}
-
-
-func _delete_prop(body: Node2D) -> void:
-	var anchor: Vector2i = body.get_meta("anchor_cell")
-	var pid: String = body.get_meta("prop_id")
-	for i in current.props.size():
-		var pw := EditorGrid.world_to_cell(Vector2(current.props[i]["x"], current.props[i]["y"]))
-		if current.props[i]["id"] == pid and pw == anchor:
-			current.props.remove_at(i)
-			break
-	# Erase every occupancy cell whose value points at this body.
-	# Works whether the registry id is known or not — no footprint lookup needed.
-	var to_erase: Array[Vector2i] = []
-	for k in occupancy:
-		if occupancy[k] == body:
-			to_erase.append(k)
-	for k in to_erase:
-		occupancy.erase(k)
-	_spawned_props.erase(body)
-	body.queue_free()
-	_drag_prop = null
-	%PieceInspector.close()
-	overlay.selected_cell = Vector2i(-1, -1)
-	overlay.selected_cells = Vector2i(1, 1)
-	overlay.refresh()
 
 
 # Frees and respawns ONLY the _scenery_pieces array — crates untouched.
@@ -702,38 +656,22 @@ func _rebuild_scenery() -> void:
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
+	# Re-resolve selection against the fresh pieces. If _rebuild() called us,
+	# its own _sync_views() call will follow — double-call is safe (idempotent).
+	if is_node_ready():
+		_sync_views()
 
 
-# Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
+# Repopulates the SceneryPanel thumbnail strip: one entry per overlay.
+# The editor decodes (document knowledge); the panel renders (UI knowledge).
 func _refresh_pieces() -> void:
-	var pieces: ItemList = %SceneryPanel.get_node("%Pieces")
-	pieces.clear()
+	var thumbs: Array = []
 	for entry in current.overlays:
 		var img_key: String = entry.get("image", "")
 		var b64: String = current.images.get(img_key, "")
 		var img := LevelJson.decode_png_b64(b64)
-		if img == null:
-			pieces.add_item("")
-			continue
-		var tex := ImageTexture.create_from_image(img)
-		pieces.add_item("", tex)
-
-
-# Shared size-cap: halve the image until its base64 fits MAX_IMAGE_CHARS.
-# Returns [png_bytes: PackedByteArray, b64: String]. Used by import AND bake
-# so a baked blob can never bypass the cap the import path enforces.
-static func _cap_image_to_max(img: Image) -> Array:
-	var png_bytes := img.save_png_to_buffer()
-	var b64 := Marshalls.raw_to_base64(png_bytes)
-	while b64.length() > LevelJson.MAX_IMAGE_CHARS:
-		var cw := img.get_width()
-		var ch := img.get_height()
-		if cw <= 1 and ch <= 1:
-			break
-		img.resize(maxi(1, cw / 2), maxi(1, ch / 2), Image.INTERPOLATE_LANCZOS)
-		png_bytes = img.save_png_to_buffer()
-		b64 = Marshalls.raw_to_base64(png_bytes)
-	return [png_bytes, b64]
+		thumbs.append(null if img == null else ImageTexture.create_from_image(img))
+	%SceneryPanel.set_piece_thumbs(thumbs)
 
 
 # Pure import pipeline — separated so unit tests can call it directly
@@ -751,7 +689,7 @@ func import_scenery_image(img: Image) -> String:
 		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
 
 	# Encode to PNG and check size cap, halving if needed.
-	var cap_result := _cap_image_to_max(img)
+	var cap_result := SceneryBake._cap_image_to_max(img)
 	var png_bytes: PackedByteArray = cap_result[0]
 	var b64: String = cap_result[1]
 
@@ -790,242 +728,55 @@ func _on_image_chosen(path: String) -> void:
 	# Place the new overlay centered on the current camera view.
 	var cam_pos: Vector2 = ($Camera as Camera2D).position
 	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
-	selected_overlay = current.overlays.size() - 1
+	var new_idx := current.overlays.size() - 1
+	_scenery_tool.selected_overlay = new_idx
 	_rebuild_scenery()
 	_refresh_pieces()
-	_reopen_inspector()
-
-
-# Rebuilds free every live piece — any open inspector must be re-pointed
-# at the FRESH piece for the current selection (or closed if none), else
-# it displays one overlay while selection means another.
-func _reopen_inspector() -> void:
-	if selected_overlay >= 0 and selected_overlay < current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
-		%PieceInspector.open(current.overlays[selected_overlay], piece)
-	else:
-		%PieceInspector.close()
+	# After rebuild, route through select_overlay so _sync_views opens the inspector.
+	select_overlay(new_idx)
 
 
 # ---------------------------------------------------------------------------
-# Scenery mode: pointer / handle polling (mirrors CRATES block structure)
+# Bake: consume edit-state transforms into the raster, re-key the blob.
+# Transform order: flip → scale → rotate (flip is pixel-level, then the
+# scaled+flipped image is rotated into its bounding box).
+# 90°/180°/270° rotations stay pixel-exact via the epsilon-guarded ceil
+# bbox (swallows cos(PI/2)'s 1e-17 dust) + unclamped-floor bilinear
+# (epsilon-negative coords land full-weight on the correct clamped pixel).
+# Unedited overlays (no underscore keys) are left unchanged — no re-encode churn.
 # ---------------------------------------------------------------------------
 
-func _scenery_process(mouse: Vector2) -> void:
-	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
-	var world := get_global_mouse_position()
-	var cam: Camera2D = $Camera
-	_gizmo.cam_zoom = cam.zoom
-
-	if lmb and not _lmb_down and not over_ui:
-		_scenery_press(world)
-	elif not lmb and _lmb_down:
-		_scenery_release()
-	elif lmb and _lmb_down and _scenery_dragging:
-		_scenery_drag(world)
-
-	_lmb_down = lmb
-
-	# RMB context menu: open only on release without significant motion.
-	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-	if rmb and not _rmb_down:
-		_rmb_press_pos = mouse
-		_rmb_down = true
-	elif not rmb and _rmb_down:
-		_rmb_down = false
-		if not menu.any_dialog_open() and not _mouse_over_ui(mouse):
-			var travel := mouse.distance_to(_rmb_press_pos)
-			if travel < _CONTEXT_MENU_MOTION_THRESHOLD:
-				var rmb_world := get_global_mouse_position()
-				var idx := _pick_piece(rmb_world)
-				if idx >= 0:
-					selected_overlay = idx
-					_show_scenery_context(mouse)
-
-	# Keep gizmo pointed at the selected piece.
-	var _selected_piece := _piece_for_overlay(selected_overlay) if selected_overlay >= 0 else null
-	if _selected_piece != null:
-		_gizmo.piece = _selected_piece
-		_gizmo.queue_redraw()
-	else:
-		_gizmo.piece = null
-		_gizmo.queue_redraw()
-
-
-func _scenery_press(world: Vector2) -> void:
-	var cam: Camera2D = $Camera
-	var zoom := cam.zoom.x
-
-	# Check handles on current selection first.
-	if selected_overlay >= 0:
-		var h := _hit_handle(world, zoom)
-		if h >= 0:
-			var piece := _piece_for_overlay(selected_overlay)
-			if piece == null:
-				return
-			_scenery_handle = h
-			_scenery_dragging = true
-			_scenery_drag_start_world = world
-			_scenery_drag_piece_origin = piece.position
-			var po: Dictionary = current.overlays[selected_overlay]
-			_scenery_drag_press_scale = po.get("_scale", 1.0)
-			return
-
-	# Pick a new piece.
-	var idx := _pick_piece(world)
-	if idx >= 0:
-		var piece := _piece_for_overlay(idx)
-		if piece == null:
-			return
-		selected_overlay = idx
-		_scenery_handle = -1  # body drag
-		_scenery_dragging = true
-		_scenery_drag_start_world = world
-		_scenery_drag_piece_origin = piece.position
-		var po: Dictionary = current.overlays[selected_overlay]
-		_scenery_drag_press_scale = po.get("_scale", 1.0)
-		%PieceInspector.open(po, piece)
-	else:
-		# Deselect.
-		selected_overlay = -1
-		_scenery_dragging = false
-		%PieceInspector.close()
-
-
-func _scenery_release() -> void:
-	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
-		if piece != null:
-			var o: Dictionary = current.overlays[selected_overlay]
-			o["x"] = piece.position.x
-			o["y"] = piece.position.y
-	_scenery_dragging = false
-	_scenery_handle = -1
-
-
-func _scenery_drag(world: Vector2) -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null:
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var delta := world - _scenery_drag_start_world
-
-	if _scenery_handle == -1:
-		# Body drag — move piece, and keep overlay dict in sync for mid-drag saves.
-		piece.position = _scenery_drag_piece_origin + delta
-		piece.rehome()  # else a live verb snaps it back to where it was born
-		o["x"] = piece.position.x
-		o["y"] = piece.position.y
-	elif _scenery_handle == 4:
-		# Rotate handle — angle from piece center to mouse.
-		var center := _scenery_drag_piece_origin
-		var angle := (world - center).angle() + PI / 2.0
-		piece.rotation = angle
-		piece.rehome()  # SPIN/SWAY anchor to home rotation the same way
-		o["_rot"] = angle
-	else:
-		# Corner resize — aspect-locked scale.
-		# Uses the scale captured at PRESS time so each frame computes from the
-		# original, preventing per-frame compounding.
-		var center := _scenery_drag_piece_origin
-		var dist_now := (world - center).length()
-		var dist_start := (_scenery_drag_start_world - center).length()
-		if dist_start > 0.01:
-			# Clamp: the baked long edge must not exceed 1024 px.
-			var tex := piece.texture
-			var max_scale := 20.0
-			if tex != null:
-				var long_edge := maxi(tex.get_width(), tex.get_height())
-				if long_edge > 0:
-					max_scale = minf(20.0, 1024.0 / float(long_edge))
-			var new_scale := clampf(_scenery_drag_press_scale * (dist_now / dist_start), 0.05, max_scale)
-			piece.scale = Vector2(new_scale, new_scale)
-			o["_scale"] = new_scale
-
-
-# Returns the NarfDecor piece for the given overlay source index, or null.
-func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
-	for p in _scenery_pieces:
-		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
-			return p
-	return null
-
-
-# Returns the index of the topmost piece whose world-space rect contains `world_pos`,
-# or -1 if none. Exposed so unit tests can call it directly.
-func _pick_piece(world_pos: Vector2) -> int:
-	# Iterate in reverse (top-most drawn last).
-	for i in range(_scenery_pieces.size() - 1, -1, -1):
-		var piece := _scenery_pieces[i]
-		if not is_instance_valid(piece):
-			continue
-		var rect := piece.get_rect()
-		# to_local() already accounts for the piece's position, rotation, and scale;
-		# the rect from get_rect() is in un-scaled local space — no further division needed.
-		var local := piece.to_local(world_pos)
-		if rect.has_point(local):
-			return piece.get_meta("overlay_index", i) as int
-	return -1
-
-
-# Returns which handle (0-3 corners, 4 rotate) is within hit radius at world_pos,
-# or -1 if none. Requires a selected piece.
-func _hit_handle(world_pos: Vector2, zoom: float) -> int:
-	if selected_overlay < 0:
-		return -1
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null or piece.texture == null:
-		return -1
-	var radius := SceneryGizmo.HANDLE_RADIUS / zoom
-	var corners := SceneryGizmo._rect_corners(
-		piece.get_rect(), piece.position, piece.rotation, piece.scale
-	)
-	for i in 4:
-		if world_pos.distance_to(corners[i]) <= radius:
-			return i
-	# Rotate lollipop.
-	var top_mid := (corners[0] + corners[1]) * 0.5
-	var up_dir := Vector2(-sin(piece.rotation), -cos(piece.rotation))
-	var lollipop := top_mid + up_dir * (SceneryGizmo.ROTATE_LOLLIPOP_DIST / zoom)
-	if world_pos.distance_to(lollipop) <= radius:
-		return 4
-	return -1
+# Test-contract forwarder: delegates pure bake to SceneryBake, then
+# resets the live piece transforms so the editor view matches the
+# freshly-baked images. The live-piece reset is editor-side state
+# (calls _piece_for_overlay which iterates _scenery_pieces); it was
+# NOT moved to SceneryBake because it is not a pure function of the layout.
+func _bake_scenery() -> int:
+	var skipped := SceneryBake.bake(current)
+	# Reset the live piece transform so the visual matches the baked image.
+	# Only reset pieces whose bake succeeded (no pending underscore edit keys).
+	for i in current.overlays.size():
+		var live_piece := LevelEditor._piece_for_overlay_from_array(_scenery_pieces, i)
+		if live_piece != null:
+			# Guard: only reset if the bake consumed the edit keys.
+			var still_pending := false
+			for k in (current.overlays[i] as Dictionary).keys():
+				if String(k).begins_with("_"):
+					still_pending = true
+					break
+			if still_pending:
+				continue
+			var piece := live_piece
+			piece.rotation = 0.0
+			piece.scale = Vector2.ONE
+			piece.flip_h = false
+			piece.flip_v = false
+	return skipped
 
 
 # ---------------------------------------------------------------------------
-# Delete selected scenery piece + orphan-cleanup
+# Static helpers (also used by GridTool via LevelEditor.footprint etc.)
 # ---------------------------------------------------------------------------
-
-func _delete_selected_piece() -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var old_key: String = o.get("image", "")
-	current.overlays.remove_at(selected_overlay)
-	selected_overlay = -1
-	_gizmo.piece = null
-	_gizmo.queue_redraw()
-	%PieceInspector.close()
-	# Drop the image blob if no remaining overlay references it.
-	if old_key != "":
-		var still_used := false
-		for entry in current.overlays:
-			if (entry as Dictionary).get("image", "") == old_key:
-				still_used = true
-				break
-		if not still_used:
-			current.images.erase(old_key)
-	_rebuild_scenery()
-	_refresh_pieces()
-
-
-# ---------------------------------------------------------------------------
-# Right-click Info menu for crates
-# ---------------------------------------------------------------------------
-
 
 static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
@@ -1040,415 +791,3 @@ static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
 static func crate_trigger_key(cell: Vector2i) -> String:
 	var w := EditorGrid.cell_to_world(cell)
 	return "hit:%d,%d" % [int(w.x), int(w.y)]
-
-
-func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
-	if _crate_context == null:
-		_crate_context = PopupMenu.new()
-		_crate_context.id_pressed.connect(_on_crate_context_item)
-		add_child(_crate_context)
-	_info_cell = cell
-	_crate_context.clear()
-	_crate_context.add_item("Info", 0)
-	_crate_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
-	_crate_context.popup()
-
-
-func _on_crate_context_item(id: int) -> void:
-	if id == 0:
-		_show_crate_info(_info_cell)
-
-
-func _show_crate_info(cell: Vector2i) -> void:
-	if not occupancy.has(cell):
-		return
-	var w := EditorGrid.cell_to_world(cell)
-	var type_id := ""
-	for c in current.crates:
-		if int(c["x"]) == int(w.x) and int(c["y"]) == int(w.y):
-			type_id = String(c["type"])
-			break
-	_info_key = crate_trigger_key(cell)
-	if _crate_info == null:
-		_crate_info = AcceptDialog.new()
-		_crate_info.title = "Crate Info"
-		_crate_info.theme = load("res://resources/ui/kingdom_theme.tres")
-		_crate_info.add_button("Copy Key", true, "copy_key")
-		_crate_info.custom_action.connect(_on_crate_info_action)
-		add_child(_crate_info)
-	_crate_info.dialog_text = (
-		"Type: %s\nTrigger key: %s\nGrid cell: (%d, %d)" % [type_id, _info_key, cell.x, cell.y]
-	)
-	_crate_info.popup_centered()
-
-
-func _on_crate_info_action(action: StringName) -> void:
-	if action == &"copy_key":
-		DisplayServer.clipboard_set(_info_key)
-		_crate_info.hide()
-
-
-# ---------------------------------------------------------------------------
-# Right-click context menu for scenery pieces
-# ---------------------------------------------------------------------------
-
-# RMB context menu is handled via release-based polling in _scenery_process.
-
-
-func _show_scenery_context(screen_pos: Vector2) -> void:
-	if _scenery_context == null:
-		_scenery_context = PopupMenu.new()
-		_scenery_context.id_pressed.connect(_on_scenery_context_item)
-		add_child(_scenery_context)
-	_scenery_context.clear()
-	_scenery_context.add_item("Flip H", 0)
-	_scenery_context.add_item("Flip V", 1)
-	_scenery_context.add_item("Reset Transform", 4)
-	_scenery_context.add_item("Drop Background", 3)
-	_scenery_context.add_separator()
-	_scenery_context.add_item("Delete", 2)
-	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
-	_scenery_context.popup()
-
-
-func _on_scenery_context_item(id: int) -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null and id != 2:
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	match id:
-		0:  # Flip H
-			if piece != null:
-				piece.flip_h = not piece.flip_h
-				o["_flip_h"] = piece.flip_h
-		1:  # Flip V
-			if piece != null:
-				piece.flip_v = not piece.flip_v
-				o["_flip_v"] = piece.flip_v
-		2:  # Delete
-			_delete_selected_piece()
-		3:  # Drop Background
-			_drop_background()
-		4:  # Reset Transform (owner: a runaway rotate/mirror had no way home)
-			for k in ["_rot", "_scale", "_flip_h", "_flip_v"]:
-				o.erase(k)
-			if piece != null:
-				piece.rotation = 0.0
-				piece.scale = Vector2.ONE
-				piece.flip_h = false
-				piece.flip_v = false
-				piece.rehome()
-
-
-# The darkroom, in-engine (owner: "drop background"): flat AI-image
-# backdrops (the classic black/white card) become transparency. The
-# four corners vote on the background color; if they disagree there is
-# no uniform background and the op declines. Destructive by design —
-# recovery is delete + re-import (the source file never left the disk).
-static func _strip_background(img: Image) -> Image:
-	var w := img.get_width()
-	var h := img.get_height()
-	if w < 4 or h < 4:
-		return null
-	var corners: Array[Color] = [
-		img.get_pixel(1, 1),
-		img.get_pixel(w - 2, 1),
-		img.get_pixel(1, h - 2),
-		img.get_pixel(w - 2, h - 2),
-	]
-	var bg := Color(0, 0, 0, 0)
-	for c in corners:
-		bg += c
-	bg *= 0.25
-	for c in corners:
-		if Vector3(c.r - bg.r, c.g - bg.g, c.b - bg.b).length() > 0.15:
-			return null
-	# Flood-fill from the border: only background CONNECTED to the frame
-	# is keyed — a king's black pupils on a black card stay landlocked
-	# and untouched (the global-distance version blinded the poor frog).
-	var dist := PackedFloat32Array()
-	dist.resize(w * h)
-	for y in h:
-		for x in w:
-			var px := img.get_pixel(x, y)
-			dist[y * w + x] = Vector3(px.r - bg.r, px.g - bg.g, px.b - bg.b).length()
-	var keyed := PackedByteArray()
-	keyed.resize(w * h)
-	var queue: Array[int] = []
-	for x in w:
-		for y: int in [0, h - 1]:
-			var i := y * w + x
-			if dist[i] < 0.35 and keyed[i] == 0:
-				keyed[i] = 1
-				queue.append(i)
-	for y in h:
-		for x: int in [0, w - 1]:
-			var i := y * w + x
-			if dist[i] < 0.35 and keyed[i] == 0:
-				keyed[i] = 1
-				queue.append(i)
-	while not queue.is_empty():
-		var i: int = queue.pop_back()
-		var ix := i % w
-		var iy := i / w
-		for n in [[ix + 1, iy], [ix - 1, iy], [ix, iy + 1], [ix, iy - 1]]:
-			var nx: int = n[0]
-			var ny: int = n[1]
-			if nx < 0 or ny < 0 or nx >= w or ny >= h:
-				continue
-			var ni := ny * w + nx
-			if keyed[ni] == 0 and dist[ni] < 0.35:
-				keyed[ni] = 1
-				queue.append(ni)
-	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
-	for y in h:
-		for x in w:
-			var i := y * w + x
-			var px := img.get_pixel(x, y)
-			if keyed[i] == 0:
-				out.set_pixel(x, y, px)
-				continue
-			var a := clampf((dist[i] - 0.10) / 0.25, 0.0, 1.0) * px.a
-			if a <= 0.001:
-				out.set_pixel(x, y, Color(0, 0, 0, 0))
-			else:
-				# Unmix the background's contribution from edge blends.
-				var r := clampf((px.r - (1.0 - a) * bg.r) / a, 0.0, 1.0)
-				var g := clampf((px.g - (1.0 - a) * bg.g) / a, 0.0, 1.0)
-				var b := clampf((px.b - (1.0 - a) * bg.b) / a, 0.0, 1.0)
-				out.set_pixel(x, y, Color(r, g, b, a))
-	return out
-
-
-func _drop_background() -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var old_key := str(o.get("image", ""))
-	var img := LevelJson.decode_png_b64(str(current.images.get(old_key, "")))
-	if img == null:
-		return
-	var stripped := _strip_background(img)
-	if stripped == null:
-		push_warning("Drop Background: corners disagree — no uniform backdrop found")
-		return
-	var cap_result := _cap_image_to_max(stripped)
-	var png_bytes: PackedByteArray = cap_result[0]
-	var new_b64: String = cap_result[1]
-	var new_key := LevelJson.image_key(png_bytes)
-	if new_key != old_key:
-		var refs := 0
-		for entry in current.overlays:
-			if str(entry.get("image", "")) == old_key:
-				refs += 1
-		if (
-			not current.images.has(new_key)
-			and refs > 1
-			and current.images.size() >= LevelJson.MAX_IMAGES
-		):
-			push_warning("Drop Background: image cap full")
-			return
-		if not current.images.has(new_key):
-			current.images[new_key] = new_b64
-		o["image"] = new_key
-		if refs <= 1:
-			current.images.erase(old_key)
-	_rebuild_scenery()
-	_refresh_pieces()
-	_reopen_inspector()
-
-
-# ---------------------------------------------------------------------------
-# Bake: consume edit-state transforms into the raster, re-key the blob.
-# Transform order: flip → scale → rotate (flip is pixel-level, then the
-# scaled+flipped image is rotated into its bounding box).
-# 90°/180°/270° rotations stay pixel-exact via the epsilon-guarded ceil
-# bbox (swallows cos(PI/2)'s 1e-17 dust) + unclamped-floor bilinear
-# (epsilon-negative coords land full-weight on the correct clamped pixel).
-# Unedited overlays (no underscore keys) are left unchanged — no re-encode churn.
-# ---------------------------------------------------------------------------
-
-func _bake_scenery() -> int:
-	var skipped := 0
-	# Build reference counts for all image keys.
-	var ref_count: Dictionary = {}
-	for entry in current.overlays:
-		var k: String = (entry as Dictionary).get("image", "")
-		if k != "":
-			ref_count[k] = ref_count.get(k, 0) + 1
-
-	for i in current.overlays.size():
-		var o: Dictionary = current.overlays[i]
-		var has_edits := false
-		for k in o:
-			if (k as String).begins_with("_"):
-				has_edits = true
-				break
-		if not has_edits:
-			continue
-
-		var old_key: String = o.get("image", "")
-		if old_key == "" or not current.images.has(old_key):
-			# Strip keys even on missing image to stay consistent.
-			_strip_edit_keys(o)
-			continue
-
-		var img := LevelJson.decode_png_b64(current.images[old_key])
-		if img == null:
-			_strip_edit_keys(o)
-			continue
-
-		# Apply flip (pixel-level, in place).
-		if o.get("_flip_h", false):
-			img.flip_x()
-		if o.get("_flip_v", false):
-			img.flip_y()
-
-		# Apply scale via resize.
-		var sc: float = o.get("_scale", 1.0)
-		if not is_equal_approx(sc, 1.0):
-			var nw := maxi(1, roundi(img.get_width() * sc))
-			var nh := maxi(1, roundi(img.get_height() * sc))
-			img.resize(nw, nh, Image.INTERPOLATE_LANCZOS)
-
-		# Apply rotation via inverse-mapping into a rotated bounding box.
-		var rot: float = o.get("_rot", 0.0)
-		if not is_equal_approx(fmod(rot, TAU), 0.0):
-			img = _rotate_image(img, rot)
-
-		# Re-encode and cap.
-		var cap_result := _cap_image_to_max(img)
-		var png_bytes: PackedByteArray = cap_result[0]
-		var new_b64: String = cap_result[1]
-		var new_key := LevelJson.image_key(png_bytes)
-
-		if new_key != old_key:
-			# Would storing this new blob exceed the image cap?
-			# Allow only if old_key is being orphaned (net count stays same).
-			var old_still_needed: bool = ref_count.get(old_key, 0) > 1
-			if not current.images.has(new_key) and old_still_needed and current.images.size() >= LevelJson.MAX_IMAGES:
-				# Cap hit: skip bake for this overlay, keep its underscore edit-state.
-				push_warning("SceneryBake: skipping overlay %d — image cap full" % i)
-				skipped += 1
-				continue
-			# Store the new blob (dedup: might already exist under new_key).
-			if not current.images.has(new_key):
-				current.images[new_key] = new_b64
-			# Update this overlay's key.
-			o["image"] = new_key
-			# Move the reference in the ledger: +new, -old. (Audit P1:
-			# forgetting the increment let a later bake orphan-erase an
-			# image this overlay still pointed at.)
-			ref_count[new_key] = ref_count.get(new_key, 0) + 1
-			ref_count[old_key] = ref_count.get(old_key, 1) - 1
-			if ref_count.get(old_key, 0) <= 0:
-				current.images.erase(old_key)
-
-		# Strip edit-state keys (always — identity bake still consumed them).
-		_strip_edit_keys(o)
-
-		# Reset the live piece transform so the visual matches the baked image.
-		var live_piece := _piece_for_overlay(i)
-		if live_piece != null:
-			var piece := live_piece
-			piece.rotation = 0.0
-			piece.scale = Vector2.ONE
-			piece.flip_h = false
-			piece.flip_v = false
-	return skipped
-
-
-static func _strip_edit_keys(o: Dictionary) -> void:
-	var to_remove: Array[String] = []
-	for k in o:
-		if (k as String).begins_with("_"):
-			to_remove.append(k)
-	for k in to_remove:
-		o.erase(k)
-
-
-# Pure-GDScript inverse-mapping rotation.
-# Computes the rotated bounding box size, then for each destination pixel
-# inverse-rotates back to source space and samples with bilinear interpolation.
-# Transparent pixels outside the source rect become Color(0,0,0,0).
-static func _rotate_image(src: Image, rot: float) -> Image:
-	var sw := src.get_width()
-	var sh := src.get_height()
-	src.convert(Image.FORMAT_RGBA8)
-
-	# Rotated bounding box: for a rectangle rotated by `rot`, the enclosing
-	# axis-aligned box has dimensions:
-	#   w' = |w·cos(r)| + |h·sin(r)|
-	#   h' = |w·sin(r)| + |h·cos(r)|
-	var abs_cos := absf(cos(rot))
-	var abs_sin := absf(sin(rot))
-	# ceili guards the half-pixel clip at odd angles; the tiny epsilon
-	# guards ceili against cos(PI/2)'s 6e-17 dust inflating exact
-	# 90-degree boxes by a whole pixel.
-	var dw := maxi(1, ceili(sw * abs_cos + sh * abs_sin - 0.001))
-	var dh := maxi(1, ceili(sw * abs_sin + sh * abs_cos - 0.001))
-
-	var dst := Image.create(dw, dh, false, Image.FORMAT_RGBA8)
-	dst.fill(Color(0, 0, 0, 0))
-
-	# Centers.
-	var cx_src := (sw - 1) * 0.5
-	var cy_src := (sh - 1) * 0.5
-	var cx_dst := (dw - 1) * 0.5
-	var cy_dst := (dh - 1) * 0.5
-
-	var cos_r := cos(-rot)  # inverse rotation
-	var sin_r := sin(-rot)
-
-	for dy in dh:
-		for dx in dw:
-			# Vector from dst center.
-			var fx := dx - cx_dst
-			var fy := dy - cy_dst
-			# Inverse-rotate.
-			var sx := fx * cos_r - fy * sin_r + cx_src
-			var sy := fx * sin_r + fy * cos_r + cy_src
-			# Bilinear sample.
-			var color := _bilinear_sample(src, sx, sy, sw, sh)
-			dst.set_pixel(dx, dy, color)
-
-	return dst
-
-
-static func _bilinear_sample(
-	src: Image, sx: float, sy: float, sw: int, sh: int
-) -> Color:
-	# Clamp to avoid out-of-bounds — transparent outside source.
-	if sx < -0.5 or sy < -0.5 or sx > sw - 0.5 or sy > sh - 0.5:
-		return Color(0, 0, 0, 0)
-
-	# Compute unclamped floor first so tx/ty are always in [0,1).
-	var x0f := floorf(sx)
-	var y0f := floorf(sy)
-	var tx: float = sx - x0f
-	var ty: float = sy - y0f
-	var x0 := clampi(int(x0f), 0, sw - 1)
-	var y0 := clampi(int(y0f), 0, sh - 1)
-	var x1 := clampi(int(x0f) + 1, 0, sw - 1)
-	var y1 := clampi(int(y0f) + 1, 0, sh - 1)
-
-	var c00 := src.get_pixel(x0, y0)
-	var c10 := src.get_pixel(x1, y0)
-	var c01 := src.get_pixel(x0, y1)
-	var c11 := src.get_pixel(x1, y1)
-
-	# Premultiplied-alpha bilinear: lerp premultiplied channels, then unpremultiply.
-	# Prevents transparent-black fringing at alpha boundaries.
-	var a00 := c00.a
-	var a10 := c10.a
-	var a01 := c01.a
-	var a11 := c11.a
-	var r := c00.r * a00 * (1 - tx) * (1 - ty) + c10.r * a10 * tx * (1 - ty) + c01.r * a01 * (1 - tx) * ty + c11.r * a11 * tx * ty
-	var g := c00.g * a00 * (1 - tx) * (1 - ty) + c10.g * a10 * tx * (1 - ty) + c01.g * a01 * (1 - tx) * ty + c11.g * a11 * tx * ty
-	var b := c00.b * a00 * (1 - tx) * (1 - ty) + c10.b * a10 * tx * (1 - ty) + c01.b * a01 * (1 - tx) * ty + c11.b * a11 * tx * ty
-	var a := a00 * (1 - tx) * (1 - ty) + a10 * tx * (1 - ty) + a01 * (1 - tx) * ty + a11 * tx * ty
-	if a < 0.00001:
-		return Color(0, 0, 0, 0)
-	return Color(r / a, g / a, b / a, a)

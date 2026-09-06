@@ -18,8 +18,14 @@ signal upload_requested
 # every save got old). Editor updates it on load/save/clear/upload.
 var suggested_stem := ""
 
+# Every modal dialog this menu owns — any_dialog_open() iterates this
+# registry instead of a hand-enumerated list, so a new dialog only has
+# to be added in ONE place (_ready).
+var _dialogs: Array[Window] = []
+
 
 func _ready() -> void:
+	_dialogs.assign([%SaveAsDialog, %LoadDialog, %ClearConfirm, %LoadError, %IntroDialog])
 	# Long intros wrap instead of scrolling sideways off the parchment.
 	%IntroEdit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	%MenuBtn.pressed.connect(func() -> void: %Panel.visible = not %Panel.visible)
@@ -110,13 +116,10 @@ func _pick(sig: Signal) -> void:
 # True while any modal dialog is up — the editor pauses field
 # interaction so clicks aimed at a dialog can't edit the level.
 func any_dialog_open() -> bool:
-	return (
-		%SaveAsDialog.visible
-		or %LoadDialog.visible
-		or %ClearConfirm.visible
-		or %LoadError.visible
-		or %IntroDialog.visible
-	)
+	for d in _dialogs:
+		if d.visible:
+			return true
+	return false
 
 
 # Geometry test for the polled interaction layer: is this viewport
