@@ -21,7 +21,7 @@ var save_path := ""  # last saved path, "" = unsaved
 var mode := Mode.CRATES
 var selected_overlay := -1
 var _spawned: Array[Crate] = []
-var _spawned_props: Array[StaticBody2D] = []
+var _spawned_props: Array[Node2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false

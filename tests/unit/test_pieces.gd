@@ -179,3 +179,211 @@ func test_tramp_left_polygon_deflects_stones_left() -> void:
 	var hh := 31.5  # cells.y=1, CELL_H=63 → size.y=63  → hh=31.5
 	var expected := PackedVector2Array([Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
 	assert_eq(poly_node.polygon, expected, "tramp-left is '/' ramp — normal points up-left, stones launch left")
+
+
+func test_wormhole_sidecars_register() -> void:
+	var blue := Pieces.entry("wormhole-blue")
+	assert_eq(blue["class"], "wormhole")
+	assert_eq(blue["cells"], Vector2i(1, 2))
+	assert_not_null(blue["texture"])
+	assert_eq(Pieces.entry("wormhole-orange")["class"], "wormhole")
+
+
+func test_link_pairs_wires_exactly_two() -> void:
+	var a := Wormhole.new()
+	var b := Wormhole.new()
+	a.set_meta("prop_id", "wormhole-blue")
+	b.set_meta("prop_id", "wormhole-blue")
+	autofree(a)
+	autofree(b)
+	Wormhole.link_pairs([a, b])
+	assert_eq(a.partner, b)
+	assert_eq(b.partner, a)
+
+
+func test_link_pairs_odd_counts_stay_inert() -> void:
+	var lone := Wormhole.new()
+	lone.set_meta("prop_id", "wormhole-orange")
+	autofree(lone)
+	Wormhole.link_pairs([lone])  # warns (GUT-safe)
+	assert_null(lone.partner, "1 portal = inert")
+	var t1 := Wormhole.new()
+	var t2 := Wormhole.new()
+	var t3 := Wormhole.new()
+	for t in [t1, t2, t3]:
+		t.set_meta("prop_id", "wormhole-blue")
+		autofree(t)
+	Wormhole.link_pairs([t1, t2, t3])  # warns (GUT-safe)
+	assert_null(t1.partner, "3 portals = all inert")
+	assert_null(t2.partner)
+	assert_null(t3.partner)
+
+
+func test_spawn_props_builds_linked_wormholes() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "warp-spawn"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	var b := EditorGrid.cell_to_world(Vector2i(20, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	l.props.append({"id": "wormhole-blue", "x": b.x, "y": b.y})
+	var spawned := PropBuilder.spawn_props(host, l)
+	assert_eq(spawned.size(), 2)
+	assert_true(spawned[0] is Wormhole)
+	assert_true(spawned[0].is_in_group("props"))
+	assert_eq(spawned[0].get_meta("prop_id"), "wormhole-blue")
+	assert_eq((spawned[0] as Wormhole).partner, spawned[1], "pair auto-linked")
+	assert_eq((spawned[1] as Wormhole).partner, spawned[0])
+
+
+func test_spawn_props_lone_wormhole_spawns_inert() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "lone"
+	var a := EditorGrid.cell_to_world(Vector2i(4, 0))
+	l.props.append({"id": "wormhole-orange", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # warns (GUT-safe)
+	assert_eq(spawned.size(), 1, "spawns as scenery")
+	assert_null((spawned[0] as Wormhole).partner, "but inert")
+
+
+func test_teleport_guards_freed_partner() -> void:
+	# Pin the use-after-free fix: partner freed between deferred call queue and execute.
+	var a := Wormhole.new()
+	var b := Wormhole.new()
+	a.set_meta("prop_id", "wormhole-blue")
+	b.set_meta("prop_id", "wormhole-blue")
+	add_child_autofree(a)
+	add_child_autofree(b)
+	Wormhole.link_pairs([a, b])
+
+	# Place portals far apart so teleport would be obvious.
+	a.global_position = Vector2(100, 100)
+	b.global_position = Vector2(500, 500)
+
+	# Instantiate a real Stone, add to tree.
+	var stone := load("res://scenes/stone.tscn").instantiate() as Stone
+	add_child_autofree(stone)
+	stone.global_position = a.global_position
+	var stone_x_before := stone.global_position.x
+
+	# Queue _teleport(stone) to b; then free b immediately (not queue_free).
+	a._on_body_entered(stone)
+	b.free()
+
+	# Let deferred calls run; the freed partner guard should prevent crash.
+	await wait_process_frames(2)
+
+	# Assert stone did NOT teleport (x should stay near original, not jump to b's x=500).
+	assert_lt(abs(stone.global_position.x - stone_x_before), 50.0, "stone x near original after freed-partner teleport")
+
+
+func _warp_pair(host: Node2D) -> Array:
+	var l := LevelLayout.new()
+	l.title = "e2e"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	var b := EditorGrid.cell_to_world(Vector2i(24, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	l.props.append({"id": "wormhole-blue", "x": b.x, "y": b.y})
+	return [PropBuilder.spawn_props(host, l), a, b]
+
+
+func test_stone_warps_with_velocity_preserved() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var a: Vector2 = parts[1]
+	var b: Vector2 = parts[2]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	# test control: isolate the warp from world air drag (game stones keep it)
+	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	stone.global_position = a + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(40)
+	assert_gt(stone.global_position.x, b.x, "stone crossed the map via the warp")
+	assert_almost_eq(stone.linear_velocity.x, 600.0, 30.0, "speed preserved (minor damp tolerated)")
+	assert_almost_eq(stone.linear_velocity.y, 0.0, 5.0, "direction preserved")
+
+
+func test_arrival_immunity_blocks_instant_return() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var exit_hole: Wormhole = spawned[1]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	host.add_child(stone)
+	autofree(stone)
+	exit_hole.expect_arrival(stone)
+	stone.global_position = exit_hole.global_position
+	stone.linear_velocity = Vector2.ZERO
+	await wait_physics_frames(20)
+	assert_almost_eq(
+		stone.global_position.x, exit_hole.global_position.x, 2.0,
+		"arrived stone parks in the exit portal — no ping-pong back"
+	)
+
+
+func test_crates_do_not_warp() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var a: Vector2 = parts[1]
+	var crate := RigidBody2D.new()  # any non-Stone body
+	var cshape := CollisionShape2D.new()
+	var crect := RectangleShape2D.new()
+	crect.size = Vector2(40, 40)
+	cshape.shape = crect
+	crate.add_child(cshape)
+	crate.gravity_scale = 0.0
+	crate.global_position = a
+	host.add_child(crate)
+	autofree(crate)
+	await wait_physics_frames(15)
+	assert_almost_eq(crate.global_position.x, a.x, 5.0, "non-stones stay put")
+
+
+func test_arrival_fx_spawns_tinted_oneshot_burst() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "fx"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var hole: Wormhole = spawned[0]
+	await wait_process_frames(1)  # _ready ran, _sprite found
+	hole.play_arrival_fx(Vector2(600, 0))
+	var burst: CPUParticles2D = null
+	for c in hole.get_children():
+		if c is CPUParticles2D:
+			burst = c
+	assert_not_null(burst, "whoosh burst spawned")
+	assert_true(burst.one_shot and burst.emitting)
+	assert_gt(burst.color.b, burst.color.r, "tint sampled from the blue portal art (NOTE: art-coupled — re-check if pieces/wormhole-blue.png is repainted warmer)")
+
+
+func test_warp_arrival_fires_partner_whoosh() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	var exit_hole: Wormhole = spawned[1]
+	var found := false
+	for c in exit_hole.get_children():
+		if c is CPUParticles2D:
+			found = true
+	assert_true(found, "arrival whoosh at the exit portal")

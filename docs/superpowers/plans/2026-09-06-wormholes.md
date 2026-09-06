@@ -454,3 +454,151 @@ git commit -m "feat: wormholes warp — velocity-preserving teleport proven unde
 - Task 3 velocity asserts use tight tolerances rather than exact equality — stones may carry linear damp; direction and speed-within-tolerance is the observable contract.
 - The editor canvas never links pairs (spawn_one is called per-prop there) — portals spin but are inert while editing; TEST runs the real level scene and links. This matches spec §5.
 - Placeholder art is deliberately crude; owner replaces PNGs in place.
+
+---
+
+### Task 5: Exit whoosh (owner-requested addendum, 2026-09-06 — runs after Task 3, before the Task 4 sweep)
+
+**Files:**
+- Modify: `src/level/wormhole.gd`
+- Test: `tests/unit/test_pieces.gd` (append)
+
+**Interfaces:**
+- Consumes: the linked pair + `_teleport` from Tasks 1-3; `_sprite` (the builder's Sprite2D child, found in `_ready`).
+- Produces: `func play_arrival_fx(exit_velocity: Vector2) -> void` on Wormhole, called on the PARTNER inside `_teleport` after the position set.
+
+- [ ] **Step 1: Write the failing tests** (append to `tests/unit/test_pieces.gd`)
+
+```gdscript
+func test_arrival_fx_spawns_tinted_oneshot_burst() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "fx"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var hole: Wormhole = spawned[0]
+	await wait_process_frames(1)  # _ready ran, _sprite found
+	hole.play_arrival_fx(Vector2(600, 0))
+	var burst: CPUParticles2D = null
+	for c in hole.get_children():
+		if c is CPUParticles2D:
+			burst = c
+	assert_not_null(burst, "whoosh burst spawned")
+	assert_true(burst.one_shot and burst.emitting)
+	assert_gt(burst.color.b, burst.color.r, "tint sampled from the blue portal art")
+
+
+func test_warp_arrival_fires_partner_whoosh() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	var exit_hole: Wormhole = spawned[1]
+	var found := false
+	for c in exit_hole.get_children():
+		if c is CPUParticles2D:
+			found = true
+	assert_true(found, "arrival whoosh at the exit portal")
+```
+
+- [ ] **Step 2: Run to verify failure**
+
+Run: `/home/frosty/Dev/godot/bin/godot --headless -s addons/gut/gut_cmdln.gd -gtest=res://tests/unit/test_pieces.gd -gexit`
+Expected: FAIL — `play_arrival_fx` not declared.
+
+- [ ] **Step 3: Implement** — add to `src/level/wormhole.gd`:
+
+Constants beside `SPIN_RAD_PER_SEC`:
+
+```gdscript
+const FX_STREAKS := 12
+const FX_LIFETIME := 0.35
+const PULSE_TIME := 0.2
+```
+
+Fields beside `_sprite`:
+
+```gdscript
+var _tint_cache := Color.WHITE
+var _tint_ready := false
+```
+
+In `_teleport`, after `body.reset_physics_interpolation()`:
+
+```gdscript
+	partner.play_arrival_fx((body as RigidBody2D).linear_velocity)
+```
+
+New methods:
+
+```gdscript
+# Arrival juice: the stone keeps its velocity (spec), so the whoosh
+# sells the violence of arrival — streaks biased along the exit
+# vector + a quick "gulp" pulse on the portal sprite.
+func play_arrival_fx(exit_velocity: Vector2) -> void:
+	var burst := CPUParticles2D.new()
+	burst.one_shot = true
+	burst.emitting = true
+	burst.amount = FX_STREAKS
+	burst.lifetime = FX_LIFETIME
+	burst.explosiveness = 1.0
+	burst.direction = exit_velocity.normalized() if exit_velocity.length() > 1.0 else Vector2.UP
+	burst.spread = 55.0
+	burst.initial_velocity_min = 180.0
+	burst.initial_velocity_max = 320.0
+	burst.gravity = Vector2.ZERO
+	burst.scale_amount_min = 2.0
+	burst.scale_amount_max = 4.0
+	burst.color = _fx_tint()
+	burst.finished.connect(burst.queue_free)
+	add_child(burst)
+	if _sprite != null:
+		var tw := create_tween()
+		tw.tween_property(_sprite, "scale", Vector2(1.3, 1.3), PULSE_TIME * 0.5)
+		tw.tween_property(_sprite, "scale", Vector2.ONE, PULSE_TIME * 0.5)
+
+
+# Average the portal art once so any color portal (future packs) gets
+# a matching whoosh with zero config.
+func _fx_tint() -> Color:
+	if _tint_ready:
+		return _tint_cache
+	_tint_ready = true
+	if _sprite != null and _sprite.texture != null:
+		var img := _sprite.texture.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			img.resize(8, 8)
+			var sum := Vector3.ZERO
+			var n := 0
+			for y in 8:
+				for x in 8:
+					var c := img.get_pixel(x, y)
+					if c.a > 0.5:
+						sum += Vector3(c.r, c.g, c.b)
+						n += 1
+			if n > 0:
+				_tint_cache = Color(sum.x / n, sum.y / n, sum.z / n)
+	return _tint_cache
+```
+
+- [ ] **Step 4: Focused green, full suite** — expected: prior count + 2. Output pristine beyond deliberate warnings.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/level/wormhole.gd tests/unit/test_pieces.gd
+git commit -m "feat: exit whoosh — arrival burst tinted from portal art + gulp pulse"
+```
+
+Note for Task 4 sweep: suite expectation rises by 2 over whatever Task 3 landed.
