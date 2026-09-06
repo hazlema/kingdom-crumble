@@ -63,3 +63,44 @@ func test_all_crate_ids_resolve_through_pieces() -> void:
 
 func test_crate_tooltips_survived_txt_to_sidecar() -> void:
 	assert_ne(Pieces.entry("crate-gold")["tip"], "crate-gold", "gold kept its .txt tooltip text")
+
+
+func _props_doc(props: Variant) -> Dictionary:
+	return {"title": "p", "background": "meadow", "crates": [], "props": props, "format": 1}
+
+
+func test_props_validation_matrix() -> void:
+	assert_eq(LevelJson.validate(_props_doc([])), "")
+	assert_eq(LevelJson.validate(_props_doc([{"id": "tramp-left", "x": 1024, "y": 569}])), "")
+	assert_eq(
+		LevelJson.validate(_props_doc([{"id": "thanksgiving:turkey", "x": 0, "y": 0}])),
+		"",
+		"namespaced ids are legal"
+	)
+	assert_eq(LevelJson.validate(_props_doc("nope")), "props must be a list")
+	assert_eq(LevelJson.validate(_props_doc([{"id": "BAD CAPS", "x": 0, "y": 0}])), "prop 0: bad id")
+	assert_eq(LevelJson.validate(_props_doc([{"id": "ok", "x": "left", "y": 0}])), "prop 0: bad coords")
+	assert_eq(LevelJson.validate(_props_doc([{"x": 0, "y": 0}])), "prop 0: bad id")
+	var many := []
+	for i in 65:
+		many.append({"id": "block-stone", "x": i, "y": 0})
+	assert_eq(LevelJson.validate(_props_doc(many)), "too many props")
+
+
+func test_props_round_trip() -> void:
+	var l := LevelLayout.new()
+	l.title = "rt"
+	l.props.append({"id": "tramp-right", "x": 1024.0, "y": 569.0})
+	var back := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(back)
+	assert_eq(back.props.size(), 1)
+	assert_eq(back.props[0]["id"], "tramp-right")
+	assert_eq(float(back.props[0]["x"]), 1024.0)
+
+
+func test_level_without_props_still_parses() -> void:
+	var l := LevelLayout.new()
+	l.title = "legacy"
+	var back := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(back, "props key optional — old levels unaffected")
+	assert_eq(back.props.size(), 0)

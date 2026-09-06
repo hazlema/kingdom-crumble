@@ -15,6 +15,9 @@ extends Resource
 @export var shots := 0  # 0 = difficulty preset decides
 # Each entry: { "x": float, "y": float, "type": String }
 @export var crates: Array[Dictionary] = []
+# props: placed non-crate pieces [{id:String, x:float, y:float}] —
+# unscored StaticBody geometry (blocks, trampolines). See Pieces.
+@export var props: Array[Dictionary] = []
 # event name -> Array[String] of curated effect ids
 @export var triggers := {}
 # Embedded scenery art: content-hash key -> base64 PNG (spec 2026-09-02).
