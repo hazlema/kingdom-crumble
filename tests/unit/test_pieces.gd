@@ -11,6 +11,8 @@ func test_parse_sidecar_defaults_to_plain_crate() -> void:
 	var meta := Pieces.parse_sidecar("crate-wood", {})
 	assert_eq(meta["class"], "crate")
 	assert_eq(meta["cells"], Vector2i(1, 1))
+	assert_eq(meta["tilt"], 0)
+	assert_eq(meta["bounce"], 1.5)
 	assert_eq(meta["tip"], "crate-wood")
 
 
@@ -27,6 +29,11 @@ func test_parse_sidecar_clamps_and_curates() -> void:
 func test_parse_sidecar_rejects_unknown_class() -> void:
 	var meta := Pieces.parse_sidecar("t", {"class": "cannon"})
 	assert_true(meta.is_empty(), "unknown class = skip signal (empty dict)")
+
+
+func test_parse_sidecar_warns_malformed_cells() -> void:
+	var meta := Pieces.parse_sidecar("t", {"cells": ["a", "b"]})
+	assert_eq(meta["cells"], Vector2i(1, 1), "malformed cells fall back to 1x1")
 
 
 func test_scan_finds_obstacles_with_metadata() -> void:

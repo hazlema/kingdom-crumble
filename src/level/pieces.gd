@@ -5,7 +5,7 @@ extends RefCounted
 # res://pieces/ holds baked content: one PNG per object + optional JSON
 # sidecar. Sidecars SELECT AND TUNE curated classes, never define
 # behavior. No sidecar = plain 1x1 crate. Wave 2 adds user://toybox
-# packs; scan() is shaped so a second root is additive.
+# packs; wave 2 will call _scan_dir(<other root>) beside the existing root inside scan().
 
 const ROOT := "res://pieces"
 const CLASSES := ["crate", "static", "trampoline"]
@@ -62,10 +62,12 @@ static func parse_sidecar(id: String, raw: Dictionary) -> Dictionary:
 		return {}
 	var cells := Vector2i(1, 1)
 	var raw_cells: Variant = raw.get("cells")
-	if raw_cells is Array and (raw_cells as Array).size() == 2:
+	if raw_cells is Array:
 		var rc := raw_cells as Array
-		if (rc[0] is float or rc[0] is int) and (rc[1] is float or rc[1] is int):
+		if rc.size() == 2 and (rc[0] is float or rc[0] is int) and (rc[1] is float or rc[1] is int):
 			cells = Vector2i(clampi(int(rc[0]), 1, MAX_CELL), clampi(int(rc[1]), 1, MAX_CELL))
+		elif rc.size() != 0:  # Array exists but is malformed
+			push_warning("Pieces: %s has malformed cells — using 1x1" % id)
 	var tilt := 0
 	var raw_tilt: Variant = raw.get("tilt", 0)
 	if (raw_tilt is float or raw_tilt is int) and int(raw_tilt) in TILTS:
