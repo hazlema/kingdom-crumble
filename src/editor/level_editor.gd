@@ -1181,9 +1181,18 @@ func _drop_background() -> void:
 func _bake_scenery() -> int:
 	var skipped := SceneryBake.bake(current)
 	# Reset the live piece transform so the visual matches the baked image.
+	# Only reset pieces whose bake succeeded (no pending underscore edit keys).
 	for i in current.overlays.size():
 		var live_piece := _piece_for_overlay(i)
 		if live_piece != null:
+			# Guard: only reset if the bake consumed the edit keys.
+			var still_pending := false
+			for k in (current.overlays[i] as Dictionary).keys():
+				if String(k).begins_with("_"):
+					still_pending = true
+					break
+			if still_pending:
+				continue
 			var piece := live_piece
 			piece.rotation = 0.0
 			piece.scale = Vector2.ONE
