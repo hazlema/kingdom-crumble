@@ -381,5 +381,5 @@ func test_theme_dropdown_lists_and_disables_out_of_season() -> void:
 			break
 	assert_ne(winter_idx, -1, "Winter Theme item found in OptionButton")
 	assert_true(ob.is_item_disabled(winter_idx), "out-of-season theme item is disabled")
-	assert_true("returns in November" in ob.get_item_text(winter_idx),
+	assert_true("returns in " + MONTHS[11] in ob.get_item_text(winter_idx),
 		"disabled item text contains 'returns in November'")
