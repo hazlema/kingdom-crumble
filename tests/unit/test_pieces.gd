@@ -219,6 +219,36 @@ func test_link_pairs_odd_counts_stay_inert() -> void:
 	assert_null(t3.partner)
 
 
+func test_spawn_props_builds_linked_wormholes() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "warp-spawn"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	var b := EditorGrid.cell_to_world(Vector2i(20, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	l.props.append({"id": "wormhole-blue", "x": b.x, "y": b.y})
+	var spawned := PropBuilder.spawn_props(host, l)
+	assert_eq(spawned.size(), 2)
+	assert_true(spawned[0] is Wormhole)
+	assert_true(spawned[0].is_in_group("props"))
+	assert_eq(spawned[0].get_meta("prop_id"), "wormhole-blue")
+	assert_eq((spawned[0] as Wormhole).partner, spawned[1], "pair auto-linked")
+	assert_eq((spawned[1] as Wormhole).partner, spawned[0])
+
+
+func test_spawn_props_lone_wormhole_spawns_inert() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "lone"
+	var a := EditorGrid.cell_to_world(Vector2i(4, 0))
+	l.props.append({"id": "wormhole-orange", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # warns (GUT-safe)
+	assert_eq(spawned.size(), 1, "spawns as scenery")
+	assert_null((spawned[0] as Wormhole).partner, "but inert")
+
+
 func test_teleport_guards_freed_partner() -> void:
 	# Pin the use-after-free fix: partner freed between deferred call queue and execute.
 	var a := Wormhole.new()

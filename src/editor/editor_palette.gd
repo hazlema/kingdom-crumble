@@ -18,7 +18,7 @@ func _ready() -> void:
 	var ob_grid := GridContainer.new()
 	ob_grid.columns = (%Grid as GridContainer).columns
 	box.add_child(ob_grid)
-	for cls in ["static", "trampoline"]:
+	for cls in ["static", "trampoline", "wormhole"]:
 		for entry in Pieces.by_class(cls):
 			ob_grid.add_child(_piece_button(entry))
 	%TitleBar.gui_input.connect(_on_title_input)

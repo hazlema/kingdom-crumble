@@ -1,7 +1,7 @@
 class_name PropBuilder
 extends RefCounted
 
-# Spawns non-crate pieces (class static/trampoline) as StaticBody2D
+# Spawns non-crate pieces (class static/trampoline/wormhole) as Node2D
 # geometry. Props are unscored scenery-with-collision: never in the
 # "crates" group, never trigger targets. Unknown ids (missing pack,
 # typo) warn and skip — the level still plays (spec §4).
@@ -10,16 +10,17 @@ const CELL_W: float = EditorGrid.CELL  # 64.0
 const CELL_H: float = EditorGrid.ROW_H  # 63.0
 
 
-static func spawn_props(parent: Node, layout: LevelLayout) -> Array[StaticBody2D]:
-	var out: Array[StaticBody2D] = []
+static func spawn_props(parent: Node, layout: LevelLayout) -> Array[Node2D]:
+	var out: Array[Node2D] = []
 	for p in layout.props:
 		var body := spawn_one(parent, p)
 		if body != null:
 			out.append(body)
+	Wormhole.link_pairs(out)
 	return out
 
 
-static func spawn_one(parent: Node, prop: Dictionary) -> StaticBody2D:
+static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 	var id := str(prop.get("id", ""))
 	var e := Pieces.entry(id)
 	if e.is_empty():
@@ -30,12 +31,29 @@ static func spawn_one(parent: Node, prop: Dictionary) -> StaticBody2D:
 		return null
 	var cells: Vector2i = e["cells"]
 	var anchor := Vector2(float(prop["x"]), float(prop["y"]))
+	var size := Vector2(cells.x * CELL_W, cells.y * CELL_H)
+	if e["class"] == "wormhole":
+		var hole := Wormhole.new()
+		hole.position = footprint_center(anchor, cells)
+		hole.add_to_group("props")
+		hole.set_meta("prop_id", id)
+		hole.set_meta("anchor_cell", EditorGrid.world_to_cell(anchor))
+		hole.collision_mask = 1  # stones ride the default physics layer (verified Step 1)
+		var wshape := CollisionShape2D.new()
+		var wrect := RectangleShape2D.new()
+		wrect.size = size
+		wshape.shape = wrect
+		hole.add_child(wshape)
+		var wsprite := Sprite2D.new()
+		wsprite.texture = e["texture"]
+		hole.add_child(wsprite)
+		parent.add_child(hole)
+		return hole
 	var body := StaticBody2D.new()
 	body.position = footprint_center(anchor, cells)
 	body.add_to_group("props")
 	body.set_meta("prop_id", id)
 	body.set_meta("anchor_cell", EditorGrid.world_to_cell(anchor))
-	var size := Vector2(cells.x * CELL_W, cells.y * CELL_H)
 	if e["class"] == "trampoline" and e["tilt"] != 0:
 		var poly := CollisionPolygon2D.new()
 		var hw := size.x / 2.0
