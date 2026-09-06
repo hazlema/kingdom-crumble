@@ -156,3 +156,26 @@ func test_spawn_props_tramp_right_has_collision_and_bounce() -> void:
 func test_footprint_center_multi_row_offset() -> void:
 	var center := PropBuilder.footprint_center(Vector2(100, 500), Vector2i(2, 2))
 	assert_eq(center, Vector2(132.0, 468.5), "2x2 footprint y-offset correct")
+
+
+func test_tramp_left_polygon_deflects_stones_left() -> void:
+	# Pin the exact triangle for tramp-left (tilt < 0).
+	# tramp-left has cells=Vector2i(2,1), so size=(128,63), hw=64, hh=31.5.
+	# "/" ramp: high edge on the RIGHT (at x=+hw).
+	# Hypotenuse goes from (-hw, hh) to (hw, -hh).
+	# Direction vector: (2hw, -2hh). Right-hand normal: (-2hh, -2hw) → up-left. ✓
+	# Stones landing on this surface are deflected to the LEFT, matching the tooltip.
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "ramp_dir"
+	var anchor := EditorGrid.cell_to_world(Vector2i(0, 0))
+	l.props.append({"id": "tramp-left", "x": anchor.x, "y": anchor.y})
+	var spawned := PropBuilder.spawn_props(host, l)
+	assert_eq(spawned.size(), 1)
+	var poly_node: CollisionPolygon2D = spawned[0].get_child(0) as CollisionPolygon2D
+	assert_not_null(poly_node, "tramp-left has CollisionPolygon2D")
+	var hw := 64.0  # cells.x=2, CELL_W=64 → size.x=128 → hw=64
+	var hh := 31.5  # cells.y=1, CELL_H=63 → size.y=63  → hh=31.5
+	var expected := PackedVector2Array([Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
+	assert_eq(poly_node.polygon, expected, "tramp-left is '/' ramp — normal points up-left, stones launch left")

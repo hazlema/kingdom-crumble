@@ -6,8 +6,8 @@ extends RefCounted
 # "crates" group, never trigger targets. Unknown ids (missing pack,
 # typo) warn and skip — the level still plays (spec §4).
 
-const CELL_W := 64.0  # EditorGrid.CELL
-const CELL_H := 63.0  # EditorGrid.ROW_H
+const CELL_W: float = EditorGrid.CELL  # 64.0
+const CELL_H: float = EditorGrid.ROW_H  # 63.0
 
 
 static func spawn_props(parent: Node, layout: LevelLayout) -> Array[StaticBody2D]:
@@ -40,10 +40,16 @@ static func spawn_one(parent: Node, prop: Dictionary) -> StaticBody2D:
 		var poly := CollisionPolygon2D.new()
 		var hw := size.x / 2.0
 		var hh := size.y / 2.0
-		if e["tilt"] < 0:  # high edge on the LEFT, ramp falls to the right
-			poly.polygon = PackedVector2Array([Vector2(-hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
-		else:  # high edge on the RIGHT
+		if e["tilt"] < 0:
+			# "/" ramp: high edge on the RIGHT → hypotenuse normal points up-LEFT.
+			# Hypotenuse goes (-hw,hh)→(hw,-hh); direction=(2hw,-2hh);
+			# left-hand perp = (-2hh,-2hw) (normalised: up-left) → stones launch LEFT. ✓
 			poly.polygon = PackedVector2Array([Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
+		else:
+			# "\" ramp: high edge on the LEFT → hypotenuse normal points up-RIGHT.
+			# Hypotenuse goes (-hw,-hh)→(hw,hh); direction=(2hw,2hh);
+			# left-hand perp = (-2hh,2hw) ... wait, right-hand perp = (2hh,-2hw) → up-right. ✓
+			poly.polygon = PackedVector2Array([Vector2(-hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
 		body.add_child(poly)
 	else:
 		var shape := CollisionShape2D.new()

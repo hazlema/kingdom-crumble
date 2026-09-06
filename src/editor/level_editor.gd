@@ -21,6 +21,7 @@ var save_path := ""  # last saved path, "" = unsaved
 var mode := Mode.CRATES
 var selected_overlay := -1
 var _spawned: Array[Crate] = []
+var _spawned_props: Array[StaticBody2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _lmb_down := false
@@ -167,6 +168,7 @@ func _try_place(cell: Vector2i) -> void:
 	var prop := {"id": carrying, "x": w.x, "y": w.y}
 	current.props.append(prop)
 	var body := PropBuilder.spawn_one(self, prop)
+	_spawned_props.append(body)
 	for c in footprint(cell, cells):
 		occupancy[c] = body
 	carrying = ""
@@ -376,6 +378,10 @@ func _rebuild() -> void:
 		if is_instance_valid(c):
 			c.queue_free()
 	_spawned.clear()
+	for p in _spawned_props:
+		if is_instance_valid(p):
+			p.queue_free()
+	_spawned_props.clear()
 	occupancy.clear()
 	# Snap all coords to cell centres and drop duplicates.
 	var seen_cells: Array[Vector2i] = []
@@ -410,6 +416,7 @@ func _rebuild() -> void:
 		var kept := {"id": str(p["id"]), "x": snapped.x, "y": snapped.y}
 		kept_props.append(kept)
 		var body := PropBuilder.spawn_one(self, kept)
+		_spawned_props.append(body)
 		for c in LevelEditor.footprint(anchor, e["cells"]):
 			occupancy[c] = body
 	current.props = kept_props
@@ -491,7 +498,7 @@ func _update_ghost() -> void:
 	else:
 		ok = EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
 	overlay.ghost_cells = ghost_cells
-	if cell == overlay.ghost_cell and ok == overlay.ghost_ok:
+	if cell == overlay.ghost_cell and ok == overlay.ghost_ok and overlay.ghost_tex == Pieces.texture_for(id):
 		return
 	overlay.ghost_cell = cell
 	overlay.ghost_tex = Pieces.texture_for(id)
@@ -546,16 +553,15 @@ func _delete_prop(body: Node2D) -> void:
 		if current.props[i]["id"] == pid and pw == anchor:
 			current.props.remove_at(i)
 			break
-	var e2 := Pieces.entry(pid)
-	if e2.is_empty():
-		push_warning("_delete_prop: unknown id '%s' — occupancy may leak" % pid)
-		body.queue_free()
-		overlay.selected_cell = Vector2i(-1, -1)
-		overlay.refresh()
-		return
-	var cells: Vector2i = e2["cells"]
-	for c in footprint(anchor, cells):
-		occupancy.erase(c)
+	# Erase every occupancy cell whose value points at this body.
+	# Works whether the registry id is known or not — no footprint lookup needed.
+	var to_erase: Array[Vector2i] = []
+	for k in occupancy:
+		if occupancy[k] == body:
+			to_erase.append(k)
+	for k in to_erase:
+		occupancy.erase(k)
+	_spawned_props.erase(body)
 	body.queue_free()
 	overlay.selected_cell = Vector2i(-1, -1)
 	overlay.refresh()
