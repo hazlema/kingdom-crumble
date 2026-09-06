@@ -180,3 +180,20 @@ func test_crate_info_dialog_shows_type_and_key() -> void:
 	assert_string_contains(ed._crate_info.dialog_text, "Type: skull")
 	assert_string_contains(ed._crate_info.dialog_text, ed._info_key)
 	assert_true(ed._info_key.begins_with("hit:"), "key ready for the clipboard")
+
+
+func test_hidden_overlay_ghosts_in_editor_but_stays_hidden_in_data() -> void:
+	# In the game a hidden piece spawns invisible; the editor must ghost
+	# it (visible at reduced alpha) so the author can still see/edit it,
+	# WITHOUT touching the data that save writes.
+	var img := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	ed.current.images[key] = b64
+	ed.current.overlays.append({"image": key, "x": 100, "y": 100, "name": "reward", "hidden": true})
+	ed._rebuild_scenery()
+	var piece: NarfDecor = ed._scenery_pieces[0]
+	assert_true(piece.visible, "editor ghosts the hidden piece")
+	assert_almost_eq(piece.modulate.a, 0.4, 0.001, "ghost alpha")
+	assert_eq(ed.current.overlays[0].get("hidden"), true, "data untouched — save still writes hidden")

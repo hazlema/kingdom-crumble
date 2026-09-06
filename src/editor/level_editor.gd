@@ -42,6 +42,7 @@ var _info_key := ""  # trigger key shown in the open Info dialog
 var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed (scenery mode)
 var _rmb_down := false              # RMB was pressed this frame in scenery mode
 const _CONTEXT_MENU_MOTION_THRESHOLD := 6.0  # px; below this RMB release opens menu
+const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -502,6 +503,11 @@ func _rebuild_scenery() -> void:
 		s.scale = Vector2(sc, sc)
 		s.flip_h = o.get("_flip_h", false)
 		s.flip_v = o.get("_flip_v", false)
+		# Hidden pieces (linked-trigger reveals) spawn invisible in the
+		# game; the editor ghosts them instead so they stay editable.
+		if o.get("hidden", false) == true:
+			s.visible = true
+			s.modulate.a = _HIDDEN_GHOST_ALPHA
 	# Pieces keep their live verbs while editing (owner: adding a second
 	# image used to freeze the first one's animation). rehome() re-anchors
 	# each piece to its just-applied transform so nothing snaps.
