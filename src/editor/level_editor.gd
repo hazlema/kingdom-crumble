@@ -17,21 +17,10 @@ static var resume_layout: LevelLayout = null
 var current := LevelLayout.new()
 var occupancy := {}  # Vector2i -> Crate
 var save_path := ""  # last saved path, "" = unsaved
-var mode := Mode.CRATES
-var selected_overlay := -1
 var _spawned: Array[Crate] = []
 var _spawned_props: Array[Node2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
-var _lmb_down := false
 var _last_mouse := Vector2.ZERO
-# Scenery drag state
-var _scenery_dragging := false  # true while LMB drags a selected piece
-var _scenery_drag_start_world := Vector2.ZERO  # world pos when drag began
-var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
-var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
-var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
-# Right-click context menu for scenery pieces
-var _scenery_context: PopupMenu = null
 # RMB context menu state (shared between crate and scenery modes)
 var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed
 var _rmb_down := false              # RMB was pressed this frame
@@ -39,6 +28,15 @@ const _CONTEXT_MENU_MOTION_THRESHOLD := 6.0  # px; below this RMB release opens 
 const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
 
 var _grid_tool: GridTool
+var _scenery_tool: SceneryTool
+var _tool: EditorTool  # the active tool
+
+
+# Derived property — tests and _unhandled_input read this; it stays as the
+# single authoritative mode indicator, driven by which tool is active.
+var mode: Mode:
+	get: return Mode.SCENERY if _tool == _scenery_tool else Mode.CRATES
+
 
 # Forwarders — tests access these as editor properties/methods:
 var carrying: String:
@@ -51,6 +49,11 @@ var _crate_info: AcceptDialog:
 var _info_key: String:
 	get: return _grid_tool._info_key
 
+# Scenery forwarder — tests write/read selected_overlay via the editor.
+var selected_overlay: int:
+	get: return _scenery_tool.selected_overlay
+	set(v): _scenery_tool.selected_overlay = v
+
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
 @onready var _gizmo: SceneryGizmo = $SceneryGizmo
@@ -59,6 +62,14 @@ var _info_key: String:
 
 func inspector() -> PieceInspector:
 	return %PieceInspector
+
+
+func gizmo() -> SceneryGizmo:
+	return _gizmo
+
+
+func camera() -> Camera2D:
+	return $Camera
 
 
 # Shared by all tools: true exactly when this frame is an RMB release
@@ -74,8 +85,16 @@ func rmb_menu_release(mouse: Vector2, over_ui: bool) -> bool:
 	return false
 
 
+func switch_tool(next: EditorTool) -> void:
+	_tool.exit()
+	_tool = next
+	_tool.enter()
+
+
 func _ready() -> void:
 	_grid_tool = GridTool.new(self)
+	_scenery_tool = SceneryTool.new(self)
+	_tool = _grid_tool  # start in CRATES mode
 	Pieces.scan()
 	palette.asset_picked.connect(
 		func(id: String) -> void:
@@ -120,9 +139,9 @@ func _process(_delta: float) -> void:
 			or _mouse_over_ui(mouse)
 			or (_grid_tool._crate_info != null and _grid_tool._crate_info.visible)
 		)
-		_grid_tool.process(mouse, over_ui)
+		_tool.process(mouse, over_ui)
 	else:
-		_scenery_process(mouse)
+		_tool.process(mouse, false)
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +163,30 @@ func _delete_selected() -> void:
 
 func _show_crate_info(cell: Vector2i) -> void:
 	_grid_tool._show_crate_info(cell)
+
+
+# ---------------------------------------------------------------------------
+# Forwarders — SceneryTool owns these; editor exposes them so tests can
+# call them on the editor directly.
+# ---------------------------------------------------------------------------
+
+func _delete_selected_piece() -> void:
+	_scenery_tool._delete_selected_piece()
+
+
+func _drop_background() -> void:
+	_scenery_tool._drop_background()
+
+
+func _pick_piece(world_pos: Vector2) -> int:
+	return _scenery_tool._pick_piece(world_pos)
+
+
+func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
+	for p in _scenery_pieces:
+		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
+			return p
+	return null
 
 
 func _on_save() -> void:
@@ -182,7 +225,7 @@ func _bake_and_capture() -> void:
 		)
 	_rebuild_scenery()
 	_refresh_pieces()
-	_reopen_inspector()
+	_scenery_tool._reopen_inspector()
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
@@ -306,41 +349,20 @@ func _on_background_picked(id: String) -> void:
 	current.background = id
 
 
+# Thin forwarders — kept for test-contract and signal wiring.
 func _enter_scenery() -> void:
-	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
-	_grid_tool.carrying = ""
-	# Stale-input hygiene: clear drag/lmb state so a leftover press can't
-	# fire a spurious release as a crate move once we return to CRATES mode.
-	_grid_tool._drag_from = Vector2i(-1, -1)
-	_grid_tool._drag_prop = null
-	_grid_tool._lmb_down = false
-	_rmb_down = false  # a held right-click must not menu on re-entry
-	%PieceInspector.close()
-	mode = Mode.SCENERY
-	palette.visible = false
-	%SceneryPanel.visible = true
-	overlay.visible = false
-	_rebuild_scenery()  # dims crates + pauses behaviors (mode is SCENERY)
-	_refresh_pieces()
-	_gizmo.visible = true
+	switch_tool(_scenery_tool)
 
 
 func _exit_scenery() -> void:
-	_rmb_down = false  # a held right-click must not menu on mode return (scenery inline copy dies in Task 3)
-	_grid_tool._lmb_down = false  # symmetric with _enter_scenery (review: latent stale-press)
-	selected_overlay = -1
-	_gizmo.piece = null
-	_gizmo.visible = false
-	%PieceInspector.close()
-	mode = Mode.CRATES
-	%SceneryPanel.visible = false
-	palette.visible = true
-	overlay.visible = true
-	for c in _spawned:
-		c.modulate.a = 1.0
-	# Respawn scenery in CRATES mode: behaviors come back to life (the
-	# pause above was editor-session-only; the dict never forgot them).
-	_rebuild_scenery()
+	# Always run the full exit cleanup, even if already in CRATES mode,
+	# to preserve test-contract behavior (some tests call _exit_scenery
+	# without a preceding _enter_scenery to clean up inspector state).
+	if _tool != _grid_tool:
+		switch_tool(_grid_tool)
+	else:
+		_scenery_tool.exit()
+		_tool = _grid_tool
 
 
 func _rebuild() -> void:
@@ -562,347 +584,10 @@ func _on_image_chosen(path: String) -> void:
 	# Place the new overlay centered on the current camera view.
 	var cam_pos: Vector2 = ($Camera as Camera2D).position
 	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
-	selected_overlay = current.overlays.size() - 1
+	_scenery_tool.selected_overlay = current.overlays.size() - 1
 	_rebuild_scenery()
 	_refresh_pieces()
-	_reopen_inspector()
-
-
-# Rebuilds free every live piece — any open inspector must be re-pointed
-# at the FRESH piece for the current selection (or closed if none), else
-# it displays one overlay while selection means another.
-func _reopen_inspector() -> void:
-	if selected_overlay >= 0 and selected_overlay < current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
-		%PieceInspector.open(current.overlays[selected_overlay], piece)
-	else:
-		%PieceInspector.close()
-
-
-# ---------------------------------------------------------------------------
-# Scenery mode: pointer / handle polling (mirrors CRATES block structure)
-# ---------------------------------------------------------------------------
-
-func _scenery_process(mouse: Vector2) -> void:
-	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
-	var world := get_global_mouse_position()
-	var cam: Camera2D = $Camera
-	_gizmo.cam_zoom = cam.zoom
-
-	if lmb and not _lmb_down and not over_ui:
-		_scenery_press(world)
-	elif not lmb and _lmb_down:
-		_scenery_release()
-	elif lmb and _lmb_down and _scenery_dragging:
-		_scenery_drag(world)
-
-	_lmb_down = lmb
-
-	# RMB context menu: open only on release without significant motion.
-	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-	if rmb and not _rmb_down:
-		_rmb_press_pos = mouse
-		_rmb_down = true
-	elif not rmb and _rmb_down:
-		_rmb_down = false
-		if not menu.any_dialog_open() and not _mouse_over_ui(mouse):
-			var travel := mouse.distance_to(_rmb_press_pos)
-			if travel < _CONTEXT_MENU_MOTION_THRESHOLD:
-				var rmb_world := get_global_mouse_position()
-				var idx := _pick_piece(rmb_world)
-				if idx >= 0:
-					selected_overlay = idx
-					_show_scenery_context(mouse)
-
-	# Keep gizmo pointed at the selected piece.
-	var _selected_piece := _piece_for_overlay(selected_overlay) if selected_overlay >= 0 else null
-	if _selected_piece != null:
-		_gizmo.piece = _selected_piece
-		_gizmo.queue_redraw()
-	else:
-		_gizmo.piece = null
-		_gizmo.queue_redraw()
-
-
-func _scenery_press(world: Vector2) -> void:
-	var cam: Camera2D = $Camera
-	var zoom := cam.zoom.x
-
-	# Check handles on current selection first.
-	if selected_overlay >= 0:
-		var h := _hit_handle(world, zoom)
-		if h >= 0:
-			var piece := _piece_for_overlay(selected_overlay)
-			if piece == null:
-				return
-			_scenery_handle = h
-			_scenery_dragging = true
-			_scenery_drag_start_world = world
-			_scenery_drag_piece_origin = piece.position
-			var po: Dictionary = current.overlays[selected_overlay]
-			_scenery_drag_press_scale = po.get("_scale", 1.0)
-			return
-
-	# Pick a new piece.
-	var idx := _pick_piece(world)
-	if idx >= 0:
-		var piece := _piece_for_overlay(idx)
-		if piece == null:
-			return
-		selected_overlay = idx
-		_scenery_handle = -1  # body drag
-		_scenery_dragging = true
-		_scenery_drag_start_world = world
-		_scenery_drag_piece_origin = piece.position
-		var po: Dictionary = current.overlays[selected_overlay]
-		_scenery_drag_press_scale = po.get("_scale", 1.0)
-		%PieceInspector.open(po, piece)
-	else:
-		# Deselect.
-		selected_overlay = -1
-		_scenery_dragging = false
-		%PieceInspector.close()
-
-
-func _scenery_release() -> void:
-	if _scenery_dragging and selected_overlay >= 0 and selected_overlay < current.overlays.size():
-		var piece := _piece_for_overlay(selected_overlay)
-		if piece != null:
-			var o: Dictionary = current.overlays[selected_overlay]
-			o["x"] = piece.position.x
-			o["y"] = piece.position.y
-	_scenery_dragging = false
-	_scenery_handle = -1
-
-
-func _scenery_drag(world: Vector2) -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null:
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var delta := world - _scenery_drag_start_world
-
-	if _scenery_handle == -1:
-		# Body drag — move piece, and keep overlay dict in sync for mid-drag saves.
-		piece.position = _scenery_drag_piece_origin + delta
-		piece.rehome()  # else a live verb snaps it back to where it was born
-		o["x"] = piece.position.x
-		o["y"] = piece.position.y
-	elif _scenery_handle == 4:
-		# Rotate handle — angle from piece center to mouse.
-		var center := _scenery_drag_piece_origin
-		var angle := (world - center).angle() + PI / 2.0
-		piece.rotation = angle
-		piece.rehome()  # SPIN/SWAY anchor to home rotation the same way
-		o["_rot"] = angle
-	else:
-		# Corner resize — aspect-locked scale.
-		# Uses the scale captured at PRESS time so each frame computes from the
-		# original, preventing per-frame compounding.
-		var center := _scenery_drag_piece_origin
-		var dist_now := (world - center).length()
-		var dist_start := (_scenery_drag_start_world - center).length()
-		if dist_start > 0.01:
-			# Clamp: the baked long edge must not exceed 1024 px.
-			var tex := piece.texture
-			var max_scale := 20.0
-			if tex != null:
-				var long_edge := maxi(tex.get_width(), tex.get_height())
-				if long_edge > 0:
-					max_scale = minf(20.0, 1024.0 / float(long_edge))
-			var new_scale := clampf(_scenery_drag_press_scale * (dist_now / dist_start), 0.05, max_scale)
-			piece.scale = Vector2(new_scale, new_scale)
-			o["_scale"] = new_scale
-
-
-# Returns the NarfDecor piece for the given overlay source index, or null.
-func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
-	for p in _scenery_pieces:
-		if is_instance_valid(p) and p.has_meta("overlay_index") and p.get_meta("overlay_index") == overlay_idx:
-			return p
-	return null
-
-
-# Returns the index of the topmost piece whose world-space rect contains `world_pos`,
-# or -1 if none. Exposed so unit tests can call it directly.
-func _pick_piece(world_pos: Vector2) -> int:
-	# Iterate in reverse (top-most drawn last).
-	for i in range(_scenery_pieces.size() - 1, -1, -1):
-		var piece := _scenery_pieces[i]
-		if not is_instance_valid(piece):
-			continue
-		var rect := piece.get_rect()
-		# to_local() already accounts for the piece's position, rotation, and scale;
-		# the rect from get_rect() is in un-scaled local space — no further division needed.
-		var local := piece.to_local(world_pos)
-		if rect.has_point(local):
-			return piece.get_meta("overlay_index", i) as int
-	return -1
-
-
-# Returns which handle (0-3 corners, 4 rotate) is within hit radius at world_pos,
-# or -1 if none. Requires a selected piece.
-func _hit_handle(world_pos: Vector2, zoom: float) -> int:
-	if selected_overlay < 0:
-		return -1
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null or piece.texture == null:
-		return -1
-	var radius := SceneryGizmo.HANDLE_RADIUS / zoom
-	var corners := SceneryGizmo._rect_corners(
-		piece.get_rect(), piece.position, piece.rotation, piece.scale
-	)
-	for i in 4:
-		if world_pos.distance_to(corners[i]) <= radius:
-			return i
-	# Rotate lollipop.
-	var top_mid := (corners[0] + corners[1]) * 0.5
-	var up_dir := Vector2(-sin(piece.rotation), -cos(piece.rotation))
-	var lollipop := top_mid + up_dir * (SceneryGizmo.ROTATE_LOLLIPOP_DIST / zoom)
-	if world_pos.distance_to(lollipop) <= radius:
-		return 4
-	return -1
-
-
-# ---------------------------------------------------------------------------
-# Delete selected scenery piece + orphan-cleanup
-# ---------------------------------------------------------------------------
-
-func _delete_selected_piece() -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var old_key: String = o.get("image", "")
-	current.overlays.remove_at(selected_overlay)
-	selected_overlay = -1
-	_gizmo.piece = null
-	_gizmo.queue_redraw()
-	%PieceInspector.close()
-	# Drop the image blob if no remaining overlay references it.
-	if old_key != "":
-		var still_used := false
-		for entry in current.overlays:
-			if (entry as Dictionary).get("image", "") == old_key:
-				still_used = true
-				break
-		if not still_used:
-			current.images.erase(old_key)
-	_rebuild_scenery()
-	_refresh_pieces()
-
-
-# ---------------------------------------------------------------------------
-# Static helpers (also used by GridTool via LevelEditor.footprint etc.)
-# ---------------------------------------------------------------------------
-
-static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
-	var out: Array[Vector2i] = []
-	for i in cells.x:
-		for j in cells.y:
-			out.append(Vector2i(anchor.x + i, anchor.y + j))
-	return out
-
-
-# The trigger event key this cell's crate answers to (matches what save
-# writes: cell_to_world coords as bare ints — see linked-triggers spec).
-static func crate_trigger_key(cell: Vector2i) -> String:
-	var w := EditorGrid.cell_to_world(cell)
-	return "hit:%d,%d" % [int(w.x), int(w.y)]
-
-
-# ---------------------------------------------------------------------------
-# Right-click context menu for scenery pieces
-# ---------------------------------------------------------------------------
-
-# RMB context menu is handled via release-based polling in _scenery_process.
-
-
-func _show_scenery_context(screen_pos: Vector2) -> void:
-	if _scenery_context == null:
-		_scenery_context = PopupMenu.new()
-		_scenery_context.id_pressed.connect(_on_scenery_context_item)
-		add_child(_scenery_context)
-	_scenery_context.clear()
-	_scenery_context.add_item("Flip H", 0)
-	_scenery_context.add_item("Flip V", 1)
-	_scenery_context.add_item("Reset Transform", 4)
-	_scenery_context.add_item("Drop Background", 3)
-	_scenery_context.add_separator()
-	_scenery_context.add_item("Delete", 2)
-	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
-	_scenery_context.popup()
-
-
-func _on_scenery_context_item(id: int) -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var piece := _piece_for_overlay(selected_overlay)
-	if piece == null and id != 2:
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	match id:
-		0:  # Flip H
-			if piece != null:
-				piece.flip_h = not piece.flip_h
-				o["_flip_h"] = piece.flip_h
-		1:  # Flip V
-			if piece != null:
-				piece.flip_v = not piece.flip_v
-				o["_flip_v"] = piece.flip_v
-		2:  # Delete
-			_delete_selected_piece()
-		3:  # Drop Background
-			_drop_background()
-		4:  # Reset Transform (owner: a runaway rotate/mirror had no way home)
-			for k in ["_rot", "_scale", "_flip_h", "_flip_v"]:
-				o.erase(k)
-			if piece != null:
-				piece.rotation = 0.0
-				piece.scale = Vector2.ONE
-				piece.flip_h = false
-				piece.flip_v = false
-				piece.rehome()
-
-
-func _drop_background() -> void:
-	if selected_overlay < 0 or selected_overlay >= current.overlays.size():
-		return
-	var o: Dictionary = current.overlays[selected_overlay]
-	var old_key := str(o.get("image", ""))
-	var img := LevelJson.decode_png_b64(str(current.images.get(old_key, "")))
-	if img == null:
-		return
-	var stripped := SceneryBake._strip_background(img)
-	if stripped == null:
-		push_warning("Drop Background: corners disagree — no uniform backdrop found")
-		return
-	var cap_result := SceneryBake._cap_image_to_max(stripped)
-	var png_bytes: PackedByteArray = cap_result[0]
-	var new_b64: String = cap_result[1]
-	var new_key := LevelJson.image_key(png_bytes)
-	if new_key != old_key:
-		var refs := 0
-		for entry in current.overlays:
-			if str(entry.get("image", "")) == old_key:
-				refs += 1
-		if (
-			not current.images.has(new_key)
-			and refs > 1
-			and current.images.size() >= LevelJson.MAX_IMAGES
-		):
-			push_warning("Drop Background: image cap full")
-			return
-		if not current.images.has(new_key):
-			current.images[new_key] = new_b64
-		o["image"] = new_key
-		if refs <= 1:
-			current.images.erase(old_key)
-	_rebuild_scenery()
-	_refresh_pieces()
-	_reopen_inspector()
+	_scenery_tool._reopen_inspector()
 
 
 # ---------------------------------------------------------------------------
@@ -941,3 +626,22 @@ func _bake_scenery() -> int:
 			piece.flip_h = false
 			piece.flip_v = false
 	return skipped
+
+
+# ---------------------------------------------------------------------------
+# Static helpers (also used by GridTool via LevelEditor.footprint etc.)
+# ---------------------------------------------------------------------------
+
+static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for i in cells.x:
+		for j in cells.y:
+			out.append(Vector2i(anchor.x + i, anchor.y + j))
+	return out
+
+
+# The trigger event key this cell's crate answers to (matches what save
+# writes: cell_to_world coords as bare ints — see linked-triggers spec).
+static func crate_trigger_key(cell: Vector2i) -> String:
+	var w := EditorGrid.cell_to_world(cell)
+	return "hit:%d,%d" % [int(w.x), int(w.y)]
