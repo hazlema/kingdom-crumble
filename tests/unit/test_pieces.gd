@@ -387,3 +387,29 @@ func test_warp_arrival_fires_partner_whoosh() -> void:
 		if c is CPUParticles2D:
 			found = true
 	assert_true(found, "arrival whoosh at the exit portal")
+
+
+func test_parse_sidecar_powerup_curated_set() -> void:
+	assert_eq(Pieces.parse_sidecar("t", {"powerup": "multishot"})["powerup"], "multishot")
+	assert_eq(Pieces.parse_sidecar("t", {})["powerup"], "", "absent = plain crate")
+	assert_eq(
+		Pieces.parse_sidecar("t", {"powerup": "laser_eyes"})["powerup"],
+		"",
+		"unknown power warns and downgrades to plain"
+	)  # warns (GUT-safe)
+
+
+func test_shipped_crates_route_identically_through_registry() -> void:
+	var no_roll := func() -> float: return 0.99
+	assert_eq(PowerupRules.route("crate-gold", true, no_roll)["kind"], "refund")
+	assert_eq(PowerupRules.route("skull", true, no_roll)["buff"], &"exploding")
+	assert_eq(PowerupRules.route("crate-blue", true, no_roll)["buff"], &"multishot")
+	assert_eq(PowerupRules.route("crate-green", true, no_roll)["buff"], &"super_bounce")
+	assert_eq(PowerupRules.route("crate-wood", true, no_roll)["kind"], "none")
+	assert_eq(PowerupRules.route("no-such-crate", true, no_roll)["kind"], "none")
+	# ghost mystery: skunk roll preserved (roll below chance, skunk locked)
+	var low_roll := func() -> float: return 0.01
+	assert_eq(PowerupRules.route("crate-ghost", false, low_roll)["kind"], "skunk")
+	# ghost mystery: pool pick when skunk unlocked
+	var r := PowerupRules.route("crate-ghost", true, no_roll)
+	assert_true(r["kind"] in ["refund", "buff"], "mystery rolls the pool")

@@ -2,7 +2,8 @@ class_name PowerupRules
 extends RefCounted
 
 # Pure routing for crate collections (spec §1-§4). No scene access, no
-# state — Level supplies the RNG and the skunk-unlocked bit.
+# state — Level supplies the RNG and the skunk-unlocked bit. Routing reads
+# the Pieces registry; crate powerups are declared in sidecars, not hardcoded.
 
 const SKUNK_CHANCE := 0.10  # owner call 2026-09-03: ceremony proven, rarity restored (matches the future ammo-rare standard)
 const POOL: Array[StringName] = [&"free_shot", &"exploding", &"multishot", &"super_bounce"]
@@ -14,16 +15,14 @@ const BUFF_LABELS := {
 
 
 static func route(type_id: String, skunk_unlocked: bool, roll: Callable) -> Dictionary:
-	match type_id:
-		"crate-gold":
+	var power := str(Pieces.entry(type_id).get("powerup", ""))
+	match power:
+		"free_shot":
 			return {"kind": "refund", "label": "+Free Shot"}
-		"skull":
-			return {"kind": "buff", "buff": &"exploding", "label": BUFF_LABELS[&"exploding"]}
-		"crate-blue":
-			return {"kind": "buff", "buff": &"multishot", "label": BUFF_LABELS[&"multishot"]}
-		"crate-green":
-			return {"kind": "buff", "buff": &"super_bounce", "label": BUFF_LABELS[&"super_bounce"]}
-		"crate-ghost":
+		"exploding", "multishot", "super_bounce":
+			var buff := StringName(power)
+			return {"kind": "buff", "buff": buff, "label": BUFF_LABELS[buff]}
+		"mystery":
 			if not skunk_unlocked and roll.call() < SKUNK_CHANCE:
 				return {"kind": "skunk"}
 			var pick: StringName = POOL[clampi(int(roll.call() * POOL.size()), 0, POOL.size() - 1)]
