@@ -413,3 +413,101 @@ func test_shipped_crates_route_identically_through_registry() -> void:
 	# ghost mystery: pool pick when skunk unlocked
 	var r := PowerupRules.route("crate-ghost", true, no_roll)
 	assert_true(r["kind"] in ["refund", "buff"], "mystery rolls the pool")
+
+
+func test_parse_sidecar_animatable_strict_bool() -> void:
+	assert_false(Pieces.parse_sidecar("t", {})["animatable"], "default off")
+	assert_true(Pieces.parse_sidecar("t", {"animatable": true})["animatable"])
+	assert_false(Pieces.parse_sidecar("t", {"animatable": 1})["animatable"], "non-bool warns + off")  # warns
+
+
+func test_props_animation_key_validation() -> void:
+	var good := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": "SPIN", "speed": 0.6}])
+	assert_eq(LevelJson.validate(good), "")
+	var travel := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": "WANDER"}])
+	assert_eq(LevelJson.validate(travel), "prop 0: bad behavior", "travel verbs rejected for props")
+	var junk := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": 7}])
+	assert_eq(LevelJson.validate(junk), "prop 0: bad behavior")
+	var dial := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "amplitude": "big"}])
+	assert_eq(LevelJson.validate(dial), "prop 0: bad dial")
+
+
+func test_props_animation_keys_round_trip() -> void:
+	var l := LevelLayout.new()
+	l.title = "anim-rt"
+	l.props.append({"id": "wormhole-blue", "x": 100.0, "y": 500.0, "behavior": "SWAY", "speed": 1.0, "amplitude": 8.0})
+	var back := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(back)
+	assert_eq(back.props[0].get("behavior"), "SWAY")
+	assert_eq(float(back.props[0].get("amplitude")), 8.0)
+	l.props.append({"id": "block-stone", "x": 200.0, "y": 500.0})
+	var back2 := LevelJson.parse(LevelJson.serialize(l))
+	assert_false(back2.props[1].has("behavior"), "keyless entries stay keyless")
+
+
+func test_animatable_placement_configures_sprite_verb() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "anim-spawn"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y, "behavior": "SPIN", "speed": 0.8})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var sprite: NarfDecor = null
+	for c in spawned[0].get_children():
+		if c is NarfDecor:
+			sprite = c
+	assert_not_null(sprite, "prop sprite is a NarfDecor")
+	assert_eq(sprite.behavior, NarfDecor.Behavior.SPIN)
+	assert_eq(sprite.speed, 0.8)
+	var body_rot: float = (spawned[0] as Node2D).rotation
+	await wait_process_frames(5)
+	assert_eq((spawned[0] as Node2D).rotation, body_rot, "body never rotates — sprite-only")
+
+
+func test_keyless_placement_is_static() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "still"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var sprite: NarfDecor = spawned[0].get_children().filter(func(c): return c is NarfDecor)[0]
+	assert_eq(sprite.behavior, NarfDecor.Behavior.NONE, "no keys = still portal (owner-approved default)")
+	await wait_process_frames(5)
+	assert_eq(sprite.rotation, 0.0, "hardcoded spin retired")
+
+
+func test_animation_keys_on_non_animatable_warn_and_ignore() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "nope"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "block-stone", "x": a.x, "y": a.y, "behavior": "SPIN", "speed": 2.0})
+	var spawned := PropBuilder.spawn_props(host, l)  # warns: not animatable (GUT-safe)
+	var sprite: NarfDecor = spawned[0].get_children().filter(func(c): return c is NarfDecor)[0]
+	assert_eq(sprite.behavior, NarfDecor.Behavior.NONE, "sidecar gate holds")
+
+
+func test_exit_trajectory_rotated_by_exit_sprite() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var exit_hole: Wormhole = spawned[1]
+	# aim the exit: quarter turn (deterministic — no spin waiting)
+	exit_hole._sprite.rotation = PI / 2.0
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE  # test control: isolate from air drag
+	stone.linear_damp = 0.0
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	assert_almost_eq(stone.linear_velocity.length(), 600.0, 30.0, "speed preserved")
+	assert_almost_eq(stone.linear_velocity.x, 0.0, 30.0, "direction rotated 90°")
+	assert_almost_eq(stone.linear_velocity.y, 600.0, 30.0, "y-down quarter turn")

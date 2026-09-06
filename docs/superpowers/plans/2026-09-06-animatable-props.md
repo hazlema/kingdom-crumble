@@ -336,3 +336,65 @@ and after a successful move, refresh the inspector reference if it was open on t
 git add src/editor tests/unit/test_level_editor_interactions.gd
 git commit -m "feat: animatable props edit with the scenery inspector — reduced mode, key-preserving moves"
 ```
+
+---
+
+### Task 4: Exit trajectory rides the exit portal's rotation (owner amendment, runs after Task 3)
+
+**Files:**
+- Modify: `src/level/wormhole.gd` (`_teleport`)
+- Test: `tests/unit/test_pieces.gd` (append)
+
+**Interfaces:**
+- Consumes: `partner._sprite` (the NarfDecor child, Task 2), the PhysicsServer2D teleport path.
+- Produces: exit velocity = `entry_velocity.rotated(exit_sprite.rotation)`, magnitude preserved; rotation 0 = byte-identical to today (the existing velocity-preservation test is the regression pin for the identity case).
+
+- [ ] **Step 1: Failing test** (append to `tests/unit/test_pieces.gd`)
+
+```gdscript
+func test_exit_trajectory_rotated_by_exit_sprite() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var exit_hole: Wormhole = spawned[1]
+	# aim the exit: quarter turn (deterministic — no spin waiting)
+	exit_hole._sprite.rotation = PI / 2.0
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE  # test control: isolate from air drag
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	assert_almost_eq(stone.linear_velocity.length(), 600.0, 30.0, "speed preserved")
+	assert_almost_eq(stone.linear_velocity.x, 0.0, 30.0, "direction rotated 90°")
+	assert_almost_eq(stone.linear_velocity.y, 600.0, 30.0, "y-down quarter turn")
+```
+
+- [ ] **Step 2: Run to verify failure** — FAIL: velocity stays (600, 0).
+
+- [ ] **Step 3: Implement** — in `_teleport`, after the transform `body_set_state` + node sync + `reset_physics_interpolation()`, and BEFORE `partner.play_arrival_fx(...)`:
+
+```gdscript
+	# Exit trajectory rides the exit portal's visible rotation (owner
+	# amendment): speed preserved, direction = entry rotated by the exit
+	# sprite's angle. Rotation 0 (still portal) is the identity — the
+	# original through-window behavior. Written via the PhysicsServer
+	# for the same flush reason as the transform.
+	var out_v: Vector2 = rb.linear_velocity
+	if partner._sprite != null and not is_zero_approx(partner._sprite.rotation):
+		out_v = out_v.rotated(partner._sprite.rotation)
+		PhysicsServer2D.body_set_state(rb.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, out_v)
+		rb.linear_velocity = out_v
+```
+
+and change the whoosh call to use `out_v`: `partner.play_arrival_fx(out_v)`.
+
+- [ ] **Step 4: Verify + commit** — focused green; existing `test_stone_warps_with_velocity_preserved` (rotation-0 identity) must pass UNMODIFIED. Full suite expected: prior count + 1.
+
+```bash
+git add src/level/wormhole.gd tests/unit/test_pieces.gd
+git commit -m "feat: exit trajectory rides the exit portal's rotation — still = through-window, spin = sweeping launcher"
+```

@@ -45,9 +45,18 @@ preserve velocity exactly; pairing by id ("colors"), two colors in V1.
   V1). The teleport helper itself takes any RigidBody2D so a future
   sidecar flag can admit crates without rebuild.
 - Effect (deferred to physics-safe time): stone's `global_position` :=
-  partner portal's center; `linear_velocity` unchanged;
-  `reset_physics_interpolation()` after the move (camera-teleport
-  lesson — no one-frame smear).
+  partner portal's center; `reset_physics_interpolation()` after the
+  move (camera-teleport lesson — no one-frame smear).
+- **Exit trajectory (owner amendment 2026-09-06, supersedes
+  "unchanged"): speed preserved, direction rotated by the EXIT
+  portal's sprite rotation at arrival** —
+  `out_v = in_v.rotated(exit_sprite.rotation)`. Rotation 0 (still
+  portal) = identity = the original through-window behavior. A SPIN
+  portal sweeps its launch direction continuously (arrival timing
+  decides the exit line); SWAY wobbles it within the amplitude cone.
+  The visible sprite IS the launcher's aim — honest by construction.
+  Velocity is written via PhysicsServer2D body_set_state (same flush
+  lesson as the transform).
 - **Arrival immunity, not timers:** on arrival the stone is added to
   the partner portal's `_arrivals` set; that portal ignores it until
   `body_exited` removes it. Framerate-proof, no oscillation even with

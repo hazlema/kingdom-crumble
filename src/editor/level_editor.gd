@@ -125,6 +125,7 @@ func _process(_delta: float) -> void:
 
 func _press(cell: Vector2i) -> void:
 	if carrying != "":
+		%PieceInspector.close()
 		_try_place(cell)
 		return
 	if occupancy.has(cell):
@@ -134,17 +135,29 @@ func _press(cell: Vector2i) -> void:
 			overlay.selected_cells = Vector2i(1, 1)
 			_drag_from = cell
 			_drag_prop = null
+			%PieceInspector.close()
 		else:
 			var e := Pieces.entry(str(node.get_meta("prop_id")))
 			overlay.selected_cell = node.get_meta("anchor_cell")
 			overlay.selected_cells = e["cells"] if not e.is_empty() else Vector2i(1, 1)
 			_drag_from = cell
 			_drag_prop = node
+			if e.get("animatable", false) == true:
+				var sprite: NarfDecor = null
+				for sc in node.get_children():
+					if sc is NarfDecor:
+						sprite = sc
+				var entry := _prop_entry_for(node)
+				if not entry.is_empty() and sprite != null:
+					%PieceInspector.open(entry, sprite, true)
+			else:
+				%PieceInspector.close()
 	else:
 		overlay.selected_cell = Vector2i(-1, -1)
 		overlay.selected_cells = Vector2i(1, 1)
 		_drag_from = Vector2i(-1, -1)
 		_drag_prop = null
+		%PieceInspector.close()
 	overlay.refresh()
 
 
@@ -358,6 +371,7 @@ func _enter_scenery() -> void:
 	_drag_prop = null
 	_lmb_down = false
 	_rmb_down = false  # a held right-click must not menu on re-entry
+	%PieceInspector.close()
 	mode = Mode.SCENERY
 	palette.visible = false
 	%SceneryPanel.visible = true
@@ -385,6 +399,7 @@ func _exit_scenery() -> void:
 
 
 func _rebuild() -> void:
+	%PieceInspector.close()
 	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()
@@ -428,7 +443,10 @@ func _rebuild() -> void:
 			push_warning("editor: dropping overlapping prop '%s'" % p["id"])
 			continue
 		var snapped := EditorGrid.cell_to_world(anchor)
-		var kept := {"id": str(p["id"]), "x": snapped.x, "y": snapped.y}
+		var kept := (p as Dictionary).duplicate()
+		kept["id"] = str(p["id"])
+		kept["x"] = snapped.x
+		kept["y"] = snapped.y
 		kept_props.append(kept)
 		var body := PropBuilder.spawn_one(self, kept)
 		_spawned_props.append(body)
@@ -590,7 +608,13 @@ func _move_prop(body: Node2D, delta: Vector2i) -> void:
 			and is_equal_approx(float(p["x"]), old_w.x)
 			and is_equal_approx(float(p["y"]), old_w.y)
 		):
-			current.props[i] = {"id": pid, "x": new_w.x, "y": new_w.y}
+			var moved := (current.props[i] as Dictionary).duplicate()
+			moved["x"] = new_w.x
+			moved["y"] = new_w.y
+			current.props[i] = moved
+			# Refresh the inspector reference if it was open on this prop,
+			# or close it — closing is simpler and avoids a stale-dict write.
+			%PieceInspector.close()
 			break
 	for c in footprint(old_anchor, cells):
 		occupancy.erase(c)
@@ -601,6 +625,15 @@ func _move_prop(body: Node2D, delta: Vector2i) -> void:
 	overlay.selected_cell = new_anchor
 	overlay.selected_cells = cells
 	overlay.refresh()
+
+
+func _prop_entry_for(body: Node2D) -> Dictionary:
+	var pid := str(body.get_meta("prop_id"))
+	var w := EditorGrid.cell_to_world(body.get_meta("anchor_cell"))
+	for p in current.props:
+		if p["id"] == pid and is_equal_approx(float(p["x"]), w.x) and is_equal_approx(float(p["y"]), w.y):
+			return p
+	return {}
 
 
 func _delete_prop(body: Node2D) -> void:
@@ -622,6 +655,7 @@ func _delete_prop(body: Node2D) -> void:
 	_spawned_props.erase(body)
 	body.queue_free()
 	_drag_prop = null
+	%PieceInspector.close()
 	overlay.selected_cell = Vector2i(-1, -1)
 	overlay.selected_cells = Vector2i(1, 1)
 	overlay.refresh()

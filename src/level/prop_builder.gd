@@ -44,9 +44,7 @@ static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 		wrect.size = size
 		wshape.shape = wrect
 		hole.add_child(wshape)
-		var wsprite := Sprite2D.new()
-		wsprite.texture = e["texture"]
-		hole.add_child(wsprite)
+		_attach_sprite(hole, e, prop)
 		parent.add_child(hole)
 		return hole
 	var body := StaticBody2D.new()
@@ -79,11 +77,29 @@ static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 		var mat := PhysicsMaterial.new()
 		mat.bounce = e["bounce"]
 		body.physics_material_override = mat
-	var sprite := Sprite2D.new()
-	sprite.texture = e["texture"]
-	body.add_child(sprite)
+	_attach_sprite(body, e, prop)
 	parent.add_child(body)
 	return body
+
+
+static func _attach_sprite(body: Node2D, e: Dictionary, prop: Dictionary) -> void:
+	var sprite := NarfDecor.new()
+	sprite.texture = e["texture"]
+	var has_keys := prop.has("behavior") or prop.has("speed") or prop.has("amplitude")
+	if e.get("animatable", false) == true:
+		var verb := str(prop.get("behavior", "NONE"))
+		# keys().find() returns array position, which equals the enum int
+		# only because Behavior is zero-based and contiguous — preserve that.
+		var bi := NarfDecor.Behavior.keys().find(verb)
+		if bi >= NarfDecor.Behavior.NONE and bi <= NarfDecor.Behavior.BOB:
+			sprite.behavior = bi as NarfDecor.Behavior
+		sprite.speed = clampf(float(prop.get("speed", 0.6)), 0.0, 2.0)
+		sprite.movement = clampf(float(prop.get("amplitude", 6.0)), 0.0, 12.0)
+	elif has_keys:
+		push_warning(
+			"PropBuilder: '%s' is not animatable — ignoring animation keys" % str(prop.get("id", ""))
+		)
+	body.add_child(sprite)
 
 
 # Anchor = leftmost bottom-most cell center; footprint extends +x/right
