@@ -14,6 +14,7 @@ const MAX_IMAGE_DIM := 1024
 const MAX_IMAGE_PIXELS := 1048576  # 1024x1024 budget, pre-decode
 const MAX_OVERLAYS := 16
 const MAX_PROPS := 64
+const PROP_BEHAVIORS := ["NONE", "SPIN", "SWAY", "BOB"]
 
 # Why the last parse() said no -- shown to the level author verbatim,
 # so every message names the suspect ("crate 13: missing type").
@@ -120,7 +121,14 @@ static func parse(text: String) -> LevelLayout:
 	for c in data["crates"]:
 		l.crates.append({"x": float(c["x"]), "y": float(c["y"]), "type": String(c["type"])})
 	for p in data.get("props", []):
-		l.props.append({"id": String(p["id"]), "x": float(p["x"]), "y": float(p["y"])})
+		var entry := {"id": String(p["id"]), "x": float(p["x"]), "y": float(p["y"])}
+		if (p as Dictionary).has("behavior"):
+			entry["behavior"] = String(p["behavior"])
+		if (p as Dictionary).has("speed"):
+			entry["speed"] = clampf(float(p["speed"]), 0.0, 2.0)
+		if (p as Dictionary).has("amplitude"):
+			entry["amplitude"] = clampf(float(p["amplitude"]), 0.0, 12.0)
+		l.props.append(entry)
 	var trig: Variant = data.get("triggers", {})
 	if trig is Dictionary:
 		for event in trig:
@@ -183,6 +191,15 @@ static func validate(d: Dictionary) -> String:
 			var py: Variant = (p as Dictionary).get("y")
 			if not (px is float or px is int) or not (py is float or py is int):
 				return "prop %d: bad coords" % pi
+			if (p as Dictionary).has("behavior"):
+				var b: Variant = (p as Dictionary)["behavior"]
+				if not b is String or b not in PROP_BEHAVIORS:
+					return "prop %d: bad behavior" % pi
+			for dial in ["speed", "amplitude"]:
+				if (p as Dictionary).has(dial):
+					var dv: Variant = (p as Dictionary)[dial]
+					if not (dv is float or dv is int):
+						return "prop %d: bad dial" % pi
 	var _shots: Variant = d.get("shots", 0)
 	if not (_shots is int or _shots is float):
 		return "shots must be a number"

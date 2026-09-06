@@ -413,3 +413,33 @@ func test_shipped_crates_route_identically_through_registry() -> void:
 	# ghost mystery: pool pick when skunk unlocked
 	var r := PowerupRules.route("crate-ghost", true, no_roll)
 	assert_true(r["kind"] in ["refund", "buff"], "mystery rolls the pool")
+
+
+func test_parse_sidecar_animatable_strict_bool() -> void:
+	assert_false(Pieces.parse_sidecar("t", {})["animatable"], "default off")
+	assert_true(Pieces.parse_sidecar("t", {"animatable": true})["animatable"])
+	assert_false(Pieces.parse_sidecar("t", {"animatable": 1})["animatable"], "non-bool warns + off")  # warns
+
+
+func test_props_animation_key_validation() -> void:
+	var good := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": "SPIN", "speed": 0.6}])
+	assert_eq(LevelJson.validate(good), "")
+	var travel := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": "WANDER"}])
+	assert_eq(LevelJson.validate(travel), "prop 0: bad behavior", "travel verbs rejected for props")
+	var junk := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "behavior": 7}])
+	assert_eq(LevelJson.validate(junk), "prop 0: bad behavior")
+	var dial := _props_doc([{"id": "wormhole-blue", "x": 0, "y": 0, "amplitude": "big"}])
+	assert_eq(LevelJson.validate(dial), "prop 0: bad dial")
+
+
+func test_props_animation_keys_round_trip() -> void:
+	var l := LevelLayout.new()
+	l.title = "anim-rt"
+	l.props.append({"id": "wormhole-blue", "x": 100.0, "y": 500.0, "behavior": "SWAY", "speed": 1.0, "amplitude": 8.0})
+	var back := LevelJson.parse(LevelJson.serialize(l))
+	assert_not_null(back)
+	assert_eq(back.props[0].get("behavior"), "SWAY")
+	assert_eq(float(back.props[0].get("amplitude")), 8.0)
+	l.props.append({"id": "block-stone", "x": 200.0, "y": 500.0})
+	var back2 := LevelJson.parse(LevelJson.serialize(l))
+	assert_false(back2.props[1].has("behavior"), "keyless entries stay keyless")

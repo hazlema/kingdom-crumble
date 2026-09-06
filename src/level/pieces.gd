@@ -82,7 +82,13 @@ static func parse_sidecar(id: String, raw: Dictionary) -> Dictionary:
 	if power != "" and power not in POWERUPS:
 		push_warning("Pieces: %s has unknown powerup '%s' — plain crate" % [id, power])
 		power = ""
-	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip, "powerup": power}
+	var animatable := false
+	var raw_anim: Variant = raw.get("animatable", false)
+	if raw_anim is bool:
+		animatable = raw_anim
+	elif raw_anim != null and not (raw_anim is bool):
+		push_warning("Pieces: %s animatable must be true/false — off" % id)
+	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip, "powerup": power, "animatable": animatable}
 
 
 static func entries() -> Array[Dictionary]:
