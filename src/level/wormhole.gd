@@ -14,7 +14,6 @@ extends Area2D
 # on the RigidBody's RID, which atomically sets the body transform in the server,
 # combined with the deferred node sync via global_position for rendering.
 
-const SPIN_RAD_PER_SEC := 0.6
 const FX_STREAKS := 12
 const FX_LIFETIME := 0.35
 const PULSE_TIME := 0.2
@@ -33,11 +32,6 @@ func _ready() -> void:
 		if c is Sprite2D:
 			_sprite = c
 			break
-
-
-func _process(delta: float) -> void:
-	if _sprite != null:
-		_sprite.rotation += SPIN_RAD_PER_SEC * delta
 
 
 func _on_body_entered(body: Node) -> void:

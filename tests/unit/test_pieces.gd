@@ -443,3 +443,49 @@ func test_props_animation_keys_round_trip() -> void:
 	l.props.append({"id": "block-stone", "x": 200.0, "y": 500.0})
 	var back2 := LevelJson.parse(LevelJson.serialize(l))
 	assert_false(back2.props[1].has("behavior"), "keyless entries stay keyless")
+
+
+func test_animatable_placement_configures_sprite_verb() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "anim-spawn"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y, "behavior": "SPIN", "speed": 0.8})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var sprite: NarfDecor = null
+	for c in spawned[0].get_children():
+		if c is NarfDecor:
+			sprite = c
+	assert_not_null(sprite, "prop sprite is a NarfDecor")
+	assert_eq(sprite.behavior, NarfDecor.Behavior.SPIN)
+	assert_eq(sprite.speed, 0.8)
+	var body_rot: float = (spawned[0] as Node2D).rotation
+	await wait_process_frames(5)
+	assert_eq((spawned[0] as Node2D).rotation, body_rot, "body never rotates — sprite-only")
+
+
+func test_keyless_placement_is_static() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "still"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var sprite: NarfDecor = spawned[0].get_children().filter(func(c): return c is NarfDecor)[0]
+	assert_eq(sprite.behavior, NarfDecor.Behavior.NONE, "no keys = still portal (owner-approved default)")
+	await wait_process_frames(5)
+	assert_eq(sprite.rotation, 0.0, "hardcoded spin retired")
+
+
+func test_animation_keys_on_non_animatable_warn_and_ignore() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "nope"
+	var a := EditorGrid.cell_to_world(Vector2i(3, 0))
+	l.props.append({"id": "block-stone", "x": a.x, "y": a.y, "behavior": "SPIN", "speed": 2.0})
+	var spawned := PropBuilder.spawn_props(host, l)  # warns: not animatable (GUT-safe)
+	var sprite: NarfDecor = spawned[0].get_children().filter(func(c): return c is NarfDecor)[0]
+	assert_eq(sprite.behavior, NarfDecor.Behavior.NONE, "sidecar gate holds")

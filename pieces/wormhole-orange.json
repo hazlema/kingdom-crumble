@@ -1,1 +1,1 @@
-{ "class": "wormhole", "cells": [1, 2], "tip": "A second, independent warp pair. Place exactly two." }
+{ "class": "wormhole", "cells": [1, 2], "tip": "A second, independent warp pair. Place exactly two.", "animatable": true }
