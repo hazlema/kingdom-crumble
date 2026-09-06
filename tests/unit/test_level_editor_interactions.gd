@@ -213,3 +213,90 @@ func test_load_path_ghosts_hidden_overlays_immediately() -> void:
 	var piece: NarfDecor = ed._scenery_pieces[0]
 	assert_true(piece.visible, "ghost visible straight from load")
 	assert_almost_eq(piece.modulate.a, 0.4, 0.001, "ghost alpha on the load path")
+
+
+func test_prop_placement_occupies_full_footprint() -> void:
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	assert_eq(ed.current.props.size(), 1, "prop recorded")
+	assert_true(ed.occupancy.has(Vector2i(4, 0)), "anchor cell occupied")
+	assert_true(ed.occupancy.has(Vector2i(5, 0)), "second cell occupied")
+	assert_eq(ed.occupancy[Vector2i(4, 0)], ed.occupancy[Vector2i(5, 0)], "same node both cells")
+	assert_eq(ed.carrying, "")
+
+
+func test_prop_placement_blocked_by_partial_overlap() -> void:
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(5, 0))
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))  # cell 5,0 is taken — whole footprint must refuse
+	assert_eq(ed.current.props.size(), 0)
+	assert_false(ed.occupancy.has(Vector2i(4, 0)))
+	assert_eq(ed.carrying, "tramp-flat", "still carrying after refused drop")
+
+
+func test_crate_cannot_land_on_prop_cell() -> void:
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(5, 0))
+	assert_eq(ed.current.crates.size(), 0, "prop cell refuses crates")
+
+
+func test_prop_delete_frees_all_cells() -> void:
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	ed.overlay.selected_cell = Vector2i(5, 0)  # select via the SECOND cell
+	ed._delete_selected()
+	assert_eq(ed.current.props.size(), 0)
+	assert_false(ed.occupancy.has(Vector2i(4, 0)))
+	assert_false(ed.occupancy.has(Vector2i(5, 0)))
+
+
+func test_prop_round_trips_through_rebuild() -> void:
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(2, 1))
+	ed._rebuild()
+	assert_true(ed.occupancy.has(Vector2i(2, 1)), "prop survives rebuild")
+	assert_false(ed.occupancy[Vector2i(2, 1)] is Crate, "and is not a crate")
+
+
+func test_rebuild_twice_leaves_exactly_one_prop_body() -> void:
+	# Regression: prop StaticBody2D nodes were not freed by _rebuild, so
+	# calling _rebuild twice left a phantom body from the first pass.
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(2, 1))
+	assert_eq(ed.current.props.size(), 1, "prop recorded before first rebuild")
+	ed._rebuild()
+	ed._rebuild()
+	# _spawned_props tracks the live prop bodies (queue_free defers removal
+	# from the scene tree, so we check the tracking array, not get_children).
+	assert_eq(ed._spawned_props.size(), 1, "exactly one prop body tracked after two rebuilds — no phantom leak")
+
+
+func test_clear_removes_all_prop_bodies() -> void:
+	# Regression: CLEAR left phantom prop StaticBody2D nodes on screen.
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(2, 1))
+	# Simulate clear: replace layout and rebuild (same as _on_clear).
+	ed.current = LevelLayout.new()
+	ed._rebuild()
+	# _spawned_props must be empty after clearing the layout.
+	assert_eq(ed._spawned_props.size(), 0, "no prop bodies tracked after clear")
+	# Occupancy must also be empty (no prop cells).
+	for k in ed.occupancy:
+		assert_false(ed.occupancy[k] is StaticBody2D, "occupancy has no prop entries after clear")
+
+
+func test_delete_prop_with_unknown_registry_id_does_not_crash() -> void:
+	# Regression: _delete_prop crashed if prop_id vanished from Pieces registry.
+	# After fix: registry-free sweep erases all occupancy cells pointing at the body.
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(3, 2))
+	var body: Node2D = ed.occupancy[Vector2i(3, 2)]
+	body.set_meta("prop_id", "gone:piece")
+	ed.overlay.selected_cell = Vector2i(3, 2)
+	ed._delete_selected()
+	# All occupancy cells pointing at the body are erased, even with unknown id.
+	assert_false(ed.occupancy.has(Vector2i(3, 2)), "anchor cell erased after unknown-id delete")
+	assert_eq(ed.overlay.selected_cell, Vector2i(-1, -1), "selection cleared")

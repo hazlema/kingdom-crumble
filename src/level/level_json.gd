@@ -13,6 +13,7 @@ const MAX_IMAGE_CHARS := 600_000
 const MAX_IMAGE_DIM := 1024
 const MAX_IMAGE_PIXELS := 1048576  # 1024x1024 budget, pre-decode
 const MAX_OVERLAYS := 16
+const MAX_PROPS := 64
 
 # Why the last parse() said no -- shown to the level author verbatim,
 # so every message names the suspect ("crate 13: missing type").
@@ -25,6 +26,9 @@ static var _b64_rx := RegEx.create_from_string("^[A-Za-z0-9+/]*={0,2}$")
 
 # Linked-trigger event keys: on_all_cleared or hit:X,Y (ints, negatives ok).
 static var _hit_rx := RegEx.create_from_string("^hit:-?\\d+,-?\\d+$")
+
+# Prop id validation: alphanumeric lowercase, underscore, colon, hyphen; 1-64 chars.
+static var _prop_id_rx := RegEx.create_from_string("^[a-z0-9_:-]{1,64}$")
 
 
 # Returns the first 8 hex characters of the SHA-256 hash of the given bytes.
@@ -115,6 +119,8 @@ static func parse(text: String) -> LevelLayout:
 	l.shots = int(data.get("shots", 0))
 	for c in data["crates"]:
 		l.crates.append({"x": float(c["x"]), "y": float(c["y"]), "type": String(c["type"])})
+	for p in data.get("props", []):
+		l.props.append({"id": String(p["id"]), "x": float(p["x"]), "y": float(p["y"])})
 	var trig: Variant = data.get("triggers", {})
 	if trig is Dictionary:
 		for event in trig:
@@ -161,6 +167,22 @@ static func validate(d: Dictionary) -> String:
 			return "crate %d: x/y must be numbers" % ci
 		if absf(float(c["x"])) > MAX_COORD or absf(float(c["y"])) > MAX_COORD:
 			return "crate %d: out of bounds" % ci
+	if d.has("props"):
+		if not d.get("props") is Array:
+			return "props must be a list"
+		if (d["props"] as Array).size() > MAX_PROPS:
+			return "too many props"
+		for pi in (d["props"] as Array).size():
+			var p: Variant = (d["props"] as Array)[pi]
+			if not p is Dictionary:
+				return "prop %d: bad id" % pi
+			var pid: Variant = (p as Dictionary).get("id")
+			if not pid is String or _prop_id_rx.search(pid) == null:
+				return "prop %d: bad id" % pi
+			var px: Variant = (p as Dictionary).get("x")
+			var py: Variant = (p as Dictionary).get("y")
+			if not (px is float or px is int) or not (py is float or py is int):
+				return "prop %d: bad coords" % pi
 	var _shots: Variant = d.get("shots", 0)
 	if not (_shots is int or _shots is float):
 		return "shots must be a number"
@@ -260,6 +282,7 @@ static func serialize(layout: LevelLayout) -> String:
 		"background": layout.background,
 		"shots": layout.shots,
 		"crates": layout.crates,
+		"props": layout.props,
 		"triggers": layout.triggers,
 	}
 	if layout.author != "":

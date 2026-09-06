@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cifkngq4ncvpa"
-path="res://.godot/imported/crate-wood.png-3ac51435548857c209246d90bda8a3d3.ctex"
+uid="uid://dkjgb7lm4f15n"
+path="res://.godot/imported/tramp-flat.png-2df368410071b475a810fb04398967bb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/editor/crates/crate-wood.png"
-dest_files=["res://.godot/imported/crate-wood.png-3ac51435548857c209246d90bda8a3d3.ctex"]
+source_file="res://pieces/tramp-flat.png"
+dest_files=["res://.godot/imported/tramp-flat.png-2df368410071b475a810fb04398967bb.ctex"]
 
 [params]
 

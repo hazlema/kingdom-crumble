@@ -63,5 +63,5 @@ func set_buffs(buffs: Array[StringName]) -> void:
 		icon.custom_minimum_size = Vector2(32, 32)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture = EditorAssets.texture_for(BUFF_ICONS.get(b, ""))
+		icon.texture = Pieces.texture_for(BUFF_ICONS.get(b, ""))
 		%BuffRow.add_child(icon)
