@@ -21,7 +21,9 @@ const FOLDER_PATTERN := "^[a-z0-9_-]{1,32}$"
 static var _cache := {}  # id -> entry Dictionary
 static var _packs: Array[Dictionary] = []  # discovered pack metadata
 static var _active_theme: String = ""
-static var clock_month: int = -1  # -1 = use system clock (test seam)
+## Test seam: -1 = system clock
+static var clock_month: int = -1
+static var _folder_rx := RegEx.create_from_string(FOLDER_PATTERN)
 
 
 static func scan() -> void:
@@ -80,9 +82,7 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 	folders.sort()
 	for folder in folders:
 		# Gate: folder must match the allowed charset
-		var rx := RegEx.new()
-		rx.compile(FOLDER_PATTERN)
-		if not rx.search(folder):
+		if not _folder_rx.search(folder):
 			push_warning("Pieces toybox: folder '%s' has invalid chars — skipping" % folder)
 			continue
 		var pack_path := "%s/%s" % [TOYBOX_ROOT, folder]
@@ -90,8 +90,12 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 		if not FileAccess.file_exists(manifest_path):
 			push_warning("Pieces toybox: '%s' has no pack.json — skipping" % folder)
 			continue
-		# Parse manifest
-		var raw_text := FileAccess.open(manifest_path, FileAccess.READ).get_as_text()
+		# Parse manifest: check size first
+		var manifest_bytes := FileAccess.get_file_as_bytes(manifest_path)
+		if manifest_bytes.size() > 65536:
+			push_warning("Pieces toybox: '%s' pack.json too large — skipping" % folder)
+			continue
+		var raw_text := manifest_bytes.get_string_from_utf8()
 		var parsed: Variant = JSON.parse_string(raw_text)
 		if not (parsed is Dictionary):
 			push_warning("Pieces toybox: '%s' pack.json is not a JSON object — skipping" % folder)
@@ -185,19 +189,34 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 ## Returns null (with warning) on any failure. Never passes junk to load_png_from_buffer.
 static func _load_user_texture(path: String) -> Texture2D:
 	var bytes := FileAccess.get_file_as_bytes(path)
-	if bytes.size() < 4:
+	if bytes.size() < 8:
 		push_warning("Pieces toybox: '%s' too small to be a PNG — skipping" % path)
 		return null
-	# PNG magic-byte gate: must start with 89 50 4E 47
-	if bytes[0] != 0x89 or bytes[1] != 0x50 or bytes[2] != 0x4E or bytes[3] != 0x47:
-		push_warning("Pieces toybox: '%s' failed PNG magic check — skipping" % path)
+	# PNG magic signature (8 bytes): 89 50 4E 47 0D 0A 1A 0A
+	const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
+	if bytes.size() < PNG_MAGIC.size():
+		return null
+	for i in PNG_MAGIC.size():
+		if bytes[i] != PNG_MAGIC[i]:
+			push_warning("Pieces toybox: '%s' failed PNG magic check — skipping" % path)
+			return null
+	# Dimension gate BEFORE decoding (audit: a 28KB base64 blob can
+	# decode to a 16MB bitmap -- allocation amplification). PNG stores
+	# width/height big-endian at bytes 16-23 of the IHDR chunk.
+	if bytes.size() < 24:
+		push_warning("Pieces toybox: '%s' too small to contain IHDR — skipping" % path)
+		return null
+	var pw := (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]
+	var ph := (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]
+	if pw <= 0 or ph <= 0 or pw > LevelJson.MAX_IMAGE_DIM or ph > LevelJson.MAX_IMAGE_DIM:
+		push_warning("Pieces toybox: '%s' IHDR dims %dx%d exceed cap — skipping" % [path, pw, ph])
 		return null
 	var img := Image.new()
 	var err := img.load_png_from_buffer(bytes)
 	if err != OK:
 		push_warning("Pieces toybox: '%s' load_png_from_buffer failed (err=%d) — skipping" % [path, err])
 		return null
-	# Dimension cap
+	# Redundant post-decode check (belt-and-suspenders)
 	if img.get_width() > LevelJson.MAX_IMAGE_DIM or img.get_height() > LevelJson.MAX_IMAGE_DIM:
 		push_warning(
 			"Pieces toybox: '%s' exceeds %dpx dimension cap (%dx%d) — skipping" % [

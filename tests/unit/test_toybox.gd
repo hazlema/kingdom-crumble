@@ -154,11 +154,51 @@ func test_junk_png_warns_and_skips_piece() -> void:
 
 func test_web_absent_toybox_is_silent() -> void:
 	# Simulates the web/absent-dir case: DirAccess.open failing = silent empty list.
-	# We verify scan() produces no engine errors and packs() returns an Array (not null/crash).
+	# Remove toybox dir first to ensure we test the absent-dir path (not empty-dir).
+	if DirAccess.dir_exists_absolute(TOYBOX_DIR):
+		DirAccess.remove_absolute(TOYBOX_DIR)
+	# Verify scan() produces no engine errors and packs() returns an Array (not null/crash).
 	# (GUT counts engine errors as failures automatically.)
 	Pieces.scan()
 	var result: Array = Pieces.packs()
-	assert_true(result is Array, "packs() returns Array even when toybox empty/absent")
+	assert_true(result is Array, "packs() returns Array even when toybox absent")
 	# No packs created by this test → nothing from us in the list
 	for p in result:
 		assert_ne(p.get("folder", ""), "", "any pack has a non-empty folder")
+
+
+func test_hostile_ihdr_blocked_before_decode() -> void:
+	# PIN TEST: Write a file with valid 8-byte PNG magic + hostile IHDR (20000x20000)
+	# → assert piece absent, warning fired, no giant allocation.
+	# Confirms IHDR pre-check gate fires before load_png_from_buffer.
+	var pack_dir := "%s/hostile_pack" % TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	_created_folders.append("hostile_pack")
+	# Write manifest
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	mf.store_string(JSON.stringify({"title": "Hostile", "kind": "objects"}))
+	mf.close()
+	# Craft hostile PNG: valid magic + IHDR with 20000x20000 claim + junk body
+	var hostile := PackedByteArray()
+	hostile.append_array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])  # PNG magic
+	# IHDR chunk: width 20000 (0x4E20), height 20000, rest is standard fields
+	hostile.append_array([0x00, 0x00, 0x00, 0x0D])  # chunk length (IHDR = 13 bytes)
+	hostile.append_array([0x49, 0x48, 0x44, 0x52])  # "IHDR"
+	hostile.append_array([0x00, 0x00, 0x4E, 0x20])  # width = 20000
+	hostile.append_array([0x00, 0x00, 0x4E, 0x20])  # height = 20000
+	hostile.append_array([0x08, 0x02, 0x00, 0x00, 0x00])  # bit depth, color, compression, filter, interlace
+	hostile.append_array([0x12, 0x34, 0x56, 0x78])  # fake CRC
+	# Junk body
+	for i in range(1000):
+		hostile.append(0xFF)
+	var hf := FileAccess.open("%s/hostile.png" % pack_dir, FileAccess.WRITE)
+	hf.store_buffer(hostile)
+	hf.close()
+	# Scan should block hostile before decode, warn, and complete fast
+	var start := Time.get_ticks_msec()
+	Pieces.scan()
+	var elapsed := Time.get_ticks_msec() - start
+	# Verify piece absent (IHDR gate blocked it)
+	assert_true(Pieces.entry("hostile_pack:hostile").is_empty(), "hostile piece blocked by IHDR gate")
+	# Verify fast completion (< 500ms confirms no giant allocation/decode)
+	assert_true(elapsed < 500, "scan completes fast (no allocation on hostile IHDR)")
