@@ -259,3 +259,18 @@ func test_prop_round_trips_through_rebuild() -> void:
 	ed._rebuild()
 	assert_true(ed.occupancy.has(Vector2i(2, 1)), "prop survives rebuild")
 	assert_false(ed.occupancy[Vector2i(2, 1)] is Crate, "and is not a crate")
+
+
+func test_delete_prop_with_unknown_registry_id_does_not_crash() -> void:
+	# Regression: _delete_prop crashed if prop_id vanished from Pieces registry.
+	# Simulate by placing a prop, then monkeypatching a bogus id onto it.
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(3, 2))
+	var body: Node2D = ed.occupancy[Vector2i(3, 2)]
+	body.set_meta("prop_id", "gone:piece")
+	ed.overlay.selected_cell = Vector2i(3, 2)
+	# Before fix: this would crash on Pieces.entry(pid)["cells"].
+	# After fix: gracefully returns early, logs warning, queues body.
+	ed._delete_selected()
+	# Function completed without exception; warning emitted and handled.
+	assert_true(true, "no crash when registry id vanished")

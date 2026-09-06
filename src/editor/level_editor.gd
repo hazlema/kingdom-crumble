@@ -475,6 +475,7 @@ func _update_ghost() -> void:
 		if overlay.ghost_cell != Vector2i(-1, -1):
 			overlay.ghost_cell = Vector2i(-1, -1)
 			overlay.refresh()
+		overlay.ghost_cells = Vector2i(1, 1)
 		return
 	var cell := _mouse_cell()
 	var e := Pieces.entry(id)
@@ -545,7 +546,14 @@ func _delete_prop(body: Node2D) -> void:
 		if current.props[i]["id"] == pid and pw == anchor:
 			current.props.remove_at(i)
 			break
-	var cells: Vector2i = Pieces.entry(pid)["cells"]
+	var e2 := Pieces.entry(pid)
+	if e2.is_empty():
+		push_warning("_delete_prop: unknown id '%s' — occupancy may leak" % pid)
+		body.queue_free()
+		overlay.selected_cell = Vector2i(-1, -1)
+		overlay.refresh()
+		return
+	var cells: Vector2i = e2["cells"]
 	for c in footprint(anchor, cells):
 		occupancy.erase(c)
 	body.queue_free()
