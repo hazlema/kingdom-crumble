@@ -8,7 +8,7 @@ extends RefCounted
 # packs; wave 2 will call _scan_dir(<other root>) beside the existing root inside scan().
 
 const ROOT := "res://pieces"
-const CLASSES := ["crate", "static", "trampoline"]
+const CLASSES := ["crate", "static", "trampoline", "wormhole"]
 const TILTS := [-45, 0, 45]
 const MAX_CELL := 4
 const TIP_CAP := 200

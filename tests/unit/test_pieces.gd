@@ -179,3 +179,41 @@ func test_tramp_left_polygon_deflects_stones_left() -> void:
 	var hh := 31.5  # cells.y=1, CELL_H=63 → size.y=63  → hh=31.5
 	var expected := PackedVector2Array([Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
 	assert_eq(poly_node.polygon, expected, "tramp-left is '/' ramp — normal points up-left, stones launch left")
+
+
+func test_wormhole_sidecars_register() -> void:
+	var blue := Pieces.entry("wormhole-blue")
+	assert_eq(blue["class"], "wormhole")
+	assert_eq(blue["cells"], Vector2i(1, 2))
+	assert_not_null(blue["texture"])
+	assert_eq(Pieces.entry("wormhole-orange")["class"], "wormhole")
+
+
+func test_link_pairs_wires_exactly_two() -> void:
+	var a := Wormhole.new()
+	var b := Wormhole.new()
+	a.set_meta("prop_id", "wormhole-blue")
+	b.set_meta("prop_id", "wormhole-blue")
+	autofree(a)
+	autofree(b)
+	Wormhole.link_pairs([a, b])
+	assert_eq(a.partner, b)
+	assert_eq(b.partner, a)
+
+
+func test_link_pairs_odd_counts_stay_inert() -> void:
+	var lone := Wormhole.new()
+	lone.set_meta("prop_id", "wormhole-orange")
+	autofree(lone)
+	Wormhole.link_pairs([lone])  # warns (GUT-safe)
+	assert_null(lone.partner, "1 portal = inert")
+	var t1 := Wormhole.new()
+	var t2 := Wormhole.new()
+	var t3 := Wormhole.new()
+	for t in [t1, t2, t3]:
+		t.set_meta("prop_id", "wormhole-blue")
+		autofree(t)
+	Wormhole.link_pairs([t1, t2, t3])  # warns (GUT-safe)
+	assert_null(t1.partner, "3 portals = all inert")
+	assert_null(t2.partner)
+	assert_null(t3.partner)
