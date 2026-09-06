@@ -213,3 +213,12 @@ ids beyond the base set.
 
 Free placement, runtime rotation, pack management beyond the settings
 toggles, hot-reload, servers/online anything.
+
+## Standing rule (owner, 2026-09-06): sidecar-first
+
+No per-piece stat or ability is hardcoded. Everything a piece IS —
+class, cells, bounce, tilt, spin, powerup, animatable, whatever comes
+next — lives in its sidecar as a curated id or a clamped number. Code
+ships the curated sets, the clamps, and the mechanics behind the ids
+(new mechanics may ship dormant); sidecars pick and tune. The powerup
+migration (2026-09-06) retired the last hardcoded per-piece table.
