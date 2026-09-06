@@ -8,18 +8,32 @@ extends RefCounted
 # packs; wave 2 will call _scan_dir(<other root>) beside the existing root inside scan().
 
 const ROOT := "res://pieces"
+const TOYBOX_ROOT := "user://toybox"
+const TOYBOX_CFG := "user://toybox.cfg"
 const CLASSES := ["crate", "static", "trampoline", "wormhole"]
 const TILTS := [-45, 0, 45]
 const MAX_CELL := 4
 const TIP_CAP := 200
 const POWERUPS := ["free_shot", "exploding", "multishot", "super_bounce", "mystery"]
+## Folder name charset: lowercase letters, digits, hyphen, underscore; 1-32 chars.
+const FOLDER_PATTERN := "^[a-z0-9_-]{1,32}$"
 
 static var _cache := {}  # id -> entry Dictionary
+static var _packs: Array[Dictionary] = []  # discovered pack metadata
+static var _active_theme: String = ""
+static var clock_month: int = -1  # -1 = use system clock (test seam)
 
 
 static func scan() -> void:
 	_cache = {}
+	_packs = []
+	# Read active theme from cfg before scanning packs
+	var cfg := _toybox_cfg()
+	_active_theme = cfg.get_value("theme", "active", "") as String
+	# Scan baked res:// pieces (pack = "")
 	_scan_dir(ROOT)
+	# Scan user://toybox packs
+	_scan_toybox(cfg)
 
 
 static func _scan_dir(dir_path: String) -> void:
@@ -51,8 +65,147 @@ static func _scan_dir(dir_path: String) -> void:
 		if meta.is_empty():
 			continue  # parse_sidecar already warned
 		meta["id"] = id
+		meta["pack"] = ""
 		meta["texture"] = load("%s/%s" % [dir_path, file_name]) as Texture2D
 		_cache[id] = meta
+
+
+## Scan user://toybox for pack folders. Reads cfg for enabled state.
+static func _scan_toybox(cfg: ConfigFile) -> void:
+	var toybox_dir := DirAccess.open(TOYBOX_ROOT)
+	if toybox_dir == null:
+		# user://toybox absent or inaccessible (web, first run) — silent
+		return
+	var folders := toybox_dir.get_directories()
+	folders.sort()
+	for folder in folders:
+		# Gate: folder must match the allowed charset
+		var rx := RegEx.new()
+		rx.compile(FOLDER_PATTERN)
+		if not rx.search(folder):
+			push_warning("Pieces toybox: folder '%s' has invalid chars — skipping" % folder)
+			continue
+		var pack_path := "%s/%s" % [TOYBOX_ROOT, folder]
+		var manifest_path := "%s/pack.json" % pack_path
+		if not FileAccess.file_exists(manifest_path):
+			push_warning("Pieces toybox: '%s' has no pack.json — skipping" % folder)
+			continue
+		# Parse manifest
+		var raw_text := FileAccess.open(manifest_path, FileAccess.READ).get_as_text()
+		var parsed: Variant = JSON.parse_string(raw_text)
+		if not (parsed is Dictionary):
+			push_warning("Pieces toybox: '%s' pack.json is not a JSON object — skipping" % folder)
+			continue
+		var manifest := parsed as Dictionary
+		# Validate kind
+		var kind := str(manifest.get("kind", ""))
+		if kind not in ["objects", "theme"]:
+			push_warning("Pieces toybox: '%s' has unknown kind '%s' — skipping" % [folder, kind])
+			continue
+		# title cap
+		var title := str(manifest.get("title", folder)).left(60)
+		# months validation
+		var months_raw: Variant = manifest.get("months", [])
+		var months: Array[int] = []
+		if months_raw is Array:
+			for m in (months_raw as Array):
+				if (m is int or m is float) and int(m) >= 1 and int(m) <= 12:
+					months.append(int(m))
+		# enabled state (default true)
+		var enabled: bool = cfg.get_value("packs", folder, true) as bool
+		var pack_in_season := in_season(months)
+		var pack_info := {
+			"folder": folder,
+			"title": title,
+			"kind": kind,
+			"months": months,
+			"in_season": pack_in_season,
+			"enabled": enabled,
+		}
+		_packs.append(pack_info)
+		# Object packs: contribute pieces if enabled and in season
+		if kind == "objects" and enabled and pack_in_season:
+			_scan_object_pack(pack_path, folder)
+		# Theme packs: no pieces contributed here (Task 2)
+	# After all packs are scanned: check active theme validity
+	if _active_theme != "":
+		var theme_ok := false
+		for p in _packs:
+			if p["folder"] == _active_theme and p["kind"] == "theme":
+				if in_season(p.get("months", []) as Array):
+					theme_ok = true
+				else:
+					push_warning("Pieces toybox: active theme '%s' is out of season — reverting to Default" % _active_theme)
+					_active_theme = ""
+					_save_active_theme("")
+				break
+		if not theme_ok and _active_theme != "":
+			push_warning("Pieces toybox: active theme '%s' not found — reverting to Default" % _active_theme)
+			_active_theme = ""
+			_save_active_theme("")
+
+
+## Scan an object pack folder for PNGs + optional JSON sidecars.
+static func _scan_object_pack(pack_path: String, folder: String) -> void:
+	var dir := DirAccess.open(pack_path)
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if f.get_extension() != "png":
+			continue
+		var basename := f.get_basename()
+		var namespaced_id := "%s:%s" % [folder, basename]
+		if _cache.has(namespaced_id):
+			continue
+		# Load PNG via bytes → magic gate → Image.load_png_from_buffer → ImageTexture
+		var tex := _load_user_texture("%s/%s" % [pack_path, f])
+		if tex == null:
+			continue  # warning already issued by _load_user_texture
+		# Parse optional JSON sidecar
+		var raw := {}
+		var sidecar_path := "%s/%s.json" % [pack_path, basename]
+		if FileAccess.file_exists(sidecar_path):
+			var sidecar_text := FileAccess.open(sidecar_path, FileAccess.READ).get_as_text()
+			var parsed: Variant = JSON.parse_string(sidecar_text)
+			if parsed is Dictionary:
+				raw = parsed
+			else:
+				push_warning("Pieces toybox: %s sidecar is not a JSON object — skipping" % namespaced_id)
+				continue
+		var meta := parse_sidecar(namespaced_id, raw)
+		if meta.is_empty():
+			continue  # parse_sidecar warned
+		meta["id"] = namespaced_id
+		meta["pack"] = folder
+		meta["texture"] = tex
+		_cache[namespaced_id] = meta
+
+
+## Load a PNG from a user:// path safely.
+## Returns null (with warning) on any failure. Never passes junk to load_png_from_buffer.
+static func _load_user_texture(path: String) -> Texture2D:
+	var bytes := FileAccess.get_file_as_bytes(path)
+	if bytes.size() < 4:
+		push_warning("Pieces toybox: '%s' too small to be a PNG — skipping" % path)
+		return null
+	# PNG magic-byte gate: must start with 89 50 4E 47
+	if bytes[0] != 0x89 or bytes[1] != 0x50 or bytes[2] != 0x4E or bytes[3] != 0x47:
+		push_warning("Pieces toybox: '%s' failed PNG magic check — skipping" % path)
+		return null
+	var img := Image.new()
+	var err := img.load_png_from_buffer(bytes)
+	if err != OK:
+		push_warning("Pieces toybox: '%s' load_png_from_buffer failed (err=%d) — skipping" % [path, err])
+		return null
+	# Dimension cap
+	if img.get_width() > LevelJson.MAX_IMAGE_DIM or img.get_height() > LevelJson.MAX_IMAGE_DIM:
+		push_warning(
+			"Pieces toybox: '%s' exceeds %dpx dimension cap (%dx%d) — skipping" % [
+				path, LevelJson.MAX_IMAGE_DIM, img.get_width(), img.get_height()
+			]
+		)
+		return null
+	return ImageTexture.create_from_image(img)
 
 
 # Pure sidecar interpretation: clamped meta, or {} to skip the object.
@@ -119,3 +272,78 @@ static func entry(id: String) -> Dictionary:
 static func texture_for(id: String) -> Texture2D:
 	var e := entry(id)
 	return e.get("texture") if not e.is_empty() else null
+
+
+# ---------------------------------------------------------------------------
+# Toybox API (Task 1)
+# ---------------------------------------------------------------------------
+
+## Returns all discovered packs (both object and theme), sorted by folder.
+static func packs() -> Array[Dictionary]:
+	return _packs
+
+
+## Returns whether a given months Array is in-season.
+## Empty months = always true. Uses clock_month seam (-1 = system).
+static func in_season(months: Array) -> bool:
+	if months.is_empty():
+		return true
+	var month: int
+	if clock_month != -1:
+		month = clock_month
+	else:
+		month = Time.get_date_dict_from_system().get("month", 1) as int
+	return month in months
+
+
+## Enable or disable a pack by folder name. Persists + rescans.
+static func set_pack_enabled(folder: String, on: bool) -> void:
+	var cfg := _toybox_cfg()
+	cfg.set_value("packs", folder, on)
+	cfg.save(TOYBOX_CFG)
+	scan()
+
+
+## Returns the active theme folder name ("" = Default).
+static func active_theme() -> String:
+	return _active_theme
+
+
+## Sets the active theme. "" = Default. Out-of-season or unknown = warn + no-op.
+static func set_active_theme(folder: String) -> void:
+	if folder == "":
+		_active_theme = ""
+		_save_active_theme("")
+		scan()
+		return
+	# Validate folder is a known theme pack and in season
+	var found := false
+	for p in _packs:
+		if p["folder"] == folder and p["kind"] == "theme":
+			found = true
+			if not in_season(p.get("months", []) as Array):
+				push_warning("Pieces toybox: theme '%s' is out of season — ignoring" % folder)
+				return
+			break
+	if not found:
+		push_warning("Pieces toybox: unknown theme '%s' — ignoring" % folder)
+		return
+	_active_theme = folder
+	_save_active_theme(folder)
+	scan()
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+static func _toybox_cfg() -> ConfigFile:
+	var cfg := ConfigFile.new()
+	cfg.load(TOYBOX_CFG)  # OK if absent — returns ERR_FILE_NOT_FOUND but cfg is still valid
+	return cfg
+
+
+static func _save_active_theme(folder: String) -> void:
+	var cfg := _toybox_cfg()
+	cfg.set_value("theme", "active", folder)
+	cfg.save(TOYBOX_CFG)
