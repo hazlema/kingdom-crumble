@@ -22,8 +22,11 @@ static func spawn_props(parent: Node, layout: LevelLayout) -> Array[StaticBody2D
 static func spawn_one(parent: Node, prop: Dictionary) -> StaticBody2D:
 	var id := str(prop.get("id", ""))
 	var e := Pieces.entry(id)
-	if e.is_empty() or e["class"] == "crate":
-		push_warning("PropBuilder: unknown or non-prop id '%s' — skipping" % id)
+	if e.is_empty():
+		push_warning("PropBuilder: id '%s' not found in registry — skipping" % id)
+		return null
+	if e["class"] == "crate":
+		push_warning("PropBuilder: id '%s' is a crate, not a prop — skipping" % id)
 		return null
 	var cells: Vector2i = e["cells"]
 	var anchor := Vector2(float(prop["x"]), float(prop["y"]))

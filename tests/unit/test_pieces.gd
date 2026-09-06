@@ -138,3 +138,21 @@ func test_spawn_props_skips_unknown_id_with_warning() -> void:
 	l.props.append({"id": "thanksgiving:turkey", "x": 700.0, "y": 569.0})
 	var spawned := PropBuilder.spawn_props(host, l)  # warns (missing pack) — GUT-safe
 	assert_eq(spawned.size(), 0, "unknown id warn-skips, never crashes")
+
+
+func test_spawn_props_tramp_right_has_collision_and_bounce() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "tramp_right_test"
+	var anchor := EditorGrid.cell_to_world(Vector2i(0, 0))
+	l.props.append({"id": "tramp-right", "x": anchor.x, "y": anchor.y})
+	var spawned := PropBuilder.spawn_props(host, l)
+	assert_eq(spawned.size(), 1)
+	assert_true(spawned[0].get_child(0) is CollisionPolygon2D, "tramp-right has CollisionPolygon2D child")
+	assert_eq(spawned[0].physics_material_override.bounce, 1.5, "tramp-right bounce is 1.5")
+
+
+func test_footprint_center_multi_row_offset() -> void:
+	var center := PropBuilder.footprint_center(Vector2(100, 500), Vector2i(2, 2))
+	assert_eq(center, Vector2(132.0, 468.5), "2x2 footprint y-offset correct")
