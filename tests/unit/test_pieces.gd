@@ -217,3 +217,34 @@ func test_link_pairs_odd_counts_stay_inert() -> void:
 	assert_null(t1.partner, "3 portals = all inert")
 	assert_null(t2.partner)
 	assert_null(t3.partner)
+
+
+func test_teleport_guards_freed_partner() -> void:
+	# Pin the use-after-free fix: partner freed between deferred call queue and execute.
+	var a := Wormhole.new()
+	var b := Wormhole.new()
+	a.set_meta("prop_id", "wormhole-blue")
+	b.set_meta("prop_id", "wormhole-blue")
+	add_child_autofree(a)
+	add_child_autofree(b)
+	Wormhole.link_pairs([a, b])
+
+	# Place portals far apart so teleport would be obvious.
+	a.global_position = Vector2(100, 100)
+	b.global_position = Vector2(500, 500)
+
+	# Instantiate a real Stone, add to tree.
+	var stone := load("res://scenes/stone.tscn").instantiate() as Stone
+	add_child_autofree(stone)
+	stone.global_position = a.global_position
+	var stone_x_before := stone.global_position.x
+
+	# Queue _teleport(stone) to b; then free b immediately (not queue_free).
+	a._on_body_entered(stone)
+	b.free()
+
+	# Let deferred calls run; the freed partner guard should prevent crash.
+	await wait_process_frames(2)
+
+	# Assert stone did NOT teleport (x should stay near original, not jump to b's x=500).
+	assert_lt(abs(stone.global_position.x - stone_x_before), 50.0, "stone x near original after freed-partner teleport")

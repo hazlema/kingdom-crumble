@@ -40,7 +40,7 @@ func _on_body_entered(body: Node) -> void:
 # Takes any RigidBody2D on purpose — the future crate-transit flag
 # reuses this path unchanged (spec: crate door open).
 func _teleport(body: Node) -> void:
-	if not is_instance_valid(body) or partner == null:
+	if not is_instance_valid(body) or partner == null or not is_instance_valid(partner):
 		return
 	(body as Node2D).global_position = partner.global_position
 	body.reset_physics_interpolation()
