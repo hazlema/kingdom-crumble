@@ -22,6 +22,9 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# Task 3 tests open the pause menu, which pauses the tree — unpause so
+	# later physics tests (awaiting settle) don't hang forever.
+	get_tree().paused = false
 	_nuke_toybox()
 	# Restore toybox.cfg exactly as it was
 	if _cfg_before == "":
@@ -286,3 +289,97 @@ func test_hostile_ihdr_blocked_before_decode() -> void:
 	assert_true(Pieces.entry("hostile_pack:hostile").is_empty(), "hostile piece blocked by IHDR gate")
 	# Verify fast completion (< 500ms confirms no giant allocation/decode)
 	assert_true(elapsed < 500, "scan completes fast (no allocation on hostile IHDR)")
+
+
+# ---------------------------------------------------------------------------
+# Task 3 Tests: Pause menu Toybox section
+# ---------------------------------------------------------------------------
+
+const MONTHS := ["", "January", "February", "March", "April", "May", "June",
+	"July", "August", "September", "October", "November", "December"]
+
+
+func _pause_menu() -> PauseMenu:
+	var pm: PauseMenu = load("res://scenes/pause_menu.tscn").instantiate()
+	add_child_autofree(pm)
+	return pm
+
+
+func test_toybox_section_hidden_without_packs() -> void:
+	# No packs written → section must be absent or invisible
+	Pieces.scan()
+	var pm := _pause_menu()
+	pm.open()
+	var section := pm.get_node_or_null("Center/Panel/Margin/Items/ToyboxSection")
+	if section != null:
+		assert_false(section.visible, "ToyboxSection invisible when packs() is empty")
+	else:
+		pass  # absent is also acceptable
+
+
+func test_object_pack_checkbox_toggles_enabled() -> void:
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLUE)
+	_make_pack("ui_obj_pack", {"title": "My Objects", "kind": "objects"}, {"block.png": img})
+	Pieces.scan()
+	var pm := _pause_menu()
+	pm.open()
+	var section: Node = pm.get_node("Center/Panel/Margin/Items/ToyboxSection")
+	assert_not_null(section, "ToyboxSection present when packs exist")
+	assert_true(section.visible, "ToyboxSection visible when packs exist")
+	# Find the CheckBox for ui_obj_pack
+	var cb: CheckBox = null
+	for child in section.get_children():
+		if child is CheckBox and child.text == "My Objects":
+			cb = child
+			break
+	assert_not_null(cb, "CheckBox with title 'My Objects' found in ToyboxSection")
+	assert_true(cb.button_pressed, "CheckBox pressed=true because pack starts enabled")
+	# Simulate toggle off — should call set_pack_enabled
+	cb.button_pressed = false
+	cb.toggled.emit(false)
+	# After toggle, Pieces must reflect disabled (set_pack_enabled persists+rescans)
+	var found_disabled := false
+	for p in Pieces.packs():
+		if p["folder"] == "ui_obj_pack" and not p["enabled"]:
+			found_disabled = true
+	assert_true(found_disabled, "toggling checkbox calls set_pack_enabled(folder, false)")
+
+
+func test_theme_dropdown_lists_and_disables_out_of_season() -> void:
+	# Create an in-season theme pack (months=[]) and an out-of-season one (months=[11], clock=3)
+	_make_pack("theme_in", {"title": "Summer Theme", "kind": "theme", "months": []}, {})
+	_make_pack("theme_out", {"title": "Winter Theme", "kind": "theme", "months": [11]}, {})
+	Pieces.clock_month = 3  # not November → theme_out is out of season
+	Pieces.scan()
+	var pm := _pause_menu()
+	pm.open()
+	var section: Node = pm.get_node("Center/Panel/Margin/Items/ToyboxSection")
+	assert_not_null(section, "ToyboxSection present")
+	# Find the OptionButton
+	var ob: OptionButton = null
+	for child in section.get_children():
+		if child is OptionButton:
+			ob = child
+			break
+	# OptionButton may be inside a HBoxContainer child
+	if ob == null:
+		for child in section.get_children():
+			if child is HBoxContainer:
+				for subchild in child.get_children():
+					if subchild is OptionButton:
+						ob = subchild
+						break
+	assert_not_null(ob, "OptionButton (theme picker) found in ToyboxSection")
+	# Must have at least 3 items: "Default", "Summer Theme", "Winter Theme (returns in November)"
+	assert_gte(ob.item_count, 3, "OptionButton has Default + 2 theme items")
+	# Find Winter Theme item and check disabled + text
+	var winter_idx := -1
+	for i in ob.item_count:
+		if "Winter Theme" in ob.get_item_text(i):
+			winter_idx = i
+			break
+	assert_ne(winter_idx, -1, "Winter Theme item found in OptionButton")
+	assert_true(ob.is_item_disabled(winter_idx), "out-of-season theme item is disabled")
+	assert_true("returns in November" in ob.get_item_text(winter_idx),
+		"disabled item text contains 'returns in November'")
