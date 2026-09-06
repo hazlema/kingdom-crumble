@@ -48,7 +48,7 @@ static func spawn_one(parent: Node, prop: Dictionary) -> StaticBody2D:
 		else:
 			# "\" ramp: high edge on the LEFT → hypotenuse normal points up-RIGHT.
 			# Hypotenuse goes (-hw,-hh)→(hw,hh); direction=(2hw,2hh);
-			# left-hand perp = (-2hh,2hw) ... wait, right-hand perp = (2hh,-2hw) → up-right. ✓
+			# outward normal of the "\" hypotenuse = (2hh,-2hw) → up-right: stones launch right.
 			poly.polygon = PackedVector2Array([Vector2(-hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
 		body.add_child(poly)
 	else:
