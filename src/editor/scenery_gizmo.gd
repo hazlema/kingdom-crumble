@@ -25,11 +25,11 @@ func _draw() -> void:
 	var rect := piece.get_rect()
 	var pos := piece.position
 	var rot := piece.rotation
-	var scale := piece.scale
+	var piece_scale := piece.scale
 
 	# Transform corners to draw-space (this Node2D has no own transform; it
 	# shares the scene root so its coordinate space == world space).
-	var corners := _rect_corners(rect, pos, rot, scale)
+	var corners := _rect_corners(rect, pos, rot, piece_scale)
 
 	# Draw selection outline (yellow).
 	var outline_color := Color(1.0, 0.83, 0.29, 0.95)

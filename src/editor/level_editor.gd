@@ -561,9 +561,9 @@ func import_scenery_image(img: Image) -> String:
 	var h := img.get_height()
 	var long_edge := maxi(w, h)
 	if long_edge > 512:
-		var scale := 512.0 / float(long_edge)
-		var new_w := maxi(1, int(w * scale))
-		var new_h := maxi(1, int(h * scale))
+		var factor := 512.0 / float(long_edge)
+		var new_w := maxi(1, int(w * factor))
+		var new_h := maxi(1, int(h * factor))
 		img.resize(new_w, new_h, Image.INTERPOLATE_LANCZOS)
 
 	# Encode to PNG and check size cap, halving if needed.

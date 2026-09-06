@@ -149,24 +149,24 @@ func close() -> void:
 # Setter API — used by UI signals AND unit tests
 # ---------------------------------------------------------------------------
 
-func set_behavior_by_name(name: String) -> void:
+func set_behavior_by_name(verb_name: String) -> void:
 	if _overlay.is_empty():
 		return
-	_overlay["behavior"] = name
+	_overlay["behavior"] = verb_name
 	# Apply to the live piece.
 	# NOTE: the editor's _rebuild_scenery will re-zero behavior to NONE on
 	# the next rebuild (static editor preview is intentional).  We poke it
 	# here so tests can verify the write went through immediately.
 	if is_instance_valid(_piece):
 		var behavior_keys := NarfDecor.Behavior.keys()
-		var idx := behavior_keys.find(name)
+		var idx := behavior_keys.find(verb_name)
 		if idx >= 0:
 			# Re-anchor first: home was captured at spawn, and the piece may
 			# have been dragged since -- without this the verb snaps it back.
 			_piece.rehome()
 			_piece.behavior = idx as NarfDecor.Behavior
 	# Sync the UI without triggering the signal callback.
-	var b_idx := BEHAVIOR_NAMES.find(name)
+	var b_idx := BEHAVIOR_NAMES.find(verb_name)
 	if b_idx >= 0 and _behavior_option.selected != b_idx:
 		_updating = true
 		_behavior_option.selected = b_idx
@@ -209,15 +209,15 @@ func set_pivot_by_index(i: int) -> void:
 	_press_pivot_button(i)
 
 
-func set_axis_by_name(name: String) -> void:
+func set_axis_by_name(axis_name: String) -> void:
 	if _overlay.is_empty():
 		return
-	if not name in AXIS_NAMES:
+	if not axis_name in AXIS_NAMES:
 		return
-	_overlay["axis"] = name
+	_overlay["axis"] = axis_name
 	if is_instance_valid(_piece):
-		_piece.axis = AXIS_NAMES.find(name) as NarfDecor.DriftAxis
-	_press_axis(name)
+		_piece.axis = AXIS_NAMES.find(axis_name) as NarfDecor.DriftAxis
+	_press_axis(axis_name)
 
 
 func set_travel(v: float) -> void:
@@ -250,10 +250,10 @@ func set_tilt(v: float) -> void:
 
 # Radio-press the axis pair. Saves and restores the _updating guard so that
 # callers mid-block (e.g. open()) do not drop the guard early.
-func _press_axis(name: String) -> void:
+func _press_axis(axis_name: String) -> void:
 	var was := _updating
 	_updating = true
-	_axis_v.button_pressed = name == "VERTICAL"
+	_axis_v.button_pressed = axis_name == "VERTICAL"
 	_axis_h.button_pressed = not _axis_v.button_pressed
 	_updating = was
 
