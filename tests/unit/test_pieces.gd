@@ -489,3 +489,24 @@ func test_animation_keys_on_non_animatable_warn_and_ignore() -> void:
 	var spawned := PropBuilder.spawn_props(host, l)  # warns: not animatable (GUT-safe)
 	var sprite: NarfDecor = spawned[0].get_children().filter(func(c): return c is NarfDecor)[0]
 	assert_eq(sprite.behavior, NarfDecor.Behavior.NONE, "sidecar gate holds")
+
+
+func test_exit_trajectory_rotated_by_exit_sprite() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var exit_hole: Wormhole = spawned[1]
+	# aim the exit: quarter turn (deterministic — no spin waiting)
+	exit_hole._sprite.rotation = PI / 2.0
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE  # test control: isolate from air drag
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	assert_almost_eq(stone.linear_velocity.length(), 600.0, 30.0, "speed preserved")
+	assert_almost_eq(stone.linear_velocity.x, 0.0, 30.0, "direction rotated 90°")
+	assert_almost_eq(stone.linear_velocity.y, 600.0, 30.0, "y-down quarter turn")

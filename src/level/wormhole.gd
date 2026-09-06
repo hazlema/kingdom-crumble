@@ -66,7 +66,17 @@ func _teleport(body: Node) -> void:
 	)
 	(body as Node2D).global_position = partner.global_position
 	body.reset_physics_interpolation()
-	partner.play_arrival_fx(rb.linear_velocity)
+	# Exit trajectory rides the exit portal's visible rotation (owner
+	# amendment): speed preserved, direction = entry rotated by the exit
+	# sprite's angle. Rotation 0 (still portal) is the identity — the
+	# original through-window behavior. Written via the PhysicsServer
+	# for the same flush reason as the transform.
+	var out_v: Vector2 = rb.linear_velocity
+	if partner._sprite != null and not is_zero_approx(partner._sprite.rotation):
+		out_v = out_v.rotated(partner._sprite.rotation)
+		PhysicsServer2D.body_set_state(rb.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, out_v)
+		rb.linear_velocity = out_v
+	partner.play_arrival_fx(out_v)
 
 
 func expect_arrival(body: Node) -> void:
