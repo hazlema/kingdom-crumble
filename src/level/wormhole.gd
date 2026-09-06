@@ -19,13 +19,11 @@ const SPIN_RAD_PER_SEC := 0.6
 var partner: Wormhole = null
 var _arrivals := {}  # body -> true while it must exit before re-trigger
 var _sprite: Sprite2D = null
-var _pending_teleport: Node = null  # body queued for next-frame teleport
 
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
-	set_physics_process(false)  # only enable when there's work to do
 	for c in get_children():
 		if c is Sprite2D:
 			_sprite = c
@@ -37,23 +35,12 @@ func _process(delta: float) -> void:
 		_sprite.rotation += SPIN_RAD_PER_SEC * delta
 
 
-func _physics_process(_delta: float) -> void:
-	if _pending_teleport == null:
-		set_physics_process(false)
-		return
-	var body := _pending_teleport
-	_pending_teleport = null
-	set_physics_process(false)
-	_teleport(body)
-
-
 func _on_body_entered(body: Node) -> void:
 	if partner == null or not body is Stone:
 		return
 	if _arrivals.has(body):
 		return
 	partner.expect_arrival(body)
-	_pending_teleport = body
 	_teleport.call_deferred(body)
 
 
@@ -71,6 +58,8 @@ func _teleport(body: Node) -> void:
 	# updates the server's canonical body record, which is then picked up in
 	# the next integration step.
 	var rb := body as RigidBody2D
+	if rb == null:
+		return
 	PhysicsServer2D.body_set_state(
 		rb.get_rid(),
 		PhysicsServer2D.BODY_STATE_TRANSFORM,

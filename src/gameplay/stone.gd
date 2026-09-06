@@ -23,10 +23,6 @@ var _boomed := false
 
 func _ready() -> void:
 	mass = 2.0 * (Settings.preset.impact_force if Settings.preset else 1.0)
-	# Use REPLACE so the stone's own linear_damp controls all air resistance;
-	# COMBINE (the default) would add the physics world's default_linear_damp
-	# which is non-zero in this project, causing unintended velocity bleed.
-	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	$Visual.texture = VARIANTS[randi() % VARIANTS.size()]
 	if super_bounce:
 		var mat := PhysicsMaterial.new()

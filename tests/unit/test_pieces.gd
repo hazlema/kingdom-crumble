@@ -298,6 +298,8 @@ func test_stone_warps_with_velocity_preserved() -> void:
 	var b: Vector2 = parts[2]
 	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
 	stone.gravity_scale = 0.0
+	# test control: isolate the warp from world air drag (game stones keep it)
+	stone.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	stone.global_position = a + Vector2(-150, 0)
 	stone.linear_velocity = Vector2(600, 0)
 	host.add_child(stone)
