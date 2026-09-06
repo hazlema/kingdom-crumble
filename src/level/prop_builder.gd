@@ -88,6 +88,8 @@ static func _attach_sprite(body: Node2D, e: Dictionary, prop: Dictionary) -> voi
 	var has_keys := prop.has("behavior") or prop.has("speed") or prop.has("amplitude")
 	if e.get("animatable", false) == true:
 		var verb := str(prop.get("behavior", "NONE"))
+		# keys().find() returns array position, which equals the enum int
+		# only because Behavior is zero-based and contiguous — preserve that.
 		var bi := NarfDecor.Behavior.keys().find(verb)
 		if bi >= NarfDecor.Behavior.NONE and bi <= NarfDecor.Behavior.BOB:
 			sprite.behavior = bi as NarfDecor.Behavior
