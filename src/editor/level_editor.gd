@@ -58,6 +58,7 @@ func _ready() -> void:
 		func(id: String) -> void:
 			carrying = id
 			_drag_from = Vector2i(-1, -1)
+			_drag_prop = null
 			overlay.selected_cell = Vector2i(-1, -1)
 	)
 	menu.save_requested.connect(_on_save)
