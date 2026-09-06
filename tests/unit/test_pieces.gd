@@ -347,3 +347,43 @@ func test_crates_do_not_warp() -> void:
 	autofree(crate)
 	await wait_physics_frames(15)
 	assert_almost_eq(crate.global_position.x, a.x, 5.0, "non-stones stay put")
+
+
+func test_arrival_fx_spawns_tinted_oneshot_burst() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var l := LevelLayout.new()
+	l.title = "fx"
+	var a := EditorGrid.cell_to_world(Vector2i(2, 0))
+	l.props.append({"id": "wormhole-blue", "x": a.x, "y": a.y})
+	var spawned := PropBuilder.spawn_props(host, l)  # lone → warns (GUT-safe)
+	var hole: Wormhole = spawned[0]
+	await wait_process_frames(1)  # _ready ran, _sprite found
+	hole.play_arrival_fx(Vector2(600, 0))
+	var burst: CPUParticles2D = null
+	for c in hole.get_children():
+		if c is CPUParticles2D:
+			burst = c
+	assert_not_null(burst, "whoosh burst spawned")
+	assert_true(burst.one_shot and burst.emitting)
+	assert_gt(burst.color.b, burst.color.r, "tint sampled from the blue portal art")
+
+
+func test_warp_arrival_fires_partner_whoosh() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var parts := _warp_pair(host)
+	var spawned: Array = parts[0]
+	var stone: Stone = load("res://scenes/stone.tscn").instantiate()
+	stone.gravity_scale = 0.0
+	stone.global_position = (parts[1] as Vector2) + Vector2(-150, 0)
+	stone.linear_velocity = Vector2(600, 0)
+	host.add_child(stone)
+	autofree(stone)
+	await wait_physics_frames(30)
+	var exit_hole: Wormhole = spawned[1]
+	var found := false
+	for c in exit_hole.get_children():
+		if c is CPUParticles2D:
+			found = true
+	assert_true(found, "arrival whoosh at the exit portal")
