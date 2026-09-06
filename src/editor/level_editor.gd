@@ -16,15 +16,12 @@ static var resume_layout: LevelLayout = null
 
 var current := LevelLayout.new()
 var occupancy := {}  # Vector2i -> Crate
-var carrying := ""  # asset id while placing, "" = none
 var save_path := ""  # last saved path, "" = unsaved
 var mode := Mode.CRATES
 var selected_overlay := -1
 var _spawned: Array[Crate] = []
 var _spawned_props: Array[Node2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
-var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
-var _drag_prop: Node2D = null  # prop being drag-moved, null = none/crate
 var _lmb_down := false
 var _last_mouse := Vector2.ZERO
 # Scenery drag state
@@ -35,16 +32,24 @@ var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
 var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
 # Right-click context menu for scenery pieces
 var _scenery_context: PopupMenu = null
-# Right-click Info menu for crates (crate mode)
-var _crate_context: PopupMenu = null
-var _crate_info: AcceptDialog = null
-var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
-var _info_key := ""  # trigger key shown in the open Info dialog
-# RMB context menu state (scenery mode)
-var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed (scenery mode)
-var _rmb_down := false              # RMB was pressed this frame in scenery mode
+# RMB context menu state (shared between crate and scenery modes)
+var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed
+var _rmb_down := false              # RMB was pressed this frame
 const _CONTEXT_MENU_MOTION_THRESHOLD := 6.0  # px; below this RMB release opens menu
 const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
+
+var _grid_tool: GridTool
+
+# Forwarders — tests access these as editor properties/methods:
+var carrying: String:
+	get: return _grid_tool.carrying
+	set(v): _grid_tool.carrying = v
+
+var _crate_info: AcceptDialog:
+	get: return _grid_tool._crate_info
+
+var _info_key: String:
+	get: return _grid_tool._info_key
 
 @onready var overlay: GridOverlay = $GridOverlay
 @onready var palette: EditorPalette = $Ui/Palette
@@ -52,13 +57,31 @@ const _HIDDEN_GHOST_ALPHA := 0.4  # editor-only alpha for hidden overlay pieces
 @onready var menu: EditorMenu = $Ui/EditorMenu
 
 
+func inspector() -> PieceInspector:
+	return %PieceInspector
+
+
+# Shared by all tools: true exactly when this frame is an RMB release
+# without significant motion (a moving RMB is a camera pan).
+func rmb_menu_release(mouse: Vector2, over_ui: bool) -> bool:
+	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if rmb and not _rmb_down:
+		_rmb_press_pos = mouse
+		_rmb_down = true
+	elif not rmb and _rmb_down:
+		_rmb_down = false
+		return not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD
+	return false
+
+
 func _ready() -> void:
+	_grid_tool = GridTool.new(self)
 	Pieces.scan()
 	palette.asset_picked.connect(
 		func(id: String) -> void:
-			carrying = id
-			_drag_from = Vector2i(-1, -1)
-			_drag_prop = null
+			_grid_tool.carrying = id
+			_grid_tool._drag_from = Vector2i(-1, -1)
+			_grid_tool._drag_prop = null
 			overlay.selected_cell = Vector2i(-1, -1)
 	)
 	menu.save_requested.connect(_on_save)
@@ -89,117 +112,38 @@ func _process(_delta: float) -> void:
 	_last_mouse = mouse
 
 	if mode == Mode.CRATES:
-		var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 		# Geometry, not gui_get_hovered_control(): during a drag that began
 		# on a palette Button the Control keeps mouse capture, so the hover
 		# API still reports UI at release and would veto the drop.
 		var over_ui := (
 			menu.any_dialog_open()
 			or _mouse_over_ui(mouse)
-			or (_crate_info != null and _crate_info.visible)
+			or (_grid_tool._crate_info != null and _grid_tool._crate_info.visible)
 		)
-		if lmb and not _lmb_down and not over_ui:
-			_press(_mouse_cell())
-		elif not lmb and _lmb_down:
-			_release(_mouse_cell(), over_ui)
-		_lmb_down = lmb
-		_update_ghost()
-
-		# RMB Info menu: open only on release without significant motion
-		# (a moving RMB is a camera pan — same rule as scenery mode).
-		var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-		if rmb and not _rmb_down:
-			_rmb_press_pos = mouse
-			_rmb_down = true
-		elif not rmb and _rmb_down:
-			_rmb_down = false
-			if not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD:
-				var cell := _mouse_cell()
-				if occupancy.has(cell) and occupancy.get(cell) is Crate:
-					overlay.selected_cell = cell
-					overlay.refresh()
-					_show_crate_context(mouse, cell)
+		_grid_tool.process(mouse, over_ui)
 	else:
 		_scenery_process(mouse)
 
 
+# ---------------------------------------------------------------------------
+# Forwarders — GridTool owns these; editor exposes them so tests and
+# _unhandled_input can call them on the editor directly.
+# ---------------------------------------------------------------------------
+
 func _press(cell: Vector2i) -> void:
-	if carrying != "":
-		%PieceInspector.close()
-		_try_place(cell)
-		return
-	if occupancy.has(cell):
-		var node: Node2D = occupancy[cell]
-		if node is Crate:
-			overlay.selected_cell = cell
-			overlay.selected_cells = Vector2i(1, 1)
-			_drag_from = cell
-			_drag_prop = null
-			%PieceInspector.close()
-		else:
-			var e := Pieces.entry(str(node.get_meta("prop_id")))
-			overlay.selected_cell = node.get_meta("anchor_cell")
-			overlay.selected_cells = e["cells"] if not e.is_empty() else Vector2i(1, 1)
-			_drag_from = cell
-			_drag_prop = node
-			if e.get("animatable", false) == true:
-				var sprite: NarfDecor = null
-				for sc in node.get_children():
-					if sc is NarfDecor:
-						sprite = sc
-				var entry := _prop_entry_for(node)
-				if not entry.is_empty() and sprite != null:
-					%PieceInspector.open(entry, sprite, true)
-			else:
-				%PieceInspector.close()
-	else:
-		overlay.selected_cell = Vector2i(-1, -1)
-		overlay.selected_cells = Vector2i(1, 1)
-		_drag_from = Vector2i(-1, -1)
-		_drag_prop = null
-		%PieceInspector.close()
-	overlay.refresh()
+	_grid_tool._press(cell)
 
 
 func _release(cell: Vector2i, over_ui: bool) -> void:
-	if carrying != "" and not over_ui:
-		_try_place(cell)
-	elif _drag_prop != null and _drag_from.x >= 0 and not over_ui and cell != _drag_from:
-		_move_prop(_drag_prop, cell - _drag_from)
-	elif (
-		_drag_from.x >= 0
-		and not over_ui
-		and cell != _drag_from
-		and EditorGrid.in_zone(cell)
-		and not occupancy.has(cell)
-	):
-		_move(_drag_from, cell)
-	_drag_from = Vector2i(-1, -1)
-	_drag_prop = null
+	_grid_tool._release(cell, over_ui)
 
 
-func _try_place(cell: Vector2i) -> void:
-	var e := Pieces.entry(carrying)
-	if e.is_empty():
-		return
-	if e["class"] == "crate":
-		if EditorGrid.in_zone(cell) and not occupancy.has(cell):
-			_place(carrying, cell)
-			carrying = ""
-		return
-	var cells: Vector2i = e["cells"]
-	for c in footprint(cell, cells):
-		if not EditorGrid.in_zone(c) or occupancy.has(c):
-			return  # whole footprint or nothing; keep carrying
-	var w := EditorGrid.cell_to_world(cell)
-	var prop := {"id": carrying, "x": w.x, "y": w.y}
-	current.props.append(prop)
-	var body := PropBuilder.spawn_one(self, prop)
-	_spawned_props.append(body)
-	for c in footprint(cell, cells):
-		occupancy[c] = body
-	carrying = ""
-	overlay.refresh()
+func _delete_selected() -> void:
+	_grid_tool._delete_selected()
+
+
+func _show_crate_info(cell: Vector2i) -> void:
+	_grid_tool._show_crate_info(cell)
 
 
 func _on_save() -> void:
@@ -364,12 +308,12 @@ func _on_background_picked(id: String) -> void:
 
 func _enter_scenery() -> void:
 	# Drop any in-flight carry so a held crate doesn't ghost in scenery mode.
-	carrying = ""
+	_grid_tool.carrying = ""
 	# Stale-input hygiene: clear drag/lmb state so a leftover press can't
 	# fire a spurious release as a crate move once we return to CRATES mode.
-	_drag_from = Vector2i(-1, -1)
-	_drag_prop = null
-	_lmb_down = false
+	_grid_tool._drag_from = Vector2i(-1, -1)
+	_grid_tool._drag_prop = null
+	_grid_tool._lmb_down = false
 	_rmb_down = false  # a held right-click must not menu on re-entry
 	%PieceInspector.close()
 	mode = Mode.SCENERY
@@ -382,7 +326,7 @@ func _enter_scenery() -> void:
 
 
 func _exit_scenery() -> void:
-	_rmb_down = false  # a held right-click must not menu on mode return
+	_rmb_down = false  # a held right-click must not menu on mode return (scenery inline copy dies in Task 3)
 	selected_overlay = -1
 	_gizmo.piece = null
 	_gizmo.visible = false
@@ -503,162 +447,6 @@ func _clamp_camera() -> void:
 	var half := get_viewport_rect().size * 0.5 / cam.zoom
 	cam.position.x = clampf(cam.position.x, cam.limit_left + half.x, cam.limit_right - half.x)
 	cam.position.y = clampf(cam.position.y, cam.limit_top + half.y, cam.limit_bottom - half.y)
-
-
-func _update_ghost() -> void:
-	var id := carrying
-	if id == "" and _drag_from.x >= 0 and _lmb_down:
-		var held: Variant = occupancy.get(_drag_from)
-		if held != null and held is Crate:
-			id = (held as Crate).type_id
-		elif _drag_prop != null:
-			id = str(_drag_prop.get_meta("prop_id"))
-	if id == "":
-		if overlay.ghost_cell != Vector2i(-1, -1):
-			overlay.ghost_cell = Vector2i(-1, -1)
-			overlay.refresh()
-		overlay.ghost_cells = Vector2i(1, 1)
-		return
-	var cell := _mouse_cell()
-	if _drag_prop != null and _lmb_down:
-		cell += (_drag_prop.get_meta("anchor_cell") as Vector2i) - _drag_from
-	var e := Pieces.entry(id)
-	var ghost_cells := Vector2i(1, 1)
-	var ok := false
-	if not e.is_empty() and e["class"] != "crate":
-		ghost_cells = e["cells"] as Vector2i
-		ok = true
-		for c in footprint(cell, ghost_cells):
-			var occ: Variant = occupancy.get(c)
-			if not EditorGrid.in_zone(c) or (occ != null and occ != _drag_prop):
-				ok = false
-				break
-	else:
-		ok = EditorGrid.in_zone(cell) and (not occupancy.has(cell) or cell == _drag_from)
-	overlay.ghost_cells = ghost_cells
-	if cell == overlay.ghost_cell and ok == overlay.ghost_ok and overlay.ghost_tex == Pieces.texture_for(id):
-		return
-	overlay.ghost_cell = cell
-	overlay.ghost_tex = Pieces.texture_for(id)
-	overlay.ghost_ok = ok
-	overlay.refresh()
-
-
-func _place(id: String, cell: Vector2i) -> void:
-	var w := EditorGrid.cell_to_world(cell)
-	current.crates.append({"x": w.x, "y": w.y, "type": id})
-	_rebuild()
-
-
-func _move(from: Vector2i, to: Vector2i) -> void:
-	if not occupancy.get(from) is Crate:
-		return
-	var fw := EditorGrid.cell_to_world(from)
-	var tw := EditorGrid.cell_to_world(to)
-	for c in current.crates:
-		if is_equal_approx(c["x"], fw.x) and is_equal_approx(c["y"], fw.y):
-			c["x"] = tw.x
-			c["y"] = tw.y
-			break
-	overlay.selected_cell = to
-	_rebuild()
-
-
-func _delete_selected() -> void:
-	var cell: Vector2i = overlay.selected_cell
-	if cell.x < 0:
-		return
-	var node: Variant = occupancy.get(cell)
-	if node != null and not node is Crate:
-		_delete_prop(node)
-		return
-	var w := EditorGrid.cell_to_world(cell)
-	for i in current.crates.size():
-		var c: Dictionary = current.crates[i]
-		if is_equal_approx(c["x"], w.x) and is_equal_approx(c["y"], w.y):
-			current.crates.remove_at(i)
-			break
-	overlay.selected_cell = Vector2i(-1, -1)
-	_drag_from = Vector2i(-1, -1)
-	_rebuild()
-
-
-# Delta-based footprint move: data, occupancy, node, and meta in lockstep.
-# A blocked target (out of zone / any foreign occupant) is a no-op.
-func _move_prop(body: Node2D, delta: Vector2i) -> void:
-	var pid := str(body.get_meta("prop_id"))
-	var e := Pieces.entry(pid)
-	if e.is_empty():
-		return
-	var old_anchor: Vector2i = body.get_meta("anchor_cell")
-	var new_anchor := old_anchor + delta
-	var cells: Vector2i = e["cells"]
-	for c in footprint(new_anchor, cells):
-		if not EditorGrid.in_zone(c):
-			return
-		var occ: Variant = occupancy.get(c)
-		if occ != null and occ != body:
-			return
-	var old_w := EditorGrid.cell_to_world(old_anchor)
-	var new_w := EditorGrid.cell_to_world(new_anchor)
-	for i in current.props.size():
-		var p: Dictionary = current.props[i]
-		if (
-			p["id"] == pid
-			and is_equal_approx(float(p["x"]), old_w.x)
-			and is_equal_approx(float(p["y"]), old_w.y)
-		):
-			var moved := (current.props[i] as Dictionary).duplicate()
-			moved["x"] = new_w.x
-			moved["y"] = new_w.y
-			current.props[i] = moved
-			# Refresh the inspector reference if it was open on this prop,
-			# or close it — closing is simpler and avoids a stale-dict write.
-			%PieceInspector.close()
-			break
-	for c in footprint(old_anchor, cells):
-		occupancy.erase(c)
-	for c in footprint(new_anchor, cells):
-		occupancy[c] = body
-	body.position = PropBuilder.footprint_center(new_w, cells)
-	body.set_meta("anchor_cell", new_anchor)
-	overlay.selected_cell = new_anchor
-	overlay.selected_cells = cells
-	overlay.refresh()
-
-
-func _prop_entry_for(body: Node2D) -> Dictionary:
-	var pid := str(body.get_meta("prop_id"))
-	var w := EditorGrid.cell_to_world(body.get_meta("anchor_cell"))
-	for p in current.props:
-		if p["id"] == pid and is_equal_approx(float(p["x"]), w.x) and is_equal_approx(float(p["y"]), w.y):
-			return p
-	return {}
-
-
-func _delete_prop(body: Node2D) -> void:
-	var anchor: Vector2i = body.get_meta("anchor_cell")
-	var pid: String = body.get_meta("prop_id")
-	for i in current.props.size():
-		var pw := EditorGrid.world_to_cell(Vector2(current.props[i]["x"], current.props[i]["y"]))
-		if current.props[i]["id"] == pid and pw == anchor:
-			current.props.remove_at(i)
-			break
-	# Erase every occupancy cell whose value points at this body.
-	# Works whether the registry id is known or not — no footprint lookup needed.
-	var to_erase: Array[Vector2i] = []
-	for k in occupancy:
-		if occupancy[k] == body:
-			to_erase.append(k)
-	for k in to_erase:
-		occupancy.erase(k)
-	_spawned_props.erase(body)
-	body.queue_free()
-	_drag_prop = null
-	%PieceInspector.close()
-	overlay.selected_cell = Vector2i(-1, -1)
-	overlay.selected_cells = Vector2i(1, 1)
-	overlay.refresh()
 
 
 # Frees and respawns ONLY the _scenery_pieces array — crates untouched.
@@ -1006,9 +794,8 @@ func _delete_selected_piece() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Right-click Info menu for crates
+# Static helpers (also used by GridTool via LevelEditor.footprint etc.)
 # ---------------------------------------------------------------------------
-
 
 static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
@@ -1023,52 +810,6 @@ static func footprint(anchor: Vector2i, cells: Vector2i) -> Array[Vector2i]:
 static func crate_trigger_key(cell: Vector2i) -> String:
 	var w := EditorGrid.cell_to_world(cell)
 	return "hit:%d,%d" % [int(w.x), int(w.y)]
-
-
-func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
-	if _crate_context == null:
-		_crate_context = PopupMenu.new()
-		_crate_context.id_pressed.connect(_on_crate_context_item)
-		add_child(_crate_context)
-	_info_cell = cell
-	_crate_context.clear()
-	_crate_context.add_item("Info", 0)
-	_crate_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
-	_crate_context.popup()
-
-
-func _on_crate_context_item(id: int) -> void:
-	if id == 0:
-		_show_crate_info(_info_cell)
-
-
-func _show_crate_info(cell: Vector2i) -> void:
-	if not occupancy.has(cell):
-		return
-	var w := EditorGrid.cell_to_world(cell)
-	var type_id := ""
-	for c in current.crates:
-		if int(c["x"]) == int(w.x) and int(c["y"]) == int(w.y):
-			type_id = String(c["type"])
-			break
-	_info_key = crate_trigger_key(cell)
-	if _crate_info == null:
-		_crate_info = AcceptDialog.new()
-		_crate_info.title = "Crate Info"
-		_crate_info.theme = load("res://resources/ui/kingdom_theme.tres")
-		_crate_info.add_button("Copy Key", true, "copy_key")
-		_crate_info.custom_action.connect(_on_crate_info_action)
-		add_child(_crate_info)
-	_crate_info.dialog_text = (
-		"Type: %s\nTrigger key: %s\nGrid cell: (%d, %d)" % [type_id, _info_key, cell.x, cell.y]
-	)
-	_crate_info.popup_centered()
-
-
-func _on_crate_info_action(action: StringName) -> void:
-	if action == &"copy_key":
-		DisplayServer.clipboard_set(_info_key)
-		_crate_info.hide()
 
 
 # ---------------------------------------------------------------------------
