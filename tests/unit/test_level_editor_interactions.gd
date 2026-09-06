@@ -300,3 +300,43 @@ func test_delete_prop_with_unknown_registry_id_does_not_crash() -> void:
 	# All occupancy cells pointing at the body are erased, even with unknown id.
 	assert_false(ed.occupancy.has(Vector2i(3, 2)), "anchor cell erased after unknown-id delete")
 	assert_eq(ed.overlay.selected_cell, Vector2i(-1, -1), "selection cleared")
+
+
+func test_prop_selection_ring_spans_footprint_from_any_cell() -> void:
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(5, 0))  # click the SECOND cell
+	assert_eq(ed.overlay.selected_cell, Vector2i(4, 0), "selection snaps to the anchor")
+	assert_eq(ed.overlay.selected_cells, Vector2i(2, 1), "ring spans the footprint")
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(8, 0))
+	ed._press(Vector2i(8, 0))
+	assert_eq(ed.overlay.selected_cells, Vector2i(1, 1), "crates stay 1x1")
+
+
+func test_prop_drag_moves_whole_footprint() -> void:
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(5, 0))          # grab by the second cell
+	ed._release(Vector2i(9, 0), false)  # drag +4 columns
+	assert_true(ed.occupancy.has(Vector2i(8, 0)), "new anchor occupied")
+	assert_true(ed.occupancy.has(Vector2i(9, 0)), "new second cell occupied")
+	assert_false(ed.occupancy.has(Vector2i(4, 0)), "old cells freed")
+	assert_false(ed.occupancy.has(Vector2i(5, 0)))
+	var w := EditorGrid.cell_to_world(Vector2i(8, 0))
+	assert_eq(float(ed.current.props[0]["x"]), w.x, "data moved with the node")
+	assert_eq(ed.occupancy[Vector2i(8, 0)].get_meta("anchor_cell"), Vector2i(8, 0), "meta updated")
+
+
+func test_prop_move_blocked_by_overlap_stays_put() -> void:
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(9, 0))
+	ed.carrying = "tramp-flat"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))
+	ed._release(Vector2i(8, 0), false)  # footprint would hit the crate at (9,0)
+	assert_true(ed.occupancy.has(Vector2i(4, 0)), "blocked move leaves the piece")
+	assert_true(ed.occupancy.has(Vector2i(5, 0)))
+	assert_false(ed.occupancy.has(Vector2i(8, 0)), "no half-move")
+	var w := EditorGrid.cell_to_world(Vector2i(4, 0))
+	assert_eq(float(ed.current.props[0]["x"]), w.x, "data untouched")
