@@ -215,3 +215,75 @@ brain fart demands.
   `2026-09-06-animatable-props-design.md` — class deep-dives
 - `docs/audits/2026-09-06-editor-architecture.md` — why the editor is
   shaped the way it is
+
+---
+
+## The Toybox — content packs
+
+Packs are folders players drop into `user://toybox/` (desktop builds;
+web pack import is future work). Each pack is:
+
+```
+user://toybox/thanksgiving/
+├── pack.json          ← the manifest (required)
+├── turkey-crate.png   ← pieces (object packs)
+├── turkey-crate.json
+└── ...
+```
+
+### The manifest (`pack.json`)
+
+| Key | Type | Rule |
+|---|---|---|
+| `title` | String | shown in the Toybox menu; ≤ 60 chars |
+| `kind` | String | `objects` or `theme` |
+| `months` | [int] | 1–12; absent/empty = available all year |
+
+Folder names: lowercase `a-z0-9_-`, ≤ 32 chars. A bad manifest, bad
+folder name, or oversized manifest (> 64 KB) makes the pack warn and
+sit out — nothing crashes, ever. Pack images pass the same hardened
+gates as everything else (PNG signature, pre-decode dimension caps),
+so a broken or hostile file is just a warning in the log.
+
+### Object packs (`kind: objects`) — NEW pieces
+
+PNG + sidecar pairs, exactly like `pieces/` (same schema, same image
+rules — see above). Their ids are namespaced by the folder:
+`thanksgiving:turkey-crate`. That means packs can never collide with
+built-in pieces or with each other. Pack crates can carry `powerup`,
+pack pieces can be `animatable` — the full sidecar vocabulary works.
+
+Players toggle each object pack with a checkbox in the **Toybox**
+section of the pause menu (default: on). Disabling a pack removes its
+pieces from the palette; a level that uses them still loads — props
+from a disabled pack are skipped with a warning; crates from a
+disabled pack spawn as plain wood crates (still scored, level stays
+winnable) with a warning.
+
+### Theme packs (`kind: theme`) — reskin the base game
+
+No sidecars: just PNGs **named for the built-in ids they replace**
+(`crate-wood.png`, `tramp-flat.png`, `wormhole-blue.png`...). While a
+theme is active, every level — built-in, yours, anyone's — wears the
+new art. Physics, scoring, and triggers are untouched by construction:
+themes change pixels, nothing else.
+
+Rules:
+
+- **Dimensions must match the base art exactly** (native pixels are
+  world pixels — a mis-sized reskin would lie about physics). Wrong
+  size → warning, that one image falls back to the built-in.
+- **One theme at a time** — a radio choice in the Toybox menu
+  ("Default" always available). No merge rules needed, ever.
+- **Seasons**: give the manifest `"months": [11]` and the theme is
+  only *selectable* in November — the menu shows it grayed with
+  "returns in November" the rest of the year, and an active theme
+  auto-reverts to Default when its season ends. (The clock is the
+  local system clock. Time-travelers welcome.)
+
+### Where the switches live
+
+Pause menu → **TOYBOX** (the section only appears when packs are
+installed). Changes apply on the next level load or editor open.
+Persistence: `user://toybox.cfg` — delete it to reset all pack
+settings to defaults.
