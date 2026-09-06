@@ -340,3 +340,36 @@ func test_prop_move_blocked_by_overlap_stays_put() -> void:
 	assert_false(ed.occupancy.has(Vector2i(8, 0)), "no half-move")
 	var w := EditorGrid.cell_to_world(Vector2i(4, 0))
 	assert_eq(float(ed.current.props[0]["x"]), w.x, "data untouched")
+
+
+func test_selecting_animatable_prop_opens_reduced_inspector() -> void:
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))  # select it
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_true(insp.visible, "inspector opens for animatable prop")
+	insp.set_behavior_by_name("SPIN")
+	insp.set_speed(1.2)
+	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "writes land in the level data")
+	assert_eq(float(ed.current.props[0].get("speed")), 1.2)
+
+
+func test_selecting_non_animatable_prop_keeps_inspector_closed() -> void:
+	ed.carrying = "block-stone"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_false(insp.visible, "statics are not animatable")
+
+
+func test_move_prop_preserves_animation_keys() -> void:
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed.current.props[0]["behavior"] = "SWAY"
+	ed.current.props[0]["amplitude"] = 8.0
+	ed._press(Vector2i(4, 0))
+	ed._release(Vector2i(9, 0), false)
+	assert_eq(ed.current.props[0].get("behavior"), "SWAY", "drag keeps the animation")
+	assert_eq(float(ed.current.props[0].get("amplitude")), 8.0)
+	var w := EditorGrid.cell_to_world(Vector2i(9, 0))
+	assert_eq(float(ed.current.props[0]["x"]), w.x, "and still moved")

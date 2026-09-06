@@ -23,6 +23,9 @@ var _piece: NarfDecor = null
 # Guard to suppress re-entrant setter calls during UI population.
 var _updating := false
 
+# True when open() was called in reduced (prop) mode.
+var _reduced := false
+
 # Node references — populated in _ready()
 var _behavior_option: OptionButton
 var _pivot_buttons: Array[Button] = []
@@ -32,6 +35,12 @@ var _axis_h: Button
 var _axis_v: Button
 var _travel_slider: HSlider
 var _tilt_slider: HSlider
+# Nodes toggled by reduced mode (not all have unique_name_in_owner).
+var _pivot_label: Label
+var _axis_label: Label
+var _axis_row: HBoxContainer
+var _travel_label: Label
+var _tilt_label: Label
 
 # Behavior name ordering must match NarfDecor.Behavior ordinals exactly — indices 0-5.
 const BEHAVIOR_NAMES := ["NONE", "SPIN", "SWAY", "BOB", "DRIFT", "WANDER"]
@@ -51,9 +60,8 @@ func _ready() -> void:
 			_pivot_buttons.append(child as Button)
 			(child as Button).toggle_mode = true
 
-	# Populate behavior OptionButton labels.
-	for bname in BEHAVIOR_NAMES:
-		_behavior_option.add_item(bname)
+	# Populate behavior OptionButton labels (full set; reduced open() re-fills to 4).
+	_rebuild_behavior_options(true)
 
 	# Connect UI signals → setters (guarded by _updating).
 	_behavior_option.item_selected.connect(func(idx: int) -> void:
@@ -72,6 +80,11 @@ func _ready() -> void:
 	_axis_v = %AxisV
 	_travel_slider = %TravelSlider
 	_tilt_slider = %TiltSlider
+	_pivot_label = $Box/PivotLabel
+	_axis_label = $Box/AxisLabel
+	_axis_row = $Box/AxisRow
+	_travel_label = $Box/TravelLabel
+	_tilt_label = $Box/TiltLabel
 	_axis_h.toggled.connect(func(pressed: bool) -> void:
 		if pressed and not _updating:
 			set_axis_by_name("HORIZONTAL")
@@ -101,9 +114,26 @@ func _ready() -> void:
 
 # Open the inspector for the given overlay dict and live piece.
 # Reads current values from the dict and pre-populates all controls.
-func open(overlay: Dictionary, piece: NarfDecor) -> void:
+# Pass reduced=true for animatable props (hides pivot/axis/travel/tilt,
+# restricts verbs to NONE/SPIN/SWAY/BOB, caps amplitude to 12).
+func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_overlay = overlay
 	_piece = piece
+	_reduced = reduced
+	var full := not reduced
+
+	# Apply mode — hide/show advanced controls and rebuild verb list.
+	# Nodes are direct children of Box (VBoxContainer), addressed by stored refs.
+	_pivot_label.visible = full
+	%PivotGrid.visible = full
+	_axis_label.visible = full
+	_axis_row.visible = full
+	_travel_label.visible = full
+	_travel_slider.visible = full
+	_tilt_label.visible = full
+	_tilt_slider.visible = full
+	_amplitude_slider.max_value = 60.0 if full else 12.0
+	_rebuild_behavior_options(full)
 
 	_updating = true
 
@@ -111,6 +141,9 @@ func open(overlay: Dictionary, piece: NarfDecor) -> void:
 	var b_name: String = overlay.get("behavior", "NONE")
 	var b_idx := BEHAVIOR_NAMES.find(b_name)
 	if b_idx < 0:
+		b_idx = 0
+	# In reduced mode only 4 items exist (NONE/SPIN/SWAY/BOB); cap the index.
+	if reduced and b_idx >= 4:
 		b_idx = 0
 	_behavior_option.selected = b_idx
 
@@ -267,3 +300,12 @@ func _press_pivot_button(i: int) -> void:
 	for j in _pivot_buttons.size():
 		_pivot_buttons[j].button_pressed = (j == i)
 	_updating = was
+
+
+# Clears and re-fills the behavior OptionButton.
+# full=true: all six BEHAVIOR_NAMES; full=false: first four (NONE/SPIN/SWAY/BOB).
+func _rebuild_behavior_options(full: bool) -> void:
+	_behavior_option.clear()
+	var count := BEHAVIOR_NAMES.size() if full else 4
+	for i in count:
+		_behavior_option.add_item(BEHAVIOR_NAMES[i])
