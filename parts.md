@@ -255,8 +255,10 @@ pack pieces can be `animatable` — the full sidecar vocabulary works.
 
 Players toggle each object pack with a checkbox in the **Toybox**
 section of the pause menu (default: on). Disabling a pack removes its
-pieces from the palette; a level that uses them still loads — the
-missing pieces just don't spawn (with a log warning).
+pieces from the palette; a level that uses them still loads — props
+from a disabled pack are skipped with a warning; crates from a
+disabled pack spawn as plain wood crates (still scored, level stays
+winnable) with a warning.
 
 ### Theme packs (`kind: theme`) — reskin the base game
 

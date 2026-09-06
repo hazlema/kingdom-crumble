@@ -132,8 +132,8 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 			"enabled": enabled,
 		}
 		_packs.append(pack_info)
-		# Object packs: contribute pieces if enabled and in season
-		if kind == "objects" and enabled and pack_in_season:
+		# Object packs: contribute pieces if enabled (season gates selectability, never playback)
+		if kind == "objects" and enabled:
 			_scan_object_pack(pack_path, folder)
 		# Theme packs: textures loaded in the post-scan phase below
 	# After all packs are scanned: check active theme validity, then load theme textures
@@ -173,12 +173,18 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		var tex := _load_user_texture("%s/%s" % [pack_path, f])
 		if tex == null:
 			continue  # warning already issued by _load_user_texture
-		# Parse optional JSON sidecar
+		# Parse optional JSON sidecar (hardened: bytes path, size cap, no null-deref)
 		var raw := {}
 		var sidecar_path := "%s/%s.json" % [pack_path, basename]
 		if FileAccess.file_exists(sidecar_path):
-			var sidecar_text := FileAccess.open(sidecar_path, FileAccess.READ).get_as_text()
-			var parsed: Variant = JSON.parse_string(sidecar_text)
+			var sidecar_bytes := FileAccess.get_file_as_bytes(sidecar_path)
+			if sidecar_bytes.is_empty():
+				push_warning("Pieces toybox: %s sidecar unreadable — skipping" % namespaced_id)
+				continue
+			if sidecar_bytes.size() > 65536:
+				push_warning("Pieces toybox: %s sidecar too large — skipping" % namespaced_id)
+				continue
+			var parsed: Variant = JSON.parse_string(sidecar_bytes.get_string_from_utf8())
 			if parsed is Dictionary:
 				raw = parsed
 			else:

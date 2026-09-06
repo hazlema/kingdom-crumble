@@ -109,7 +109,20 @@ func _rebuild_toybox() -> void:
 	var object_packs := all_packs.filter(func(p: Dictionary) -> bool: return p["kind"] == "objects")
 	for pack: Dictionary in object_packs:
 		var cb := CheckBox.new()
-		cb.text = pack["title"]
+		var in_season: bool = pack["in_season"]
+		if in_season:
+			cb.text = pack["title"]
+			cb.disabled = false
+		else:
+			# Mirror theme dropdown treatment: disabled + "returns in <Month>"
+			var months: Array = pack.get("months", [])
+			var month_name := ""
+			if months.size() > 0:
+				var m := int(months[0])
+				if m >= 1 and m <= 12:
+					month_name = MONTHS[m]
+			cb.text = "%s (returns in %s)" % [pack["title"], month_name]
+			cb.disabled = true
 		cb.button_pressed = pack["enabled"]
 		var folder: String = pack["folder"]
 		cb.toggled.connect(func(on: bool) -> void:

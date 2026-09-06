@@ -383,3 +383,69 @@ func test_theme_dropdown_lists_and_disables_out_of_season() -> void:
 	assert_true(ob.is_item_disabled(winter_idx), "out-of-season theme item is disabled")
 	assert_true("returns in " + MONTHS[11] in ob.get_item_text(winter_idx),
 		"disabled item text contains 'returns in November'")
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 Tests: season gates selectability not playback
+# ---------------------------------------------------------------------------
+
+func test_out_of_season_object_pack_piece_still_registered() -> void:
+	# Object pack with months:[11], clock=3 (out of season), enabled → piece MUST register.
+	# Season gates selectability (UI disabled), never playback (registry contribution).
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color.GREEN)
+	_make_pack("xmas_pack", {"title": "Christmas", "kind": "objects", "months": [11]}, {"xmas-block.png": img})
+	Pieces.clock_month = 3  # not November
+	Pieces.scan()
+	var e := Pieces.entry("xmas_pack:xmas-block")
+	assert_false(e.is_empty(), "out-of-season enabled object pack piece is still registered (season never gates playback)")
+
+
+func test_out_of_season_object_pack_checkbox_disabled_with_month() -> void:
+	# Same pack as above: in pause menu, checkbox must be disabled and text must contain "returns in November".
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color.ORANGE)
+	_make_pack("xmas_pack", {"title": "Christmas", "kind": "objects", "months": [11]}, {"xmas-block.png": img})
+	Pieces.clock_month = 3  # not November
+	Pieces.scan()
+	var pm := _pause_menu()
+	pm.open()
+	var section: Node = pm.get_node("Center/Panel/Margin/Items/ToyboxSection")
+	assert_not_null(section, "ToyboxSection present when pack exists")
+	var cb: CheckBox = null
+	for child in section.get_children():
+		if child is CheckBox and "Christmas" in child.text:
+			cb = child
+			break
+	assert_not_null(cb, "CheckBox for Christmas pack found")
+	assert_true(cb.disabled, "out-of-season object pack CheckBox is disabled")
+	assert_true("returns in " + MONTHS[11] in cb.text, "disabled checkbox text contains 'returns in November'")
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 Tests: sidecar read hardening
+# ---------------------------------------------------------------------------
+
+func test_oversized_sidecar_warns_and_piece_absent_or_default() -> void:
+	# Write a sidecar > 64 KB — piece must be absent (or fall back) and no engine error.
+	var pack_dir := "%s/bigside_pack" % TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	_created_folders.append("bigside_pack")
+	# Write manifest
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	mf.store_string(JSON.stringify({"title": "BigSide", "kind": "objects"}))
+	mf.close()
+	# Write a valid PNG
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color.YELLOW)
+	img.save_png("%s/big-piece.png" % pack_dir)
+	# Write oversized sidecar (> 64 KB padding)
+	var oversized := FileAccess.open("%s/big-piece.json" % pack_dir, FileAccess.WRITE)
+	# JSON with a large padding string: {"class":"crate","_pad":"AAAA..."}
+	var pad := "A".repeat(70000)
+	oversized.store_string('{"class":"crate","_pad":"%s"}' % pad)
+	oversized.close()
+	# Scan — must warn, no engine error (GUT counts engine errors as failures)
+	Pieces.scan()
+	# Piece absent (sidecar too large → skipped entirely)
+	assert_true(Pieces.entry("bigside_pack:big-piece").is_empty(), "oversized sidecar: piece absent from registry")
