@@ -327,6 +327,7 @@ func _enter_scenery() -> void:
 
 func _exit_scenery() -> void:
 	_rmb_down = false  # a held right-click must not menu on mode return (scenery inline copy dies in Task 3)
+	_grid_tool._lmb_down = false  # symmetric with _enter_scenery (review: latent stale-press)
 	selected_overlay = -1
 	_gizmo.piece = null
 	_gizmo.visible = false
