@@ -26,13 +26,13 @@ func enter() -> void:
 	ed._grid_tool._lmb_down = false
 	_lmb_down = false
 	ed._rmb_down = false  # a held right-click must not menu on re-entry
-	ed.inspector().close()
+	ed.deselect()
 	ed.palette.visible = false
 	ed.get_node("%SceneryPanel").visible = true
 	ed.overlay.visible = false
 	ed._rebuild_scenery()  # dims crates + pauses behaviors (mode is SCENERY)
 	ed._refresh_pieces()
-	ed.gizmo().visible = true
+	# _rebuild_scenery() → _sync_views() handles gizmo visibility.
 
 
 func exit() -> void:
@@ -40,10 +40,7 @@ func exit() -> void:
 	ed._grid_tool._lmb_down = false
 	ed._rmb_down = false  # a held right-click must not menu on mode return
 	selected_overlay = -1
-	ed.gizmo().piece = null
-	ed.gizmo().queue_redraw()
-	ed.gizmo().visible = false
-	ed.inspector().close()
+	ed.deselect()
 	ed.get_node("%SceneryPanel").visible = false
 	ed.palette.visible = true
 	ed.overlay.visible = true
@@ -76,9 +73,12 @@ func process(mouse: Vector2, _over_ui: bool) -> void:
 		var idx := _pick_piece(rmb_world)
 		if idx >= 0:
 			selected_overlay = idx
+			ed.select_overlay(idx)
 			_show_scenery_context(mouse)
 
 	# Keep gizmo pointed at the selected piece.
+	# _sync_views handles the gizmo pointer at selection time; here we only
+	# refresh the draw each frame while a piece is selected.
 	var _selected_piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay) if selected_overlay >= 0 else null
 	if _selected_piece != null:
 		ed.gizmo().piece = _selected_piece
@@ -119,12 +119,12 @@ func _scenery_press(world: Vector2) -> void:
 		_scenery_drag_piece_origin = piece.position
 		var po: Dictionary = ed.current.overlays[selected_overlay]
 		_scenery_drag_press_scale = po.get("_scale", 1.0)
-		ed.inspector().open(po, piece)
+		ed.select_overlay(selected_overlay)
 	else:
 		# Deselect.
 		selected_overlay = -1
 		_scenery_dragging = false
-		ed.inspector().close()
+		ed.deselect()
 
 
 func _scenery_release() -> void:
@@ -234,9 +234,7 @@ func _delete_selected_piece() -> void:
 	var old_key: String = o.get("image", "")
 	ed.current.overlays.remove_at(selected_overlay)
 	selected_overlay = -1
-	ed.gizmo().piece = null
-	ed.gizmo().queue_redraw()
-	ed.inspector().close()
+	ed.deselect()
 	# Drop the image blob if no remaining overlay references it.
 	if old_key != "":
 		var still_used := false
@@ -336,15 +334,4 @@ func _drop_background() -> void:
 			ed.current.images.erase(old_key)
 	ed._rebuild_scenery()
 	ed._refresh_pieces()
-	_reopen_inspector()
-
-
-# Rebuilds free every live piece — any open inspector must be re-pointed
-# at the FRESH piece for the current selection (or closed if none), else
-# it displays one overlay while selection means another.
-func _reopen_inspector() -> void:
-	if selected_overlay >= 0 and selected_overlay < ed.current.overlays.size():
-		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, selected_overlay)
-		ed.inspector().open(ed.current.overlays[selected_overlay], piece)
-	else:
-		ed.inspector().close()
+	# _rebuild_scenery() now calls _sync_views() which re-resolves the inspector.

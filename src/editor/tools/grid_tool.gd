@@ -31,47 +31,32 @@ func process(mouse: Vector2, over_ui: bool) -> void:
 	if ed.rmb_menu_release(mouse, over_ui):
 		var cell := ed._mouse_cell()
 		if ed.occupancy.has(cell) and ed.occupancy.get(cell) is Crate:
-			ed.overlay.selected_cell = cell
-			ed.overlay.refresh()
+			var crate_node: Node2D = ed.occupancy.get(cell) as Node2D
+			ed.select_cell(cell, Vector2i(1, 1), crate_node)
 			_show_crate_context(mouse, cell)
 
 
 func _press(cell: Vector2i) -> void:
 	if carrying != "":
-		ed.inspector().close()
 		_try_place(cell)
 		return
 	if ed.occupancy.has(cell):
 		var node: Node2D = ed.occupancy[cell]
 		if node is Crate:
-			ed.overlay.selected_cell = cell
-			ed.overlay.selected_cells = Vector2i(1, 1)
 			_drag_from = cell
 			_drag_prop = null
-			ed.inspector().close()
+			ed.select_cell(cell, Vector2i(1, 1), node)
 		else:
 			var e := Pieces.entry(str(node.get_meta("prop_id")))
-			ed.overlay.selected_cell = node.get_meta("anchor_cell")
-			ed.overlay.selected_cells = e["cells"] if not e.is_empty() else Vector2i(1, 1)
+			var anchor: Vector2i = node.get_meta("anchor_cell")
+			var cells: Vector2i = e["cells"] if not e.is_empty() else Vector2i(1, 1)
 			_drag_from = cell
 			_drag_prop = node
-			if e.get("animatable", false) == true:
-				var sprite: NarfDecor = null
-				for sc in node.get_children():
-					if sc is NarfDecor:
-						sprite = sc
-				var entry := _prop_entry_for(node)
-				if not entry.is_empty() and sprite != null:
-					ed.inspector().open(entry, sprite, true)
-			else:
-				ed.inspector().close()
+			ed.select_cell(anchor, cells, node)
 	else:
-		ed.overlay.selected_cell = Vector2i(-1, -1)
-		ed.overlay.selected_cells = Vector2i(1, 1)
 		_drag_from = Vector2i(-1, -1)
 		_drag_prop = null
-		ed.inspector().close()
-	ed.overlay.refresh()
+		ed.deselect()
 
 
 func _release(cell: Vector2i, over_ui: bool) -> void:
@@ -131,12 +116,18 @@ func _move(from: Vector2i, to: Vector2i) -> void:
 			c["x"] = tw.x
 			c["y"] = tw.y
 			break
-	ed.overlay.selected_cell = to
+	# Set selection to destination cell before rebuild so _sync_views can re-resolve.
+	ed.selection = {"kind": "cell", "cell": to, "cells": Vector2i(1, 1), "node": null}
 	ed._rebuild()
 
 
 func _delete_selected() -> void:
-	var cell: Vector2i = ed.overlay.selected_cell
+	# Read selection cell from the selection dict (or fall back to overlay for compat).
+	var cell: Vector2i
+	if ed.selection.get("kind") == "cell":
+		cell = ed.selection["cell"]
+	else:
+		cell = ed.overlay.selected_cell
 	if cell.x < 0:
 		return
 	var node: Variant = ed.occupancy.get(cell)
@@ -149,8 +140,8 @@ func _delete_selected() -> void:
 		if is_equal_approx(c["x"], w.x) and is_equal_approx(c["y"], w.y):
 			ed.current.crates.remove_at(i)
 			break
-	ed.overlay.selected_cell = Vector2i(-1, -1)
 	_drag_from = Vector2i(-1, -1)
+	ed.deselect()
 	ed._rebuild()
 
 
@@ -183,9 +174,6 @@ func _move_prop(body: Node2D, delta: Vector2i) -> void:
 			moved["x"] = new_w.x
 			moved["y"] = new_w.y
 			ed.current.props[i] = moved
-			# Refresh the inspector reference if it was open on this prop,
-			# or close it — closing is simpler and avoids a stale-dict write.
-			ed.inspector().close()
 			break
 	for c in LevelEditor.footprint(old_anchor, cells):
 		ed.occupancy.erase(c)
@@ -193,9 +181,8 @@ func _move_prop(body: Node2D, delta: Vector2i) -> void:
 		ed.occupancy[c] = body
 	body.position = PropBuilder.footprint_center(new_w, cells)
 	body.set_meta("anchor_cell", new_anchor)
-	ed.overlay.selected_cell = new_anchor
-	ed.overlay.selected_cells = cells
-	ed.overlay.refresh()
+	# Route through select_cell: re-resolves inspector to the fresh anchor.
+	ed.select_cell(new_anchor, cells, body)
 
 
 func _prop_entry_for(body: Node2D) -> Dictionary:
@@ -226,10 +213,7 @@ func _delete_prop(body: Node2D) -> void:
 	ed._spawned_props.erase(body)
 	body.queue_free()
 	_drag_prop = null
-	ed.inspector().close()
-	ed.overlay.selected_cell = Vector2i(-1, -1)
-	ed.overlay.selected_cells = Vector2i(1, 1)
-	ed.overlay.refresh()
+	ed.deselect()
 
 
 func _update_ghost() -> void:

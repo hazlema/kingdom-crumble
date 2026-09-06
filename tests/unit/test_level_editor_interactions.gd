@@ -388,3 +388,46 @@ func test_rebuild_preserves_animation_keys() -> void:
 	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "behavior survives rebuild")
 	assert_eq(float(ed.current.props[0].get("speed")), 2.5, "speed survives rebuild")
 	assert_eq(float(ed.current.props[0].get("amplitude")), 12.0, "amplitude survives rebuild")
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — ONE selection rule
+# ---------------------------------------------------------------------------
+
+func test_clear_path_resets_selection_and_hides_inspector() -> void:
+	# (a) clear-path: select an animatable prop, then clear the level.
+	# After the clear+rebuild, selection must be "none" and inspector hidden.
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))  # select it — opens inspector
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_true(insp.visible, "inspector open after selecting animatable prop")
+	# Simulate clear (same as _on_clear)
+	ed.current = LevelLayout.new()
+	ed._rebuild()
+	assert_false(insp.visible, "inspector hidden after clear+rebuild")
+	assert_eq(ed.selection.get("kind", ""), "none", "selection kind is none after clear")
+
+
+func test_inspector_survives_rebuild_after_selecting_animatable_prop() -> void:
+	# (b) rebuild re-resolution: select an animatable prop, then place a
+	# crate (triggers _rebuild). Inspector must STILL be open and writes must
+	# land in the CURRENT (fresh) props entry.
+	#
+	# This test MUST FAIL against today's close-on-rebuild code; it will
+	# pass only after _sync_views re-resolution is implemented.
+	ed.carrying = "wormhole-blue"
+	ed._press(Vector2i(4, 0))
+	ed._press(Vector2i(4, 0))  # select wormhole → opens inspector (reduced mode)
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	assert_true(insp.visible, "inspector open before rebuild")
+	# Trigger a rebuild by placing a crate in a different cell.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))
+	# After rebuild, inspector must still be open (re-resolved to fresh prop).
+	assert_true(insp.visible, "inspector still open after rebuild (re-resolution)")
+	# Writes after rebuild must land in the CURRENT props entry.
+	insp.set_behavior_by_name("SPIN")
+	insp.set_speed(1.5)
+	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "write lands in fresh props entry")
+	assert_almost_eq(float(ed.current.props[0].get("speed", 0.0)), 1.5, 0.001, "speed write lands in fresh entry")

@@ -31,6 +31,13 @@ var _grid_tool: GridTool
 var _scenery_tool: SceneryTool
 var _tool: EditorTool  # the active tool
 
+# THE rule (owner doctrine, 2026-09-06): selection is one fact; views
+# render it. Nothing opens/closes/re-points the inspector, selection
+# ring, or gizmo except _sync_views(). Tools WRITE the fact via the
+# three setters; _rebuild re-resolves it; everything else just reads.
+var selection := {"kind": "none"}
+# kinds: none | cell {cell, cells, node} | overlay {index}
+
 
 # Derived property — tests and _unhandled_input read this; it stays as the
 # single authoritative mode indicator, driven by which tool is active.
@@ -62,6 +69,97 @@ var selected_overlay: int:
 
 func inspector() -> PieceInspector:
 	return %PieceInspector
+
+
+# ---------------------------------------------------------------------------
+# Selection authority — ONE rule
+# Tools write the fact; _sync_views is the ONLY view writer.
+# ---------------------------------------------------------------------------
+
+func select_cell(cell: Vector2i, cells: Vector2i, node: Node2D) -> void:
+	selection = {"kind": "cell", "cell": cell, "cells": cells, "node": node}
+	_sync_views()
+
+
+func select_overlay(index: int) -> void:
+	selection = {"kind": "overlay", "index": index}
+	_sync_views()
+
+
+func deselect() -> void:
+	selection = {"kind": "none"}
+	_sync_views()
+
+
+func _sync_views() -> void:
+	# The single choke point for all view writes. Reads selection, re-resolves
+	# nodes against fresh occupancy/overlays, and renders the result.
+	var insp_opened := false
+	match selection.get("kind"):
+		"cell":
+			# Ring at the piece's anchor, spanning its footprint; reduced
+			# inspector for animatable props — assembled verbatim from
+			# today's GridTool._press occupied-branch decisions.
+			var cell: Vector2i = selection["cell"]
+			var cells: Vector2i = selection["cells"]
+			# Always re-resolve node via occupancy (the node in the dict may be
+			# stale after a rebuild — queue_free makes it technically valid but
+			# no longer the current occupant of this cell).
+			var fresh: Variant = occupancy.get(cell)
+			if fresh == null or not (fresh is Node2D):
+				# Cell no longer occupied — downgrade selection to none.
+				selection = {"kind": "none"}
+				_sync_views()
+				return
+			var node: Node2D = fresh as Node2D
+			# Re-resolve cells from registry if it's a prop.
+			if not (fresh is Crate):
+				var e_def := Pieces.entry(str(node.get_meta("prop_id", "")))
+				if not e_def.is_empty():
+					cells = e_def["cells"]
+			selection["node"] = node
+			selection["cells"] = cells
+			overlay.selected_cell = cell
+			overlay.selected_cells = cells
+			_gizmo.piece = null
+			_gizmo.visible = false
+			# Open reduced inspector for animatable props only.
+			if node != null and not (node is Crate):
+				var e := _grid_tool._prop_entry_for(node)
+				var entry_def := Pieces.entry(str(node.get_meta("prop_id", "")))
+				if not e.is_empty() and entry_def.get("animatable", false) == true:
+					var sprite: NarfDecor = null
+					for sc in node.get_children():
+						if sc is NarfDecor:
+							sprite = sc
+					if sprite != null:
+						inspector().open(e, sprite, true)
+						insp_opened = true
+		"overlay":
+			# Gizmo point + full inspector open via _reopen_inspector logic.
+			var index: int = selection["index"]
+			# Re-resolve: check if index is still valid.
+			if index < 0 or index >= current.overlays.size():
+				# Index out of range — downgrade to none.
+				selection = {"kind": "none"}
+				_sync_views()
+				return
+			var piece := LevelEditor._piece_for_overlay_from_array(_scenery_pieces, index)
+			overlay.selected_cell = Vector2i(-1, -1)
+			overlay.selected_cells = Vector2i(1, 1)
+			_gizmo.piece = piece
+			_gizmo.visible = piece != null
+			if piece != null:
+				inspector().open(current.overlays[index], piece)
+				insp_opened = true
+		_:
+			overlay.selected_cell = Vector2i(-1, -1)
+			overlay.selected_cells = Vector2i(1, 1)
+			_gizmo.piece = null
+			_gizmo.visible = false
+	if not insp_opened:
+		inspector().close()
+	overlay.refresh()
 
 
 func gizmo() -> SceneryGizmo:
@@ -101,7 +199,7 @@ func _ready() -> void:
 			_grid_tool.carrying = id
 			_grid_tool._drag_from = Vector2i(-1, -1)
 			_grid_tool._drag_prop = null
-			overlay.selected_cell = Vector2i(-1, -1)
+			deselect()
 	)
 	menu.save_requested.connect(_on_save)
 	menu.save_as_requested.connect(_on_save_as)
@@ -232,7 +330,7 @@ func _bake_and_capture() -> void:
 		)
 	_rebuild_scenery()
 	_refresh_pieces()
-	_scenery_tool._reopen_inspector()
+	# _rebuild_scenery() calls _sync_views() which re-resolves the inspector.
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
@@ -372,7 +470,6 @@ func _exit_scenery() -> void:
 
 
 func _rebuild() -> void:
-	%PieceInspector.close()
 	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()
@@ -431,7 +528,9 @@ func _rebuild() -> void:
 	# inline and skipped the ghost pass — hidden pieces were invisible
 	# until the first EDIT SCENERY visit).
 	_rebuild_scenery()
-	overlay.refresh()
+	# Re-resolve selection against the fresh nodes/dicts. If the selected
+	# thing no longer exists, downgrade to none. _sync_views calls overlay.refresh().
+	_sync_views()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -519,6 +618,10 @@ func _rebuild_scenery() -> void:
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
+	# Re-resolve selection against the fresh pieces. If _rebuild() called us,
+	# its own _sync_views() call will follow — double-call is safe (idempotent).
+	if is_node_ready():
+		_sync_views()
 
 
 # Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
@@ -590,10 +693,12 @@ func _on_image_chosen(path: String) -> void:
 	# Place the new overlay centered on the current camera view.
 	var cam_pos: Vector2 = ($Camera as Camera2D).position
 	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
-	_scenery_tool.selected_overlay = current.overlays.size() - 1
+	var new_idx := current.overlays.size() - 1
+	_scenery_tool.selected_overlay = new_idx
 	_rebuild_scenery()
 	_refresh_pieces()
-	_scenery_tool._reopen_inspector()
+	# After rebuild, route through select_overlay so _sync_views opens the inspector.
+	select_overlay(new_idx)
 
 
 # ---------------------------------------------------------------------------
