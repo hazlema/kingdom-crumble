@@ -1,4 +1,4 @@
-# GameObjects Design — one registry for everything placeable
+# Pieces Design — one registry for everything placeable
 
 Owner problem (2026-09-05): "there really are not that many ways to
 arrange crates to keep it interesting." Solution: a unified game-object
@@ -13,15 +13,15 @@ updates; packs and sidecars pick from and parameterize the curated set.
 Wrong TYPE in a level file → named validation error. Unknown NAME at
 spawn → `push_warning` + skip, never crash.
 
-## 1. Registry (`GameObjects`, replaces `EditorAssets`)
+## 1. Registry (`Pieces`, replaces `EditorAssets`)
 
 One class scans two roots with identical rules and becomes the single
 texture/metadata authority for everything placeable:
 
 | Root | Contents | Id form |
 |---|---|---|
-| `res://gameObjects/` | baked content (crates migrate here; blocks + tramps born here) | bare: `crate-wood`, `tramp-left` |
-| `user://gameObjects/<pack>/` | one folder per pack (wave 2) | namespaced: `thanksgiving:turkey-crate` |
+| `res://pieces/` | baked content (crates migrate here; blocks + tramps born here) | bare: `crate-wood`, `tramp-left` |
+| `user://pieces/<pack>/` | one folder per pack (wave 2) | namespaced: `thanksgiving:turkey-crate` |
 
 - Subfolders under either root are purely organizational; recursive
   scan; the object's **class comes from its sidecar, not its folder**
@@ -117,7 +117,7 @@ ship dormant — code in the update, content in a later pack.
 
 ## 5. Packs (wave 2)
 
-A pack = `user://gameObjects/<folder>/` containing `pack.json` +
+A pack = `user://pieces/<folder>/` containing `pack.json` +
 content. Two kinds, declared by manifest:
 
 ```json
@@ -175,13 +175,13 @@ content. Two kinds, declared by manifest:
 ## 7. The gutting (wave 1, no legacy path survives)
 
 - `EditorAssets` deleted; every caller (palette, editor spawn, game
-  spawn, `texture_for`) repoints to `GameObjects`.
-- Baked crate PNGs move `assets/editor/crates/` → `res://gameObjects/`
+  spawn, `texture_for`) repoints to `Pieces`.
+- Baked crate PNGs move `assets/editor/crates/` → `res://pieces/`
   (`.txt` tooltips become `tip` sidecars or stay default).
 - The in-game crate spritesheet retires to kc-old-assets: each crate
   face becomes its own PNG (mechanical darkroom slice, owner blesses
   results). One texture authority.
-- Export filter check: `gameObjects/` must be included in all presets
+- Export filter check: `pieces/` must be included in all presets
   (dynamic scan = invisible to dependency tracing — the music-folder
   lesson).
 
@@ -198,7 +198,7 @@ content. Two kinds, declared by manifest:
 - Editor: multi-cell occupancy (place/blocked/move/delete), palette
   sections populated by class.
 - Migration pins: every baked crate id resolves to a texture through
-  `GameObjects`; shipped levels still load and spawn identical crate
+  `Pieces`; shipped levels still load and spawn identical crate
   counts.
 
 ## 9. Future (spec'd, not built)
