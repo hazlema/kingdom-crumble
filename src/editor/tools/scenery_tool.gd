@@ -30,7 +30,7 @@ func enter() -> void:
 	ed.palette.visible = false
 	ed.get_node("%SceneryPanel").visible = true
 	ed.overlay.visible = false
-	ed._rebuild_scenery()  # dims crates + pauses behaviors (mode is SCENERY)
+	ed._rebuild_scenery()  # dims crates; verbs stay live (mode is SCENERY)
 	ed._refresh_pieces()
 	# _rebuild_scenery() → _sync_views() handles gizmo visibility.
 
@@ -46,15 +46,20 @@ func exit() -> void:
 	ed.overlay.visible = true
 	for c in ed._spawned:
 		c.modulate.a = 1.0
-	# Respawn scenery in CRATES mode: behaviors come back to life (the
-	# pause above was editor-session-only; the dict never forgot them).
+	# Respawn scenery in CRATES mode: crates back to full brightness,
+	# pieces re-emerge wearing any pending (unbaked) edit-state — verbs
+	# were never paused, so nothing needs reviving.
 	ed._rebuild_scenery()
 
 
 # Called every frame while SCENERY mode is active.
 func process(mouse: Vector2, _over_ui: bool) -> void:
 	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var over_ui := ed.menu.any_dialog_open() or ed._mouse_over_ui(mouse)
+	# Shared editor-side computation — registered popups (context menus,
+	# the crate Info dialog) veto field clicks in THIS mode too. Before
+	# the registry, scenery over_ui skipped the Info dialog: with polled
+	# input, a click aimed at the dialog also landed on the field.
+	var over_ui := ed.over_ui_at(mouse)
 	var world := ed.get_global_mouse_position()
 	ed.gizmo().cam_zoom = ed.camera().zoom
 
@@ -257,6 +262,7 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 		_scenery_context = PopupMenu.new()
 		_scenery_context.id_pressed.connect(_on_scenery_context_item)
 		ed.add_child(_scenery_context)
+		ed.register_popup(_scenery_context)
 	_scenery_context.clear()
 	_scenery_context.add_item("Flip H", 0)
 	_scenery_context.add_item("Flip V", 1)

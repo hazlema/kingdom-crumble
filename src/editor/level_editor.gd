@@ -38,6 +38,19 @@ var _tool: EditorTool  # the active tool
 var selection := {"kind": "none"}
 # kinds: none | cell {cell, cells, node} | overlay {index}
 
+# Editor-side popups (context menus, the crate Info dialog) — the tools
+# create them lazily and register them here at creation time. BOTH
+# modes' over_ui consults this list: input is polled, so an open popup
+# must veto field clicks by registry membership — window routing alone
+# does not protect the field.
+var _popups: Array[Window] = []
+
+# UI panels whose geometry blocks field clicks — registered once in
+# _ready. "blocks_hidden" preserves the palette's long-standing
+# behavior: its rect vetoes clicks even while the palette is hidden
+# (scenery mode).
+var _ui_panels: Array[Dictionary] = []
+
 
 # Derived property — tests and _unhandled_input read this; it stays as the
 # single authoritative mode indicator, driven by which tool is active.
@@ -189,10 +202,36 @@ func switch_tool(next: EditorTool) -> void:
 	_tool.enter()
 
 
+# Tools call this once, at the moment they lazily create a popup.
+func register_popup(p: Window) -> void:
+	_popups.append(p)
+
+
+func any_popup_open() -> bool:
+	for p in _popups:
+		if is_instance_valid(p) and p.visible:
+			return true
+	return false
+
+
+func _register_ui_panel(c: Control, blocks_hidden := false) -> void:
+	_ui_panels.append({"node": c, "blocks_hidden": blocks_hidden})
+
+
+# THE over-UI answer, shared by both modes: menu dialogs, panel
+# geometry, and every registered popup.
+func over_ui_at(mouse: Vector2) -> bool:
+	return menu.any_dialog_open() or _mouse_over_ui(mouse) or any_popup_open()
+
+
 func _ready() -> void:
 	_grid_tool = GridTool.new(self)
 	_scenery_tool = SceneryTool.new(self)
 	_tool = _grid_tool  # start in CRATES mode
+	# Palette blocks even while hidden — preserved behavior, see _ui_panels.
+	_register_ui_panel(palette, true)
+	_register_ui_panel(%SceneryPanel)
+	_register_ui_panel(%PieceInspector)
 	Pieces.scan()
 	palette.asset_picked.connect(
 		func(id: String) -> void:
@@ -228,18 +267,13 @@ func _process(_delta: float) -> void:
 		_clamp_camera()
 	_last_mouse = mouse
 
-	if mode == Mode.CRATES:
-		# Geometry, not gui_get_hovered_control(): during a drag that began
-		# on a palette Button the Control keeps mouse capture, so the hover
-		# API still reports UI at release and would veto the drop.
-		var over_ui := (
-			menu.any_dialog_open()
-			or _mouse_over_ui(mouse)
-			or (_grid_tool._crate_info != null and _grid_tool._crate_info.visible)
-		)
-		_tool.process(mouse, over_ui)
-	else:
-		_tool.process(mouse, false)
+	# Geometry, not gui_get_hovered_control(): during a drag that began
+	# on a palette Button the Control keeps mouse capture, so the hover
+	# API still reports UI at release and would veto the drop.
+	# over_ui_at() folds in dialogs, panels, and registered popups;
+	# SceneryTool recomputes the same answer internally (its process
+	# ignores the argument — test contract).
+	_tool.process(mouse, over_ui_at(mouse))
 
 
 # ---------------------------------------------------------------------------
@@ -560,14 +594,13 @@ func _mouse_cell() -> Vector2i:
 
 
 func _mouse_over_ui(p: Vector2) -> bool:
-	var sp: Node = %SceneryPanel
-	var insp: Node = %PieceInspector
-	return (
-		palette.get_global_rect().has_point(p)
-		or menu.covers_point(p)
-		or (sp.visible and (sp as Control).get_global_rect().has_point(p))
-		or (insp.visible and (insp as Control).get_global_rect().has_point(p))
-	)
+	if menu.covers_point(p):
+		return true
+	for e in _ui_panels:
+		var c: Control = e["node"]
+		if (c.visible or e["blocks_hidden"]) and c.get_global_rect().has_point(p):
+			return true
+	return false
 
 
 # Clamp pan POSITION to the camera limits — past the bounds the display
@@ -627,19 +660,16 @@ func _rebuild_scenery() -> void:
 		_sync_views()
 
 
-# Repopulates the %Pieces ItemList: one entry per overlay, thumbnail only.
+# Repopulates the SceneryPanel thumbnail strip: one entry per overlay.
+# The editor decodes (document knowledge); the panel renders (UI knowledge).
 func _refresh_pieces() -> void:
-	var pieces: ItemList = %SceneryPanel.get_node("%Pieces")
-	pieces.clear()
+	var thumbs: Array = []
 	for entry in current.overlays:
 		var img_key: String = entry.get("image", "")
 		var b64: String = current.images.get(img_key, "")
 		var img := LevelJson.decode_png_b64(b64)
-		if img == null:
-			pieces.add_item("")
-			continue
-		var tex := ImageTexture.create_from_image(img)
-		pieces.add_item("", tex)
+		thumbs.append(null if img == null else ImageTexture.create_from_image(img))
+	%SceneryPanel.set_piece_thumbs(thumbs)
 
 
 # Pure import pipeline — separated so unit tests can call it directly

@@ -9,13 +9,13 @@ extends PanelContainer
 # references.  Setter methods are the single path through which both UI
 # signals AND tests mutate state — no signal-callback divergence.
 #
-# Live preview note: while in the editor, _rebuild_scenery() forces all
-# pieces to behavior=NONE so they stay static during editing.  set_behavior_by_name
-# writes the dict (source of truth) and pokes piece.behavior for the live
-# piece — but _rebuild_scenery will re-zero it on the next rebuild.
-# Speed, movement, and pivot ARE applied live because they are purely
-# visual without motion.  Live behavior preview is deliberately off in the
-# editor; the tests confirm dict correctness, not animation playback.
+# Live preview note: verbs stay LIVE in the editor (since 8c02d4e).
+# set_behavior_by_name writes the dict (source of truth) AND applies the
+# verb to the live piece, which keeps animating; _rebuild_scenery()
+# re-applies pending edit-state and rehome()s every piece, so rebuilds
+# never silence or revert a verb.  Speed, movement, and pivot are applied
+# live the same way.  The tests confirm dict correctness, not animation
+# playback.
 
 var _overlay: Dictionary = {}
 var _piece: NarfDecor = null
@@ -189,10 +189,8 @@ func set_behavior_by_name(verb_name: String) -> void:
 	if _reduced and b_idx >= 4:
 		return
 	_overlay["behavior"] = verb_name
-	# Apply to the live piece.
-	# NOTE: the editor's _rebuild_scenery will re-zero behavior to NONE on
-	# the next rebuild (static editor preview is intentional).  We poke it
-	# here so tests can verify the write went through immediately.
+	# Apply to the live piece — verbs stay live in the editor (8c02d4e),
+	# and _rebuild_scenery re-applies dict state rather than silencing it.
 	if is_instance_valid(_piece):
 		var behavior_keys := NarfDecor.Behavior.keys()
 		var idx := behavior_keys.find(verb_name)

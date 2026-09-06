@@ -260,6 +260,7 @@ func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
 		_crate_context = PopupMenu.new()
 		_crate_context.id_pressed.connect(_on_crate_context_item)
 		ed.add_child(_crate_context)
+		ed.register_popup(_crate_context)
 	_info_cell = cell
 	_crate_context.clear()
 	_crate_context.add_item("Info", 0)
@@ -289,6 +290,7 @@ func _show_crate_info(cell: Vector2i) -> void:
 		_crate_info.add_button("Copy Key", true, "copy_key")
 		_crate_info.custom_action.connect(_on_crate_info_action)
 		ed.add_child(_crate_info)
+		ed.register_popup(_crate_info)
 	_crate_info.dialog_text = (
 		"Type: %s\nTrigger key: %s\nGrid cell: (%d, %d)" % [type_id, _info_key, cell.x, cell.y]
 	)

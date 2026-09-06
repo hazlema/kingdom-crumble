@@ -45,6 +45,18 @@ func _tame_path_dropdown(node: Node) -> bool:
 	return false
 
 
+# Repopulate the piece thumbnail strip: one row per entry, in overlay
+# order. A null entry still gets a blank row so list indices keep
+# matching overlay indices.
+func set_piece_thumbs(thumbs: Array) -> void:
+	%Pieces.clear()
+	for tex in thumbs:
+		if tex is Texture2D:
+			%Pieces.add_item("", tex)
+		else:
+			%Pieces.add_item("")
+
+
 func _open_file_dialog() -> void:
 	if OS.has_feature("web"):
 		_web_pick_via_js()
