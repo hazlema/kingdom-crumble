@@ -53,13 +53,10 @@ func exit() -> void:
 
 
 # Called every frame while SCENERY mode is active.
-func process(mouse: Vector2, _over_ui: bool) -> void:
+func process(mouse: Vector2, over_ui: bool) -> void:
 	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	# Shared editor-side computation — registered popups (context menus,
-	# the crate Info dialog) veto field clicks in THIS mode too. Before
-	# the registry, scenery over_ui skipped the Info dialog: with polled
-	# input, a click aimed at the dialog also landed on the field.
-	var over_ui := ed.over_ui_at(mouse)
+	# over_ui is pre-computed by the editor (same ed.over_ui_at(mouse) call
+	# that all tools share) — use it directly; do not recompute here.
 	var world := ed.get_global_mouse_position()
 	ed.gizmo().cam_zoom = ed.camera().zoom
 

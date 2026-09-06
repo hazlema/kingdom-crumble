@@ -197,8 +197,9 @@ func rmb_menu_release(mouse: Vector2, over_ui: bool) -> bool:
 
 
 func switch_tool(next: EditorTool) -> void:
-	_tool.exit()
+	var prev := _tool
 	_tool = next
+	prev.exit()
 	_tool.enter()
 
 
@@ -393,6 +394,7 @@ func _on_load(path: String) -> void:
 	save_path = path
 	menu.suggested_stem = path.get_file().get_basename()
 	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -456,6 +458,7 @@ func _on_upload_text(args: Array) -> void:
 	save_path = ""  # imported document: Save prompts for a name
 	menu.suggested_stem = LevelStore.sanitize_stem(loaded.title)
 	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 
@@ -467,6 +470,7 @@ func _on_clear() -> void:
 	save_path = ""
 	menu.suggested_stem = ""
 	selection = {"kind": "none"}
+	_scenery_tool.selected_overlay = -1
 	_rebuild()
 
 

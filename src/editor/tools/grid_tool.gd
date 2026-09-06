@@ -116,7 +116,7 @@ func _move(from: Vector2i, to: Vector2i) -> void:
 			c["x"] = tw.x
 			c["y"] = tw.y
 			break
-	# Set selection to destination cell before rebuild so _sync_views can re-resolve.
+	# staged; _rebuild()'s _sync_views re-resolves — do not "fix" into a double-sync
 	ed.selection = {"kind": "cell", "cell": to, "cells": Vector2i(1, 1), "node": null}
 	ed._rebuild()
 

@@ -467,3 +467,15 @@ func test_document_swap_clears_selection_no_adoption() -> void:
 
 	# Clean up.
 	DirAccess.remove_absolute(path)
+
+
+func test_exit_scenery_restores_crate_modulate_to_full() -> void:
+	# Pin: crates must be dimmed (α=0.8) while in SCENERY mode and fully
+	# restored (α=1.0) after leaving — the switch_tool ordering fix ensures
+	# _rebuild_scenery() sees CRATES mode when called from exit().
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(2, 0))
+	ed._enter_scenery()
+	assert_almost_eq(ed._spawned[0].modulate.a, 0.8, 0.001, "crate dimmed in SCENERY mode")
+	ed._exit_scenery()
+	assert_almost_eq(ed._spawned[0].modulate.a, 1.0, 0.001, "crate restored after leaving SCENERY")
