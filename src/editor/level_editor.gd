@@ -334,9 +334,9 @@ func _bake_and_capture() -> void:
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 1.0
-	_gizmo.visible = false
+	_sync_views()
 	await _capture_thumb()
-	_gizmo.visible = mode == Mode.SCENERY
+	_sync_views()
 	if mode == Mode.SCENERY:
 		for c in _spawned:
 			c.modulate.a = 0.8
@@ -358,6 +358,7 @@ func _on_load(path: String) -> void:
 	current = loaded
 	save_path = path
 	menu.suggested_stem = path.get_file().get_basename()
+	selection = {"kind": "none"}
 	_rebuild()
 
 
@@ -420,6 +421,7 @@ func _on_upload_text(args: Array) -> void:
 	current = loaded
 	save_path = ""  # imported document: Save prompts for a name
 	menu.suggested_stem = LevelStore.sanitize_stem(loaded.title)
+	selection = {"kind": "none"}
 	_rebuild()
 
 
@@ -430,6 +432,7 @@ func _on_clear() -> void:
 	current = LevelLayout.new()
 	save_path = ""
 	menu.suggested_stem = ""
+	selection = {"kind": "none"}
 	_rebuild()
 
 

@@ -431,3 +431,39 @@ func test_inspector_survives_rebuild_after_selecting_animatable_prop() -> void:
 	insp.set_speed(1.5)
 	assert_eq(ed.current.props[0].get("behavior"), "SPIN", "write lands in fresh props entry")
 	assert_almost_eq(float(ed.current.props[0].get("speed", 0.0)), 1.5, 0.001, "speed write lands in fresh entry")
+
+
+func test_document_swap_clears_selection_no_adoption() -> void:
+	# Pin: select a crate at cell (3,0), then load a different document
+	# that has a different crate at the same cell. The new crate must NOT
+	# be auto-adopted by the stale selection — selection must clear first,
+	# so the ring and inspector stay clean until an explicit re-click.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(3, 0))
+	ed._press(Vector2i(3, 0))  # select it
+	var insp: Control = ed.get_node("%PieceInspector")
+	assert_eq(ed.selection.get("kind"), "cell", "crate selected before load")
+
+	# Create a different document with a different crate type at the same cell.
+	var doc2 := LevelLayout.new()
+	doc2.title = "other"
+	var w := EditorGrid.cell_to_world(Vector2i(3, 0))
+	doc2.crates.append({"x": w.x, "y": w.y, "type": "skull"})
+
+	# Save doc2 to disk and load it through the real _on_load path.
+	var path := LevelStore.save_user(doc2, "test_doc_swap_pin")
+	assert_ne(path, "", "save succeeded")
+
+	# Load doc2 (triggers clear + _rebuild).
+	ed._on_load(path)
+
+	# Verify: selection cleared, inspector hidden, but crate occupies the cell.
+	assert_eq(ed.selection.get("kind"), "none", "selection cleared on document swap")
+	assert_false(insp.visible, "inspector hidden after load")
+	assert_true(ed.occupancy.has(Vector2i(3, 0)), "new crate occupies the cell")
+	# Verify the new crate is skull, not the old wood.
+	var c: Crate = ed.occupancy[Vector2i(3, 0)]
+	assert_eq(c.type_id, "skull", "new document's crate adopted, not old selection")
+
+	# Clean up.
+	DirAccess.remove_absolute(path)
