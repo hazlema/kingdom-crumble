@@ -193,6 +193,14 @@ func test_theme_reskins_base_id() -> void:
 	# entry()'s texture should match themed too
 	var e := Pieces.entry("crate-wood")
 	assert_eq(e.get("texture"), themed_tex, "entry() texture matches themed texture")
+	# PIN TEST: by_class() entries carry the themed texture
+	var palette_entries := Pieces.by_class("crate")
+	var found_themed := false
+	for pe in palette_entries:
+		if pe["id"] == "crate-wood":
+			assert_eq(pe["texture"], Pieces.texture_for("crate-wood"), "by_class() entries carry the themed texture")
+			found_themed = true
+	assert_true(found_themed, "crate-wood present in by_class results")
 
 
 func test_theme_dimension_mismatch_falls_back() -> void:

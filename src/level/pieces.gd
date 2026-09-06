@@ -312,7 +312,7 @@ static func entries() -> Array[Dictionary]:
 		scan()
 	var out: Array[Dictionary] = []
 	for id in _cache.keys():
-		out.append(_cache[id])
+		out.append(entry(id))
 	out.sort_custom(func(a, b): return a["id"] < b["id"])
 	return out
 
