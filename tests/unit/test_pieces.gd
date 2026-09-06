@@ -104,3 +104,8 @@ func test_level_without_props_still_parses() -> void:
 	var back := LevelJson.parse(LevelJson.serialize(l))
 	assert_not_null(back, "props key optional — old levels unaffected")
 	assert_eq(back.props.size(), 0)
+
+	# Backward-compat: parse doc with NO "props" key (pre-props levels)
+	var legacy := LevelJson.parse('{"format":1,"title":"legacy","background":"meadow","crates":[]}')
+	assert_not_null(legacy, "doc with no props key parses")
+	assert_eq(legacy.props.size(), 0)
