@@ -366,7 +366,7 @@ func test_arrival_fx_spawns_tinted_oneshot_burst() -> void:
 			burst = c
 	assert_not_null(burst, "whoosh burst spawned")
 	assert_true(burst.one_shot and burst.emitting)
-	assert_gt(burst.color.b, burst.color.r, "tint sampled from the blue portal art")
+	assert_gt(burst.color.b, burst.color.r, "tint sampled from the blue portal art (NOTE: art-coupled — re-check if pieces/wormhole-blue.png is repainted warmer)")
 
 
 func test_warp_arrival_fires_partner_whoosh() -> void:

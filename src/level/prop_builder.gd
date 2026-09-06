@@ -38,7 +38,7 @@ static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 		hole.add_to_group("props")
 		hole.set_meta("prop_id", id)
 		hole.set_meta("anchor_cell", EditorGrid.world_to_cell(anchor))
-		hole.collision_mask = 1  # stones ride the default physics layer (verified Step 1)
+		hole.collision_mask = 1  # stones use the default layer; stone.tscn sets none
 		var wshape := CollisionShape2D.new()
 		var wrect := RectangleShape2D.new()
 		wrect.size = size

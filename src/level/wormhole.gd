@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if partner == null or not body is Stone:
+	if partner == null or not is_instance_valid(partner) or not body is Stone:
 		return
 	if _arrivals.has(body):
 		return
