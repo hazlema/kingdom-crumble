@@ -21,7 +21,7 @@ texture/metadata authority for everything placeable:
 | Root | Contents | Id form |
 |---|---|---|
 | `res://pieces/` | baked content (crates migrate here; blocks + tramps born here) | bare: `crate-wood`, `tramp-left` |
-| `user://pieces/<pack>/` | one folder per pack (wave 2) | namespaced: `thanksgiving:turkey-crate` |
+| `user://toybox/<pack>/` | one folder per pack (wave 2) | namespaced: `thanksgiving:turkey-crate` |
 
 - Subfolders under either root are purely organizational; recursive
   scan; the object's **class comes from its sidecar, not its folder**
@@ -117,7 +117,7 @@ ship dormant — code in the update, content in a later pack.
 
 ## 5. Packs (wave 2)
 
-A pack = `user://pieces/<folder>/` containing `pack.json` +
+A pack = `user://toybox/<folder>/` containing `pack.json` +
 content. Two kinds, declared by manifest:
 
 ```json
@@ -150,7 +150,7 @@ content. Two kinds, declared by manifest:
   "returns in <month>"; an active theme whose season ends reverts to
   Default at next boot. Clock = local system time (time-travel by
   clock change is fine for a cozy single-player game).
-- Discovery is automatic (dropping the folder IS the install); the
+- Discovery is automatic (dropping the folder IS the install; "Toybox" is also the player-facing name for the settings Packs section); the
   settings Packs section is the kill-switch, not the enabler.
 - Manifest hygiene: malformed `pack.json` or unknown `kind` → named
   warning, pack ignored.
