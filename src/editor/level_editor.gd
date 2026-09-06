@@ -24,6 +24,7 @@ var _spawned: Array[Crate] = []
 var _spawned_props: Array[Node2D] = []
 var _scenery_pieces: Array[NarfDecor] = []
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
+var _drag_prop: Node2D = null  # prop being drag-moved, null = none/crate
 var _lmb_down := false
 var _last_mouse := Vector2.ZERO
 # Scenery drag state
@@ -57,6 +58,7 @@ func _ready() -> void:
 		func(id: String) -> void:
 			carrying = id
 			_drag_from = Vector2i(-1, -1)
+			_drag_prop = null
 			overlay.selected_cell = Vector2i(-1, -1)
 	)
 	menu.save_requested.connect(_on_save)
@@ -126,20 +128,31 @@ func _press(cell: Vector2i) -> void:
 		_try_place(cell)
 		return
 	if occupancy.has(cell):
-		overlay.selected_cell = cell
-		if occupancy.get(cell) is Crate:
+		var node: Node2D = occupancy[cell]
+		if node is Crate:
+			overlay.selected_cell = cell
+			overlay.selected_cells = Vector2i(1, 1)
 			_drag_from = cell
+			_drag_prop = null
 		else:
-			_drag_from = Vector2i(-1, -1)
+			var e := Pieces.entry(str(node.get_meta("prop_id")))
+			overlay.selected_cell = node.get_meta("anchor_cell")
+			overlay.selected_cells = e["cells"] if not e.is_empty() else Vector2i(1, 1)
+			_drag_from = cell
+			_drag_prop = node
 	else:
 		overlay.selected_cell = Vector2i(-1, -1)
+		overlay.selected_cells = Vector2i(1, 1)
 		_drag_from = Vector2i(-1, -1)
+		_drag_prop = null
 	overlay.refresh()
 
 
 func _release(cell: Vector2i, over_ui: bool) -> void:
 	if carrying != "" and not over_ui:
 		_try_place(cell)
+	elif _drag_prop != null and _drag_from.x >= 0 and not over_ui and cell != _drag_from:
+		_move_prop(_drag_prop, cell - _drag_from)
 	elif (
 		_drag_from.x >= 0
 		and not over_ui
@@ -149,6 +162,7 @@ func _release(cell: Vector2i, over_ui: bool) -> void:
 	):
 		_move(_drag_from, cell)
 	_drag_from = Vector2i(-1, -1)
+	_drag_prop = null
 
 
 func _try_place(cell: Vector2i) -> void:
@@ -341,6 +355,7 @@ func _enter_scenery() -> void:
 	# Stale-input hygiene: clear drag/lmb state so a leftover press can't
 	# fire a spurious release as a crate move once we return to CRATES mode.
 	_drag_from = Vector2i(-1, -1)
+	_drag_prop = null
 	_lmb_down = false
 	_rmb_down = false  # a held right-click must not menu on re-entry
 	mode = Mode.SCENERY
@@ -478,6 +493,8 @@ func _update_ghost() -> void:
 		var held: Variant = occupancy.get(_drag_from)
 		if held != null and held is Crate:
 			id = (held as Crate).type_id
+		elif _drag_prop != null:
+			id = str(_drag_prop.get_meta("prop_id"))
 	if id == "":
 		if overlay.ghost_cell != Vector2i(-1, -1):
 			overlay.ghost_cell = Vector2i(-1, -1)
@@ -485,6 +502,8 @@ func _update_ghost() -> void:
 		overlay.ghost_cells = Vector2i(1, 1)
 		return
 	var cell := _mouse_cell()
+	if _drag_prop != null and _lmb_down:
+		cell += (_drag_prop.get_meta("anchor_cell") as Vector2i) - _drag_from
 	var e := Pieces.entry(id)
 	var ghost_cells := Vector2i(1, 1)
 	var ok := false
@@ -492,7 +511,8 @@ func _update_ghost() -> void:
 		ghost_cells = e["cells"] as Vector2i
 		ok = true
 		for c in footprint(cell, ghost_cells):
-			if not EditorGrid.in_zone(c) or occupancy.has(c):
+			var occ: Variant = occupancy.get(c)
+			if not EditorGrid.in_zone(c) or (occ != null and occ != _drag_prop):
 				ok = false
 				break
 	else:
@@ -545,6 +565,44 @@ func _delete_selected() -> void:
 	_rebuild()
 
 
+# Delta-based footprint move: data, occupancy, node, and meta in lockstep.
+# A blocked target (out of zone / any foreign occupant) is a no-op.
+func _move_prop(body: Node2D, delta: Vector2i) -> void:
+	var pid := str(body.get_meta("prop_id"))
+	var e := Pieces.entry(pid)
+	if e.is_empty():
+		return
+	var old_anchor: Vector2i = body.get_meta("anchor_cell")
+	var new_anchor := old_anchor + delta
+	var cells: Vector2i = e["cells"]
+	for c in footprint(new_anchor, cells):
+		if not EditorGrid.in_zone(c):
+			return
+		var occ: Variant = occupancy.get(c)
+		if occ != null and occ != body:
+			return
+	var old_w := EditorGrid.cell_to_world(old_anchor)
+	var new_w := EditorGrid.cell_to_world(new_anchor)
+	for i in current.props.size():
+		var p: Dictionary = current.props[i]
+		if (
+			p["id"] == pid
+			and is_equal_approx(float(p["x"]), old_w.x)
+			and is_equal_approx(float(p["y"]), old_w.y)
+		):
+			current.props[i] = {"id": pid, "x": new_w.x, "y": new_w.y}
+			break
+	for c in footprint(old_anchor, cells):
+		occupancy.erase(c)
+	for c in footprint(new_anchor, cells):
+		occupancy[c] = body
+	body.position = PropBuilder.footprint_center(new_w, cells)
+	body.set_meta("anchor_cell", new_anchor)
+	overlay.selected_cell = new_anchor
+	overlay.selected_cells = cells
+	overlay.refresh()
+
+
 func _delete_prop(body: Node2D) -> void:
 	var anchor: Vector2i = body.get_meta("anchor_cell")
 	var pid: String = body.get_meta("prop_id")
@@ -563,7 +621,9 @@ func _delete_prop(body: Node2D) -> void:
 		occupancy.erase(k)
 	_spawned_props.erase(body)
 	body.queue_free()
+	_drag_prop = null
 	overlay.selected_cell = Vector2i(-1, -1)
+	overlay.selected_cells = Vector2i(1, 1)
 	overlay.refresh()
 
 

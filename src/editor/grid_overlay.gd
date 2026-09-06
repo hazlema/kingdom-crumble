@@ -8,6 +8,7 @@ var ghost_ok := false
 var ghost_tex: Texture2D
 var ghost_cells := Vector2i(1, 1)
 var selected_cell := Vector2i(-1, -1)
+var selected_cells := Vector2i(1, 1)
 
 
 func _draw() -> void:
@@ -31,9 +32,9 @@ func _draw() -> void:
 		draw_texture_rect(ghost_tex, Rect2(top_left, size), false, tint)
 	if selected_cell.x >= 0:
 		var s := EditorGrid.cell_to_world(selected_cell)
-		draw_rect(
-			Rect2(s - Vector2(34, 34), Vector2(68, 68)), Color(1.0, 0.83, 0.29, 0.95), false, 4.0
-		)
+		var sel_size := Vector2(selected_cells.x * 64.0 + 4.0, selected_cells.y * 63.0 + 4.0)
+		var sel_top_left := Vector2(s.x - 34.0, s.y - 33.5 - (selected_cells.y - 1) * 63.0)
+		draw_rect(Rect2(sel_top_left, sel_size), Color(1.0, 0.83, 0.29, 0.95), false, 4.0)
 
 
 func refresh() -> void:
