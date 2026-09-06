@@ -33,6 +33,11 @@ var _scenery_handle := -1  # -1 = body, 0-3 = corner, 4 = rotate
 var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
 # Right-click context menu for scenery pieces
 var _scenery_context: PopupMenu = null
+# Right-click Info menu for crates (crate mode)
+var _crate_context: PopupMenu = null
+var _crate_info: AcceptDialog = null
+var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
+var _info_key := ""  # trigger key shown in the open Info dialog
 # RMB context menu state (scenery mode)
 var _rmb_press_pos := Vector2.ZERO  # screen pos when RMB was pressed (scenery mode)
 var _rmb_down := false              # RMB was pressed this frame in scenery mode
@@ -84,13 +89,32 @@ func _process(_delta: float) -> void:
 		# Geometry, not gui_get_hovered_control(): during a drag that began
 		# on a palette Button the Control keeps mouse capture, so the hover
 		# API still reports UI at release and would veto the drop.
-		var over_ui := menu.any_dialog_open() or _mouse_over_ui(mouse)
+		var over_ui := (
+			menu.any_dialog_open()
+			or _mouse_over_ui(mouse)
+			or (_crate_info != null and _crate_info.visible)
+		)
 		if lmb and not _lmb_down and not over_ui:
 			_press(_mouse_cell())
 		elif not lmb and _lmb_down:
 			_release(_mouse_cell(), over_ui)
 		_lmb_down = lmb
 		_update_ghost()
+
+		# RMB Info menu: open only on release without significant motion
+		# (a moving RMB is a camera pan — same rule as scenery mode).
+		var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+		if rmb and not _rmb_down:
+			_rmb_press_pos = mouse
+			_rmb_down = true
+		elif not rmb and _rmb_down:
+			_rmb_down = false
+			if not over_ui and mouse.distance_to(_rmb_press_pos) < _CONTEXT_MENU_MOTION_THRESHOLD:
+				var cell := _mouse_cell()
+				if occupancy.has(cell):
+					overlay.selected_cell = cell
+					overlay.refresh()
+					_show_crate_context(mouse, cell)
 	else:
 		_scenery_process(mouse)
 
@@ -306,6 +330,7 @@ func _enter_scenery() -> void:
 
 
 func _exit_scenery() -> void:
+	_rmb_down = false  # a held right-click must not menu on mode return
 	selected_overlay = -1
 	_gizmo.piece = null
 	_gizmo.visible = false
@@ -804,6 +829,64 @@ func _delete_selected_piece() -> void:
 			current.images.erase(old_key)
 	_rebuild_scenery()
 	_refresh_pieces()
+
+
+# ---------------------------------------------------------------------------
+# Right-click Info menu for crates
+# ---------------------------------------------------------------------------
+
+
+# The trigger event key this cell's crate answers to (matches what save
+# writes: cell_to_world coords as bare ints — see linked-triggers spec).
+static func crate_trigger_key(cell: Vector2i) -> String:
+	var w := EditorGrid.cell_to_world(cell)
+	return "hit:%d,%d" % [int(w.x), int(w.y)]
+
+
+func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
+	if _crate_context == null:
+		_crate_context = PopupMenu.new()
+		_crate_context.id_pressed.connect(_on_crate_context_item)
+		add_child(_crate_context)
+	_info_cell = cell
+	_crate_context.clear()
+	_crate_context.add_item("Info", 0)
+	_crate_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
+	_crate_context.popup()
+
+
+func _on_crate_context_item(id: int) -> void:
+	if id == 0:
+		_show_crate_info(_info_cell)
+
+
+func _show_crate_info(cell: Vector2i) -> void:
+	if not occupancy.has(cell):
+		return
+	var w := EditorGrid.cell_to_world(cell)
+	var type_id := ""
+	for c in current.crates:
+		if int(c["x"]) == int(w.x) and int(c["y"]) == int(w.y):
+			type_id = String(c["type"])
+			break
+	_info_key = crate_trigger_key(cell)
+	if _crate_info == null:
+		_crate_info = AcceptDialog.new()
+		_crate_info.title = "Crate Info"
+		_crate_info.theme = load("res://resources/ui/kingdom_theme.tres")
+		_crate_info.add_button("Copy Key", true, "copy_key")
+		_crate_info.custom_action.connect(_on_crate_info_action)
+		add_child(_crate_info)
+	_crate_info.dialog_text = (
+		"Type: %s\nTrigger key: %s\nGrid cell: (%d, %d)" % [type_id, _info_key, cell.x, cell.y]
+	)
+	_crate_info.popup_centered()
+
+
+func _on_crate_info_action(action: StringName) -> void:
+	if action == &"copy_key":
+		DisplayServer.clipboard_set(_info_key)
+		_crate_info.hide()
 
 
 # ---------------------------------------------------------------------------

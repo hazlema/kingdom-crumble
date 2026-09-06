@@ -154,3 +154,29 @@ func test_intro_edit_lands_in_the_layout() -> void:
 	assert_eq(ed.current.intro, "Aim for the base of the tower!")
 	ed.menu.intro_edited.emit("")
 	assert_eq(ed.current.intro, "", "clearing empties the field")
+
+
+func test_crate_trigger_key_matches_runtime_json_coords() -> void:
+	# The Info dialog's key must be the exact key the runtime fires on:
+	# place a crate, spawn it through LevelBuilder, and compare against
+	# the "hit:%d,%d" the level forms from json_coords meta.
+	ed.carrying = "skull"
+	ed._press(Vector2i(5, 1))
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var crates := LevelBuilder.spawn_crates(
+		host, ed.current, true, func(_id: String) -> Texture2D: return null
+	)
+	var jc: Vector2i = crates[0].get_meta("json_coords")
+	var runtime_key := "hit:%d,%d" % [jc.x, jc.y]
+	assert_eq(LevelEditor.crate_trigger_key(Vector2i(5, 1)), runtime_key)
+
+
+func test_crate_info_dialog_shows_type_and_key() -> void:
+	ed.carrying = "skull"
+	ed._press(Vector2i(5, 1))
+	ed._show_crate_info(Vector2i(5, 1))
+	assert_true(ed._crate_info.visible, "info dialog pops")
+	assert_string_contains(ed._crate_info.dialog_text, "Type: skull")
+	assert_string_contains(ed._crate_info.dialog_text, ed._info_key)
+	assert_true(ed._info_key.begins_with("hit:"), "key ready for the clipboard")
