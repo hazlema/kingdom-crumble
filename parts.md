@@ -186,6 +186,9 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
 - Selection is one fact; the views (ring, inspector, gizmo) render it.
   Loading/clearing a level always deselects.
 - TEST runs the real game spawners — what you test is what ships.
+- Keys: **S** save, **A** save as, **T** test, **C** toggle scenery,
+  **DELETE** remove selection, **Esc** leave scenery / drop carried
+  piece (Ctrl+S / Ctrl+T also work on desktop; browsers keep those).
 
 ---
 

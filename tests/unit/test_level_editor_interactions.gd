@@ -620,3 +620,44 @@ func test_fresh_editor_ignores_stale_resume_save_path() -> void:
 	add_child_autofree(ed2)
 	assert_eq(ed2.save_path, "", "fresh document stays unsaved")
 	assert_eq(LevelEditor.resume_save_path, "", "stale rail cleared either way")
+
+
+# ---------------------------------------------------------------------------
+# Bare-letter editor keybinds (S/A/T/C) — game-parity, browser-safe.
+# T is untestable headless (change_scene); C and S cover the shared path.
+# ---------------------------------------------------------------------------
+
+func _key(code: int) -> InputEventKey:
+	var ev := InputEventKey.new()
+	ev.keycode = code
+	ev.pressed = true
+	return ev
+
+
+func test_key_c_toggles_scenery_mode() -> void:
+	assert_eq(ed.mode, LevelEditor.Mode.CRATES)
+	ed._unhandled_input(_key(KEY_C))
+	assert_eq(ed.mode, LevelEditor.Mode.SCENERY, "C enters scenery")
+	ed._unhandled_input(_key(KEY_C))
+	assert_eq(ed.mode, LevelEditor.Mode.CRATES, "C again exits")
+
+
+func test_key_s_unsaved_opens_save_as() -> void:
+	ed.save_path = ""
+	ed._unhandled_input(_key(KEY_S))
+	assert_true(ed.menu.any_dialog_open(), "unsaved S falls through to the Save As dialog")
+
+
+func test_keys_blocked_while_dialog_open() -> void:
+	ed.menu.open_save_as()
+	ed._unhandled_input(_key(KEY_C))
+	assert_eq(ed.mode, LevelEditor.Mode.CRATES, "letters are inert behind a dialog")
+
+
+func test_keys_blocked_while_typing() -> void:
+	var box := LineEdit.new()
+	ed.add_child(box)
+	box.grab_focus()
+	ed._unhandled_input(_key(KEY_C))
+	assert_eq(ed.mode, LevelEditor.Mode.CRATES, "letters are inert while typing")
+	box.queue_free()

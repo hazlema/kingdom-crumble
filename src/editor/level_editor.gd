@@ -579,6 +579,15 @@ func _rebuild() -> void:
 	_sync_views()
 
 
+# Bare-letter shortcuts stay quiet while the user is typing or any dialog
+# is up — a letter behind a dialog must never edit the document.
+func _shortcut_blocked() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return true
+	return menu.any_dialog_open() or any_popup_open()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.ctrl_pressed:
 		match event.keycode:
@@ -586,6 +595,28 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_test()
 			KEY_S:
 				_on_save()  # falls through to Save As when unsaved
+	elif (
+		event is InputEventKey
+		and event.pressed
+		and not event.alt_pressed
+		and not event.meta_pressed
+		and event.keycode in [KEY_S, KEY_A, KEY_T, KEY_C]
+		and not _shortcut_blocked()
+	):
+		# Bare letters — same convention as the game's L/B keys, and the
+		# only form that survives the browser (Ctrl+S/T belong to Chrome).
+		match event.keycode:
+			KEY_S:
+				_on_save()
+			KEY_A:
+				menu.open_save_as()
+			KEY_T:
+				_on_test()
+			KEY_C:
+				if mode == Mode.SCENERY:
+					_exit_scenery()
+				else:
+					_enter_scenery()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		if mode == Mode.SCENERY:
 			_delete_selected_piece()
