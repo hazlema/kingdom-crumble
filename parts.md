@@ -33,8 +33,8 @@ is. The grid cell is **64 px wide × 63 px tall**, so:
 
 | Footprint | Image size | Shipped examples |
 |---|---|---|
-| 1×1 | 64 × 63 | `block-stone.png` |
-| 2×1 | 128 × 63 | `tramp-flat/left/right.png` |
+| 1×1 | 64 × 63 | `block-stone.png`, `tramp-left/right.png` |
+| 2×1 | 128 × 63 | `tramp-flat.png` |
 | 1×2 | 64 × 126 | `wormhole-blue/orange.png` |
 
 Crates are the one exception: their art rides the crate scene's Skin
@@ -81,8 +81,8 @@ axis-aligned and the bounce direction is always readable.
 - `tilt: -45` — launches up-and-**left**
 - `tilt: 45` — launches up-and-**right**
 
-*(Heads-up: the current placeholder art leans opposite the physics —
-the collision is correct; regenerate the PNGs, don't touch the code.)*
+*(The angled tramps are owner art, 1×1, and the lean now matches the
+physics — verified against the collision polygons 2026-09-06.)*
 
 ### `wormhole` — paired portals
 
