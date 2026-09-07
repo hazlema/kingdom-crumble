@@ -1,6 +1,14 @@
 extends GutTest
 
 
+func before_all() -> void:
+	Level.suppress_intro = false
+
+
+func after_all() -> void:
+	Level.suppress_intro = true
+
+
 func _dialog() -> IntroDialog:
 	var d: IntroDialog = load("res://scenes/ui/intro_dialog.tscn").instantiate()
 	add_child_autofree(d)

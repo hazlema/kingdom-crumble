@@ -8,7 +8,7 @@ const STONE_SCENE := preload("res://scenes/stone.tscn")
 const HIT_TEXT_SCENE := preload("res://src/effects/HitTextEffect.tscn")
 const UNLOCK_FRAME_SCENE := preload("res://scenes/ui/rare_unlock_frame.tscn")
 const INVALID_LEVEL_SCENE := preload("res://scenes/ui/invalid_level.tscn")
-const DEFAULT_LAYOUT := "res://levels/demo.json"
+const DEFAULT_LAYOUT := "res://levels/basics.json"
 const RESOLVE_MIN := 1.5
 const RESOLVE_MAX := 6.0
 const IDLE_SPEED := 20.0  # px/s — below this a body no longer holds the turn open
@@ -23,6 +23,11 @@ static var next_layout_path := ""
 static var next_layout: LevelLayout = null
 # When true the level returns to the editor on end/pause rather than reloading.
 static var return_to_editor := false
+# Test seam: every shipped level now opens with an intro, whose pause
+# deadlocks physics awaits in headless tests (SceneTree.physics_frame
+# fires while paused; the space doesn't step). The GUT pre-run hook
+# sets this true; test_intro_dialog opts back out to test the real thing.
+static var suppress_intro := false
 # Unspent buffs riding into the next level after a CLEAR (spec §5).
 # Consume-and-clear in _ready, like every Level static.
 static var carry_buffs: Array[StringName] = []
@@ -85,7 +90,7 @@ func _ready() -> void:
 	PropBuilder.spawn_props(self, layout)
 	if layout.title != "":
 		hud.toast(layout.title)
-	if layout.intro != "":
+	if layout.intro != "" and not suppress_intro:
 		_show_intro()
 	var _chain := LevelChain.entries()
 	var _pos := -1

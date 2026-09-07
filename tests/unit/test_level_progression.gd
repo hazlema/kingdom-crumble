@@ -70,7 +70,7 @@ func test_deleted_level_falls_back_to_demo_stem() -> void:
 	Level.next_layout_path = "user://levels/definitely_deleted_ghost.json"
 	var l: Level = load("res://scenes/level.tscn").instantiate()
 	add_child_autofree(l)
-	assert_eq(l.current_stem, "builtin:demo", "fallback must use demo id, not the ghost path")
+	assert_eq(l.current_stem, "builtin:basics", "fallback must use demo id, not the ghost path")
 	assert_not_null(l.layout, "layout must not be null after fallback")
 
 func test_level_title_toast_shows_then_clears() -> void:
