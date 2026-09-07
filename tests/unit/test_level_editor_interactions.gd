@@ -661,3 +661,37 @@ func test_keys_blocked_while_typing() -> void:
 	ed._unhandled_input(_key(KEY_C))
 	assert_eq(ed.mode, LevelEditor.Mode.CRATES, "letters are inert while typing")
 	box.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# Overlay auto-naming (owner: multiple anonymous overlays made trigger
+# authoring blind).  Names come from the filename, sanitized to the
+# trigger charset, deduped sign/sign2/sign3.
+# ---------------------------------------------------------------------------
+
+func test_default_overlay_name_sanitizes_filename() -> void:
+	assert_eq(LevelEditor.default_overlay_name("/tmp/Sign Post!.PNG", []), "signpost")
+	assert_eq(LevelEditor.default_overlay_name("/tmp/@@@.png", []), "piece", "all-junk stem falls back")
+	var long_name := LevelEditor.default_overlay_name("/tmp/a_very_long_filename_indeed.png", [])
+	assert_true(Effects.valid_name(long_name), "truncated name is trigger-legal")
+
+
+func test_default_overlay_name_dedupes_with_index() -> void:
+	var overlays := [{"name": "sign"}, {"name": "sign2"}]
+	assert_eq(LevelEditor.default_overlay_name("/tmp/sign.png", overlays), "sign3")
+	assert_eq(LevelEditor.default_overlay_name("/tmp/tree.png", overlays), "tree", "unused base stays bare")
+
+
+func test_image_import_assigns_unique_names() -> void:
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var tmp := "user://gut_sign.png"
+	img.save_png(tmp)
+	var abs_tmp := ProjectSettings.globalize_path(tmp)
+	ed._on_image_chosen(abs_tmp)
+	ed._on_image_chosen(abs_tmp)
+	var n := ed.current.overlays.size()
+	assert_eq(str(ed.current.overlays[n - 2].get("name", "")), "gut_sign")
+	assert_eq(str(ed.current.overlays[n - 1].get("name", "")), "gut_sign2")
+	assert_true(Effects.valid_name(str(ed.current.overlays[n - 1].get("name", ""))))
+	DirAccess.remove_absolute(abs_tmp)

@@ -753,6 +753,30 @@ func can_add_overlay() -> bool:
 
 
 # Wired to SceneryPanel.image_chosen signal.
+# Default overlay name from the image filename: sanitized to the trigger
+# charset (a-z0-9_-, 16 cap — Effects.valid_name), deduped with a numeric
+# suffix (sign, sign2, sign3...). Named overlays are what show:/hide:
+# trigger actions aim at — anonymous overlays made trigger authoring blind.
+static func default_overlay_name(path: String, overlays: Array) -> String:
+	var base := path.get_file().get_basename().to_lower()
+	var clean := ""
+	for ch in base:
+		if "abcdefghijklmnopqrstuvwxyz0123456789_-".contains(ch):
+			clean += ch
+	if clean == "":
+		clean = "piece"
+	clean = clean.left(13)  # room for a 3-digit suffix inside the 16 cap
+	var used := {}
+	for o in overlays:
+		used[str((o as Dictionary).get("name", ""))] = true
+	if not used.has(clean):
+		return clean
+	var n := 2
+	while used.has(clean + str(n)):
+		n += 1
+	return clean + str(n)
+
+
 func _on_image_chosen(path: String) -> void:
 	if not can_add_overlay():
 		push_warning("SceneryPanel: overlay cap reached (%d)" % LevelJson.MAX_OVERLAYS)
@@ -765,7 +789,8 @@ func _on_image_chosen(path: String) -> void:
 		return
 	# Place the new overlay centered on the current camera view.
 	var cam_pos: Vector2 = ($Camera as Camera2D).position
-	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y})
+	var oname := LevelEditor.default_overlay_name(path, current.overlays)
+	current.overlays.append({"image": key, "x": cam_pos.x, "y": cam_pos.y, "name": oname})
 	var new_idx := current.overlays.size() - 1
 	_rebuild_scenery()
 	_refresh_pieces()

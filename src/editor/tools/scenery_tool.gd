@@ -262,6 +262,11 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 	_scenery_context.add_item("Flip V", 1)
 	_scenery_context.add_item("Reset Transform", 4)
 	_scenery_context.add_item("Drop Background", 3)
+	var _ci := ed.selected_overlay
+	if _ci >= 0 and _ci < ed.current.overlays.size():
+		var _nm := str((ed.current.overlays[_ci] as Dictionary).get("name", ""))
+		if _nm != "":
+			_scenery_context.add_item("Copy Name  \"%s\"" % _nm, 5)
 	_scenery_context.add_separator()
 	_scenery_context.add_item("Delete", 2)
 	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
@@ -289,6 +294,8 @@ func _on_scenery_context_item(id: int) -> void:
 			_delete_selected_piece()
 		3:  # Drop Background
 			_drop_background()
+		5:  # Copy Name — clipboard-ready for show:/hide: trigger actions
+			DisplayServer.clipboard_set(str(o.get("name", "")))
 		4:  # Reset Transform (owner: a runaway rotate/mirror had no way home)
 			for k in ["_rot", "_scale", "_flip_h", "_flip_v"]:
 				o.erase(k)

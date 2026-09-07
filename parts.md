@@ -180,6 +180,9 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
   tramps, wormholes).
 - Everything places on the grid. Multi-cell pieces need their whole
   footprint free; the ghost preview spans it (green = fits, red = no).
+- Imported scenery gets an automatic **name** from its filename
+  (sanitized, deduped: `sign`, `sign2`...) — right-click the piece →
+  **Copy Name** for a clipboard-ready `show:`/`hide:` trigger target.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
   it. Right-click a **crate** for Info/Copy-Key.
