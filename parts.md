@@ -117,6 +117,7 @@ physically). Rules:
 | `cells` | [int, int] | each 1–4 | `[1, 1]` | all (footprint: x → right, y → up) |
 | `tip` | String | ≤ 200 chars | the id | all (palette tooltip) |
 | `powerup` | String | `free_shot` \| `exploding` \| `multishot` \| `super_bounce` \| `mystery` | none | crate |
+| `aura` | String | `smog-green` \| `mist` \| `sparkle` \| `embers` | none | crate + any prop |
 | `tilt` | int | `-45` \| `0` \| `45` | `0` | trampoline |
 | `bounce` | float | 0.5–2.0 | `1.5` | trampoline |
 | `animatable` | bool | strict `true` only | `false` | any prop (see below) |
@@ -124,6 +125,22 @@ physically). Rules:
 Unknown keys are ignored (forward compatibility). Unknown `class` or
 `powerup` values warn and degrade safely. `mystery` is the ghost-crate
 roll: a random power, with the skunk-unlock chance baked into it.
+
+### Auras
+
+**Auras** are ambient cosmetic particles that drift from a piece — purely
+visual, zero gameplay effect. Each aura id maps to a baked CPUParticles2D
+configuration inside `Auras` (`src/level/auras.gd`). The four curated ids:
+
+- **`embers`** — slow upward orange sparks, campfire feel
+- **`mist`** — soft blue-white wisps, cool and quiet
+- **`smog-green`** — toxic green haze, subtle menace
+- **`sparkle`** — bright yellow glitter, celebratory
+
+Auras are applied at spawn (both crates and props). Unknown or non-String
+values warn and are silently ignored — a missing aura is always a no-op,
+never a crash. New aura ids require a code change (adding an entry to
+`Auras.KNOWN`) and can never be scripted from content alone.
 
 ## Per-placement keys (in the level file's `props` entries)
 
@@ -176,7 +193,7 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
 - `entries() -> Array[Dictionary]` — all pieces, sorted by id
 - `by_class(cls) -> Array[Dictionary]` — palette feeds
 - `entry(id) -> Dictionary` — `{id, texture, class, cells: Vector2i,
-  tilt, bounce, tip, powerup, animatable}`; `{}` if unknown
+  tilt, bounce, tip, powerup, aura, animatable}`; `{}` if unknown
 - `texture_for(id) -> Texture2D` — the single texture authority
   (HUD, palette, spawners all route here); null if unknown
 - `parse_sidecar(id, raw) -> Dictionary` — pure, clamped; `{}` = skip
@@ -251,7 +268,8 @@ PNG + sidecar pairs, exactly like `pieces/` (same schema, same image
 rules — see above). Their ids are namespaced by the folder:
 `thanksgiving:turkey-crate`. That means packs can never collide with
 built-in pieces or with each other. Pack crates can carry `powerup`,
-pack pieces can be `animatable` — the full sidecar vocabulary works.
+pack pieces can be `animatable`, and pack pieces of any class can carry
+`aura` — the full sidecar vocabulary works.
 
 Players toggle each object pack with a checkbox in the **Toybox**
 section of the pause menu (default: on). Disabling a pack removes its

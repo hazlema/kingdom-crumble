@@ -31,6 +31,7 @@ static func spawn_crates(
 		if _tex == null and c["type"] != "crate-wood":
 			push_warning("Unknown crate type: %s" % c["type"])
 		crate.apply_type(c["type"], _tex)
+		Auras.attach(crate, Pieces.entry(c["type"]).get("aura", ""))
 		out.append(crate)
 	return out
 
