@@ -1,5 +1,5 @@
 class_name TriggerDialog
-extends Window
+extends AcceptDialog
 
 # Programmatic dialog for authoring crate-hit triggers in the editor.
 #
@@ -59,16 +59,18 @@ func _ready() -> void:
 	title = "Add / Edit Triggers"
 	size = Vector2i(420, 480)
 	min_size = Vector2i(320, 320)
-	# Window: not exclusive so the user can still pan
+	# AcceptDialog, not bare Window: the kingdom theme styles dialog panels,
+	# not raw window chrome (a themed Window still rendered engine-grey —
+	# owner field report). Matches the crate Info dialog.
 	exclusive = false
-	close_requested.connect(hide)
+	ok_button_text = "Done"
 	theme = load("res://resources/ui/kingdom_theme.tres")
 
 	_vbox = VBoxContainer.new()
 	_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_vbox.add_theme_constant_override("separation", 8)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# no anchors preset — AcceptDialog manages its content rect
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_%s" % side, 10)
 	margin.add_child(_vbox)
