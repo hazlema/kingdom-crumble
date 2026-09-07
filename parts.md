@@ -140,7 +140,7 @@ configuration inside `Auras` (`src/level/auras.gd`). The four curated ids:
 
 Auras are applied at spawn (both crates and props). Unknown or non-String
 values warn and are silently ignored — a missing aura is always a no-op,
-never a crash. `aura_color` recolors any verb — `"aura": "smog",
+never a crash. `aura_color` recolors any verb — `"aura": "smog"` plus
 `"aura_color": "#7ec8ff"` is blue ghost-smoke; a bad color warns and
 falls back to the verb's default, and the tint can never change the
 baked alpha (content recolors, never opacifies). New aura ids require

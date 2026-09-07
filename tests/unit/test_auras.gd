@@ -236,3 +236,17 @@ func test_parse_sidecar_aura_color_rules() -> void:
 	assert_eq(meta_bad.get("aura_color", ""), "", "bad color dropped to verb default")
 	var meta_orphan := Pieces.parse_sidecar("t", {"aura_color": "#112233"})  # warns
 	assert_eq(meta_orphan.get("aura_color", ""), "", "aura_color without aura ignored")
+
+
+func test_attach_hostile_color_rejected_before_engine() -> void:
+	# is_valid_hex_number accepts a leading minus — "#-1a2b3" must never
+	# reach Color.html() (engine error). Warn + verb default instead.
+	var host := Node2D.new()
+	add_child_autofree(host)
+	Auras.attach(host, "smog", "#-1a2b3")  # warns
+	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
+	assert_almost_eq(p.color.g, 0.85, 0.01, "hostile color falls back to verb default")
+	assert_false(Auras.is_valid_color("#-1a2b3"), "leading minus rejected")
+	assert_false(Auras.is_valid_color("#12345"), "short rejected")
+	assert_false(Auras.is_valid_color("#1234567"), "long rejected")
+	assert_true(Auras.is_valid_color("#7ec8ff"), "honest color accepted")

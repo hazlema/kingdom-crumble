@@ -55,9 +55,19 @@ const KNOWN: Dictionary = {
 }
 
 
+const _HEX_CHARS := "0123456789abcdefABCDEF"
+
+
 ## True for a strict "#RRGGBB" string — the only color form sidecars may use.
+## Per-character check: is_valid_hex_number accepts a leading minus sign,
+## which would reach Color.html() as an engine error (re-review catch).
 static func is_valid_color(s: String) -> bool:
-	return s.begins_with("#") and s.length() == 7 and s.substr(1).is_valid_hex_number(false)
+	if not s.begins_with("#") or s.length() != 7:
+		return false
+	for i in range(1, 7):
+		if not _HEX_CHARS.contains(s[i]):
+			return false
+	return true
 
 
 ## Attach a configured CPUParticles2D child to host.
