@@ -109,3 +109,18 @@ func test_skip_changes_track_when_pool_allows() -> void:
 	Music.skip()
 	assert_ne(Music._current_track, before, "skip lands on a different track")
 	Music.stop()
+
+
+func test_cycle_tier_hops_albums_and_wraps() -> void:
+	var all := MusicDirector.tiers()
+	assert_true(all.has("chill") and all.has("hardcore") and all.has("heartpumper"), "three shipped albums discovered")
+	Music.play_tier("chill")
+	var t1: String = Music.cycle_tier()
+	assert_ne(t1, "chill", "cycle leaves the current album")
+	var seen := {t1: true}
+	var t2: String = Music.cycle_tier()
+	var t3: String = Music.cycle_tier()
+	seen[t2] = true
+	seen[t3] = true
+	assert_eq(seen.size(), 3, "three cycles visit all three albums (wrap included)")
+	Music.stop()

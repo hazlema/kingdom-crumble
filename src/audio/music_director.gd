@@ -82,11 +82,41 @@ func stop() -> void:
 	_player.stop()
 
 
-## User-initiated next-track (the editor's M key). A deliberate skip is
-## not a "cut" — the no-cut doctrine guards against the GAME interrupting,
-## not against the owner escaping a song they've heard 3 million times.
+## User-initiated next-track. A deliberate skip is not a "cut" — the
+## no-cut doctrine guards against the GAME interrupting, not the user.
 func skip() -> void:
 	_play_next()
+
+
+## All soundtrack tiers = the folders under res://music, sorted.
+static func tiers() -> Array[String]:
+	var out: Array[String] = []
+	var dir := DirAccess.open("res://music")
+	if dir == null:
+		return out
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		if dir.current_is_dir() and not f.begins_with("."):
+			out.append(f)
+		f = dir.get_next()
+	dir.list_dir_end()
+	out.sort()
+	return out
+
+
+## The editor's M key: hop to the NEXT soundtrack album (chill →
+## hardcore → heartpumper → wrap). Owner's mercy feature — the no-cut
+## doctrine keeps one tier rolling forever otherwise.
+func cycle_tier() -> String:
+	var all := tiers()
+	if all.is_empty():
+		return ""
+	var idx := all.find(_tier)
+	var next_tier: String = all[(idx + 1) % all.size()]  # find() == -1 → 0: starts at the first tier
+	_tier = ""  # defeat play_tier's same-tier no-op — a cycle must switch
+	play_tier(next_tier)
+	return next_tier
 
 
 func _play_next() -> void:

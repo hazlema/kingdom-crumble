@@ -653,7 +653,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				else:
 					_enter_scenery()
 			KEY_M:
-				Music.skip()
+				Music.cycle_tier()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		if mode == Mode.SCENERY:
 			_delete_selected_piece()
