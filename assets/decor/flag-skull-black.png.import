@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://8xg1bptstxno"
-path="res://.godot/imported/flag-skull-red.png-8afc6099beac341cd10cd3485f377d26.ctex"
+uid="uid://d2uawkbxbgqr5"
+path="res://.godot/imported/flag-skull-black.png-47bca0ead714ea1fc9178a5090afaeaa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://pieces/flag-skull-red.png"
-dest_files=["res://.godot/imported/flag-skull-red.png-8afc6099beac341cd10cd3485f377d26.ctex"]
+source_file="res://assets/decor/flag-skull-black.png"
+dest_files=["res://.godot/imported/flag-skull-black.png-47bca0ead714ea1fc9178a5090afaeaa.ctex"]
 
 [params]
 
