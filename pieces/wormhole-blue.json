@@ -1,1 +1,1 @@
-{ "class": "wormhole", "cells": [1, 2], "tip": "Warp! Stones exit at its twin. Place exactly two.", "animatable": true }
+{ "class": "wormhole", "cells": [1, 1], "tip": "Warp! Stones exit at its twin. Place exactly two.", "animatable": true }

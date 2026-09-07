@@ -184,7 +184,7 @@ func test_tramp_left_polygon_deflects_stones_left() -> void:
 func test_wormhole_sidecars_register() -> void:
 	var blue := Pieces.entry("wormhole-blue")
 	assert_eq(blue["class"], "wormhole")
-	assert_eq(blue["cells"], Vector2i(1, 2))
+	assert_eq(blue["cells"], Vector2i(1, 1))
 	assert_not_null(blue["texture"])
 	assert_eq(Pieces.entry("wormhole-orange")["class"], "wormhole")
 
