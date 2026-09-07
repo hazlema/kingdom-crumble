@@ -168,23 +168,26 @@ func test_remove_action_deletes_and_empty_key_vanishes() -> void:
 # ---------------------------------------------------------------------------
 
 func test_row_select_emits_flash_with_overlay_index() -> void:
-	# overlays: [{name:"sign1"}, {name:"door", hidden:true}, {no name}]
-	# "door" is index 1 in layout.overlays (not row index — unnamed skews them)
-	# Row 1 in the ItemList is "door (hidden)" → must emit flash_requested(1)
+	# overlays: [{no name}, {name:"sign1"}, {name:"door", hidden:true}]
+	# The UNNAMED overlay sits FIRST so every row index differs from its
+	# overlay index — a naive emit(row) implementation must fail here.
+	# Row 1 in the ItemList is "door (hidden)" → overlay index 2.
 	var img := Image.create(2, 2, false, Image.FORMAT_RGBA8)
 	img.fill(Color.BLUE)
 	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
 	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
 	ed.current.images[key] = b64
+	ed.current.overlays.append({"image": key, "x": 20.0, "y": 0.0})  # no name, index 0
 	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0, "name": "sign1"})
 	ed.current.overlays.append({"image": key, "x": 10.0, "y": 0.0, "name": "door", "hidden": true})
-	ed.current.overlays.append({"image": key, "x": 20.0, "y": 0.0})  # no name, index 2
 	dlg.open("hit:0,0", ed.current)
 	watch_signals(dlg)
-	# Simulate selecting row 1 ("door (hidden)" — overlay index 1)
+	dlg.get_overlay_list().select(0)
+	dlg._on_overlay_row_selected(0)
+	assert_signal_emitted_with_parameters(dlg, "flash_requested", [1])
 	dlg.get_overlay_list().select(1)
 	dlg._on_overlay_row_selected(1)
-	assert_signal_emitted_with_parameters(dlg, "flash_requested", [1])
+	assert_signal_emitted_with_parameters(dlg, "flash_requested", [2])
 
 
 # ---------------------------------------------------------------------------

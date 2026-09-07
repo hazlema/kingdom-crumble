@@ -692,6 +692,10 @@ func _clamp_camera() -> void:
 # Used in the import path so entering/being in scenery mode doesn't
 # accidentally un-dim the crates (a full _rebuild would reset modulate).
 func _rebuild_scenery() -> void:
+	# A flash mid-pulse would tween a freed piece — kill it with the pieces.
+	if _flash_tween != null and _flash_tween.is_valid():
+		_flash_tween.kill()
+		_flash_tween = null
 	for s in _scenery_pieces:
 		if is_instance_valid(s):
 			s.queue_free()

@@ -154,6 +154,11 @@ func _ready() -> void:
 func open(trigger_key: String, layout: LevelLayout) -> void:
 	_trigger_key = trigger_key
 	_layout = layout
+	# Re-scan stems each open — a fresh ogg dropped mid-session appears
+	# without recreating the dialog (matches the overlay-list refresh).
+	_stem_option.clear()
+	for stem in _get_stems():
+		_stem_option.add_item(stem)
 
 	# Update key label
 	var key_label: Label = _vbox.get_node("KeyLabel")
@@ -404,8 +409,11 @@ static func _get_stems() -> Array[String]:
 	dir.list_dir_begin()
 	var fname := dir.get_next()
 	while fname != "":
-		if not dir.current_is_dir() and fname.ends_with(".ogg"):
-			stems.append(fname.get_basename())
+		# Exported builds list disguised names (boom.ogg.remap / .import) —
+		# strip before matching or the list is empty on web (MusicDirector lesson).
+		var stripped := fname.trim_suffix(".remap").trim_suffix(".import")
+		if not dir.current_is_dir() and stripped.ends_with(".ogg"):
+			stems.append(stripped.get_basename())
 		fname = dir.get_next()
 	dir.list_dir_end()
 	stems.sort()
