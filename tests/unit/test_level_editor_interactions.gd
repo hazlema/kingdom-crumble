@@ -682,6 +682,13 @@ func test_default_overlay_name_dedupes_with_index() -> void:
 	assert_eq(LevelEditor.default_overlay_name("/tmp/tree.png", overlays), "tree", "unused base stays bare")
 
 
+func test_default_overlay_name_keeps_dashes_and_respects_hand_names() -> void:
+	assert_eq(LevelEditor.default_overlay_name("/tmp/stone-sign.png", []), "stone-sign", "dashes are trigger-legal and kept")
+	# hand-authored names count as taken — imports dodge them
+	var hand := [{"name": "castle"}]
+	assert_eq(LevelEditor.default_overlay_name("/tmp/castle.png", hand), "castle2")
+
+
 func test_image_import_assigns_unique_names() -> void:
 	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
 	img.fill(Color.RED)
