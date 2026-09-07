@@ -3,13 +3,82 @@ extends GutTest
 # Drives the editor's press/release interaction state machine directly
 # (the polling layer in _process only translates mouse state into these
 # calls, and headless runs cannot move the virtual mouse).
+#
+# Footprint tests (multi-cell occupancy, blocked drops, selection ring spanning,
+# drag-move freeing old cells) need a 2×1 fixture.  We provision it through the
+# sandboxed toybox seam so no test ever depends on shipped art again.
+# The fixture id is "gutfix:wide-block" (class "static", cells [2,1]).
+# The sandbox dir is "user://toybox_gut_editor" — deliberately different from
+# test_toybox.gd's "user://toybox_gut" so concurrent/sequential runs never collide.
+
+const FIXTURE_TOYBOX_DIR := "user://toybox_gut_editor"
+const TOYBOX_CFG := "user://toybox.cfg"
+const FIXTURE_ID := "gutfix:wide-block"
 
 var ed: LevelEditor
+var _cfg_before: String = ""
 
 
 func before_each() -> void:
+	# ── Toybox sandbox ──────────────────────────────────────────────────────
+	# Redirect all Pieces scans to our private sandbox.
+	Pieces.toybox_root = FIXTURE_TOYBOX_DIR
+	# Capture existing toybox.cfg so after_each can restore it byte-for-byte.
+	if FileAccess.file_exists(TOYBOX_CFG):
+		_cfg_before = FileAccess.open(TOYBOX_CFG, FileAccess.READ).get_as_text()
+	else:
+		_cfg_before = ""
+	# Write the "gutfix" pack: a 128×63 PNG (2 cells wide at 64 px/cell) plus
+	# a sidecar declaring class "static" and cells [2,1].
+	var pack_dir := "%s/gutfix" % FIXTURE_TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	# pack.json — kind "objects" so the scanner registers pieces from it
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	mf.store_string(JSON.stringify({"title": "GUT Editor Fixture", "kind": "objects"}))
+	mf.close()
+	# 128×63 PNG (2 cells wide × 1 cell tall)
+	var img := Image.create(128, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.2, 0.6, 1.0, 1.0))
+	img.save_png("%s/wide-block.png" % pack_dir)
+	# Sidecar: static class, 2×1 footprint
+	var sf := FileAccess.open("%s/wide-block.json" % pack_dir, FileAccess.WRITE)
+	sf.store_string(JSON.stringify({"class": "static", "cells": [2, 1]}))
+	sf.close()
+	# Scan so "gutfix:wide-block" is live in the registry before any test runs.
+	Pieces.scan()
+	# ── Editor instance ──────────────────────────────────────────────────────
 	ed = load("res://scenes/editor.tscn").instantiate()
 	add_child_autofree(ed)
+
+
+func after_each() -> void:
+	# ── Sandbox teardown ─────────────────────────────────────────────────────
+	# Remove every file inside the gutfix pack folder, then the folder itself.
+	var pack_dir := "%s/gutfix" % FIXTURE_TOYBOX_DIR
+	var dir := DirAccess.open(pack_dir)
+	if dir:
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if not dir.current_is_dir():
+				dir.remove(fname)
+			fname = dir.get_next()
+		dir.list_dir_end()
+	DirAccess.remove_absolute(pack_dir)
+	# Remove the sandbox root itself (empty after pack removal).
+	DirAccess.remove_absolute(FIXTURE_TOYBOX_DIR)
+	# Restore toybox.cfg exactly as it was before this test ran.
+	if _cfg_before == "":
+		if FileAccess.file_exists(TOYBOX_CFG):
+			DirAccess.remove_absolute(TOYBOX_CFG)
+	else:
+		var f := FileAccess.open(TOYBOX_CFG, FileAccess.WRITE)
+		if f:
+			f.store_string(_cfg_before)
+	# Restore the real toybox root and rescan so subsequent tests/files
+	# see the real registry (halloween + spooky_season packs, etc.).
+	Pieces.toybox_root = "user://toybox"
+	Pieces.scan()
 
 
 func test_press_places_carried_asset() -> void:
@@ -216,7 +285,12 @@ func test_load_path_ghosts_hidden_overlays_immediately() -> void:
 
 
 func test_prop_placement_occupies_full_footprint() -> void:
-	ed.carrying = "tramp-flat"
+	# OLD: ed.carrying = "tramp-flat"  (shipped 2×1 trampoline; now resized to 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (sandbox 2×1 static fixture — same footprint intent)
+	# WHY: The test verifies that placing a 2×1 piece occupies both anchor and
+	#      second cell.  The fixture has identical cells:[2,1]; the class change
+	#      from trampoline→static is irrelevant to occupancy logic.
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	assert_eq(ed.current.props.size(), 1, "prop recorded")
 	assert_true(ed.occupancy.has(Vector2i(4, 0)), "anchor cell occupied")
@@ -226,17 +300,27 @@ func test_prop_placement_occupies_full_footprint() -> void:
 
 
 func test_prop_placement_blocked_by_partial_overlap() -> void:
+	# OLD: ed.carrying = "tramp-flat" / assert_eq(ed.carrying, "tramp-flat", ...)
+	# NEW: ed.carrying = FIXTURE_ID   / assert_eq(ed.carrying, FIXTURE_ID, ...)
+	# WHY: The test verifies that a 2×1 drop is refused when cell (5,0) is
+	#      already occupied by a crate, and that carrying is unchanged.
+	#      The fixture has the same 2×1 footprint; the refusal logic is class-agnostic.
 	ed.carrying = "crate-wood"
 	ed._press(Vector2i(5, 0))
-	ed.carrying = "tramp-flat"
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))  # cell 5,0 is taken — whole footprint must refuse
 	assert_eq(ed.current.props.size(), 0)
 	assert_false(ed.occupancy.has(Vector2i(4, 0)))
-	assert_eq(ed.carrying, "tramp-flat", "still carrying after refused drop")
+	assert_eq(ed.carrying, FIXTURE_ID, "still carrying after refused drop")
 
 
 func test_crate_cannot_land_on_prop_cell() -> void:
-	ed.carrying = "tramp-flat"
+	# OLD: ed.carrying = "tramp-flat"  (2×1 trampoline, now 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (2×1 static fixture)
+	# WHY: The test verifies that a crate dropped onto the second cell of a
+	#      2×1 prop is refused.  The fixture occupies the same two cells (4,0)
+	#      and (5,0); the prop-class change does not affect crate refusal logic.
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	ed.carrying = "crate-wood"
 	ed._press(Vector2i(5, 0))
@@ -244,7 +328,12 @@ func test_crate_cannot_land_on_prop_cell() -> void:
 
 
 func test_prop_delete_frees_all_cells() -> void:
-	ed.carrying = "tramp-flat"
+	# OLD: ed.carrying = "tramp-flat"  (2×1 trampoline, now 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (2×1 static fixture)
+	# WHY: The test verifies that deleting a 2×1 prop frees both anchor and
+	#      second cell from occupancy.  The fixture spans identical cells;
+	#      the deletion path is class-agnostic.
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	# OLD: ed.overlay.selected_cell = Vector2i(5, 0)  # direct view-write (bypassed selection)
 	# NEW: arrange selection state via the public API — intent is "select via the SECOND cell"
@@ -309,7 +398,12 @@ func test_delete_prop_with_unknown_registry_id_does_not_crash() -> void:
 
 
 func test_prop_selection_ring_spans_footprint_from_any_cell() -> void:
-	ed.carrying = "tramp-flat"
+	# OLD: ed.carrying = "tramp-flat"  (2×1 trampoline, now 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (2×1 static fixture)
+	# WHY: The test verifies that clicking either cell of a 2×1 prop snaps the
+	#      selection ring to the anchor and reports selected_cells == Vector2i(2,1).
+	#      The fixture has identical cells:[2,1]; selection-ring logic is class-agnostic.
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	ed._press(Vector2i(5, 0))  # click the SECOND cell
 	assert_eq(ed.overlay.selected_cell, Vector2i(4, 0), "selection snaps to the anchor")
@@ -321,7 +415,12 @@ func test_prop_selection_ring_spans_footprint_from_any_cell() -> void:
 
 
 func test_prop_drag_moves_whole_footprint() -> void:
-	ed.carrying = "tramp-flat"
+	# OLD: ed.carrying = "tramp-flat"  (2×1 trampoline, now 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (2×1 static fixture)
+	# WHY: The test verifies that dragging a 2×1 prop (grabbed by its second cell)
+	#      moves both cells atomically and updates the data record.  The fixture
+	#      has the same 2×1 footprint; drag-move logic is class-agnostic.
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	ed._press(Vector2i(5, 0))          # grab by the second cell
 	ed._release(Vector2i(9, 0), false)  # drag +4 columns
@@ -335,9 +434,15 @@ func test_prop_drag_moves_whole_footprint() -> void:
 
 
 func test_prop_move_blocked_by_overlap_stays_put() -> void:
+	# OLD: ed.carrying = "tramp-flat"  (2×1 trampoline, now 1×1)
+	# NEW: ed.carrying = FIXTURE_ID    (2×1 static fixture)
+	# WHY: The test verifies that dragging a 2×1 prop is refused when the
+	#      destination overlaps an existing crate, leaving the piece at its
+	#      original position.  The fixture has the same footprint; overlap
+	#      detection is class-agnostic.
 	ed.carrying = "crate-wood"
 	ed._press(Vector2i(9, 0))
-	ed.carrying = "tramp-flat"
+	ed.carrying = FIXTURE_ID
 	ed._press(Vector2i(4, 0))
 	ed._press(Vector2i(4, 0))
 	ed._release(Vector2i(8, 0), false)  # footprint would hit the crate at (9,0)
