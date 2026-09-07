@@ -590,3 +590,33 @@ func test_exit_scenery_restores_crate_modulate_to_full() -> void:
 	assert_almost_eq(ed._spawned[0].modulate.a, 0.8, 0.001, "crate dimmed in SCENERY mode")
 	ed._exit_scenery()
 	assert_almost_eq(ed._spawned[0].modulate.a, 1.0, 0.001, "crate restored after leaving SCENERY")
+
+
+# ---------------------------------------------------------------------------
+# TEST round-trip keeps the filename (owner bug: "after you test a level the
+# system forgets what the filename was").  The doc rides LevelEditor.resume_layout
+# back from TEST; save_path must ride beside it — a fresh editor instance
+# otherwise reverts to "" and Save prompts Save-As.
+# ---------------------------------------------------------------------------
+
+func test_resume_from_test_keeps_save_path() -> void:
+	var layout := LevelLayout.new()
+	layout.title = "roundtrip"
+	LevelEditor.resume_layout = layout
+	LevelEditor.resume_save_path = "user://levels/roundtrip.json"
+	var ed2: LevelEditor = load("res://scenes/editor.tscn").instantiate()
+	add_child_autofree(ed2)
+	assert_eq(ed2.current, layout, "doc adopted from resume rail")
+	assert_eq(ed2.save_path, "user://levels/roundtrip.json", "filename survives the TEST round-trip")
+	assert_eq(LevelEditor.resume_save_path, "", "rail cleared after adoption")
+
+
+func test_fresh_editor_ignores_stale_resume_save_path() -> void:
+	# The adoption trap: a stale path must never leak into a NEW document
+	# (no resume_layout = not a TEST return, whatever the path static says).
+	LevelEditor.resume_layout = null
+	LevelEditor.resume_save_path = "user://levels/stale.json"
+	var ed2: LevelEditor = load("res://scenes/editor.tscn").instantiate()
+	add_child_autofree(ed2)
+	assert_eq(ed2.save_path, "", "fresh document stays unsaved")
+	assert_eq(LevelEditor.resume_save_path, "", "stale rail cleared either way")

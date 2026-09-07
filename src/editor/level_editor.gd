@@ -13,6 +13,7 @@ extends Node2D
 enum Mode { CRATES, SCENERY }
 
 static var resume_layout: LevelLayout = null
+static var resume_save_path := ""  # rides beside resume_layout through TEST
 
 var current := LevelLayout.new()
 var occupancy := {}  # Vector2i -> Crate
@@ -264,6 +265,8 @@ func _ready() -> void:
 	if resume_layout != null:
 		current = resume_layout
 		resume_layout = null
+		save_path = resume_save_path
+	resume_save_path = ""
 	_rebuild()
 
 
@@ -489,6 +492,7 @@ func _on_test() -> void:
 		)
 	Level.next_layout = current
 	Level.return_to_editor = true
+	LevelEditor.resume_save_path = save_path
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 
