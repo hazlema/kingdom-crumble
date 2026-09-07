@@ -23,6 +23,7 @@ func reset_input_state() -> void:
 
 var _crate_context: PopupMenu = null
 var _crate_info: AcceptDialog = null
+var _trigger_dialog: TriggerDialog = null
 var _info_cell := Vector2i(-1, -1)  # cell the crate menu opened on
 var _info_key := ""  # trigger key shown in the open Info dialog
 
@@ -273,13 +274,17 @@ func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
 	_info_cell = cell
 	_crate_context.clear()
 	_crate_context.add_item("Info", 0)
+	_crate_context.add_item("Add Trigger…", 1)
 	_crate_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
 	_crate_context.popup()
 
 
 func _on_crate_context_item(id: int) -> void:
-	if id == 0:
-		_show_crate_info(_info_cell)
+	match id:
+		0:
+			_show_crate_info(_info_cell)
+		1:
+			_show_trigger_dialog(_info_cell)
 
 
 func _show_crate_info(cell: Vector2i) -> void:
@@ -310,3 +315,17 @@ func _on_crate_info_action(action: StringName) -> void:
 	if action == &"copy_key":
 		DisplayServer.clipboard_set(_info_key)
 		_crate_info.hide()
+
+
+func _show_trigger_dialog(cell: Vector2i) -> void:
+	if not ed.occupancy.has(cell):
+		return
+	# Reuse the SAME key-formatting as the Info dialog — shared via crate_trigger_key.
+	var key := LevelEditor.crate_trigger_key(cell)
+	if _trigger_dialog == null:
+		_trigger_dialog = TriggerDialog.new(ed)
+		ed.add_child(_trigger_dialog)
+		ed.register_popup(_trigger_dialog)
+		# Wire flash signal → editor flash method
+		_trigger_dialog.flash_requested.connect(ed.flash_overlay)
+	_trigger_dialog.open(key, ed.current)

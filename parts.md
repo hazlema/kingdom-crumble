@@ -186,6 +186,11 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
   it. Right-click a **crate** for Info/Copy-Key.
+- Right-click a **crate** → **Add Trigger…** opens the trigger dialog:
+  pick named scenery overlays as `show:`/`hide:` targets, `confetti`,
+  or a `sound:` stem. Each action is parameterized per type; up to 16
+  actions per crate. This is why overlays want names — anonymous
+  overlays don't appear in the picker.
 - Selection is one fact; the views (ring, inspector, gizmo) render it.
   Loading/clearing a level always deselects.
 - TEST runs the real game spawners — what you test is what ships.
