@@ -39,7 +39,7 @@ func test_parse_sidecar_warns_malformed_cells() -> void:
 func test_scan_finds_obstacles_with_metadata() -> void:
 	var tramp := Pieces.entry("tramp-left")
 	assert_eq(tramp["class"], "trampoline")
-	assert_eq(tramp["cells"], Vector2i(2, 1))
+	assert_eq(tramp["cells"], Vector2i(1, 1))
 	assert_eq(tramp["tilt"], -45)
 	assert_not_null(tramp["texture"])
 	var block := Pieces.entry("block-stone")
@@ -126,8 +126,8 @@ func test_spawn_props_builds_static_geometry() -> void:
 	assert_false(spawned[0].is_in_group("crates"), "props are unscored")
 	assert_eq(spawned[1].get_meta("prop_id"), "tramp-left")
 	assert_eq(spawned[1].physics_material_override.bounce, 1.5, "sidecar bounce applied")
-	# 2x1 footprint: body centered half a cell right of the anchor
-	assert_almost_eq(spawned[1].position.x, anchor.x + 128.0 + 32.0, 0.01)
+	# 1x1 footprint: body centered on the anchor cell
+	assert_almost_eq(spawned[1].position.x, anchor.x + 128.0, 0.01)
 
 
 func test_spawn_props_skips_unknown_id_with_warning() -> void:
@@ -175,7 +175,7 @@ func test_tramp_left_polygon_deflects_stones_left() -> void:
 	assert_eq(spawned.size(), 1)
 	var poly_node: CollisionPolygon2D = spawned[0].get_child(0) as CollisionPolygon2D
 	assert_not_null(poly_node, "tramp-left has CollisionPolygon2D")
-	var hw := 64.0  # cells.x=2, CELL_W=64 → size.x=128 → hw=64
+	var hw := 32.0  # cells.x=1, CELL_W=64 → size.x=64 → hw=32
 	var hh := 31.5  # cells.y=1, CELL_H=63 → size.y=63  → hh=31.5
 	var expected := PackedVector2Array([Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh)])
 	assert_eq(poly_node.polygon, expected, "tramp-left is '/' ramp — normal points up-left, stones launch left")
