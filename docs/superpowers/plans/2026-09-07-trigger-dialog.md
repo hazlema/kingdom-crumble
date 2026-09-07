@@ -66,3 +66,13 @@ func test_flash_overlay_restores_modulate_and_survives_bad_idx() -> void:
 - [ ] **Step 4: Focused green, then FULL suite = 393 + new, zero failures.**
 - [ ] **Step 5: parts.md** — one bullet in Editor behavior: right-click a crate → **Add Trigger…** (named scenery + actions, params per action; the dialog is why overlays want names).
 - [ ] **Step 6: Commit** — `git commit -m "feat: trigger dialog — author crate-hit triggers in the editor"`
+
+---
+
+## Forward note (owner, mid-build): expandable advanced section
+
+Not V1 scope (all V1 params are required). When a future action descriptor
+carries OPTIONAL params (smoke color, delay, repeat...), mark them
+`advanced: true` in the catalog and render them inside a collapsed
+"Advanced ▸" fold — required params stay in the main flow, dials hide
+until wanted. The component doesn't change shape; descriptors grow a flag.
