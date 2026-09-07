@@ -95,3 +95,17 @@ func test_play_track_starts_named_song_then_lets_same_tier_ride() -> void:
 	Music.play_track(pool[pool.size() - 1], "chill")
 	assert_eq(Music._current_track, pool[0], "same tier already on: let it ride")
 	Music.stop()
+
+
+func test_skip_changes_track_when_pool_allows() -> void:
+	# The editor's M key: a deliberate skip picks a DIFFERENT track from
+	# the same pool (pick_track's exclude-current guarantee).
+	var pool := MusicDirector.list_pool("chill")
+	if pool.size() < 2:
+		pass_test("chill pool too small to assert a change")
+		return
+	Music.play_tier("chill")
+	var before: String = Music._current_track
+	Music.skip()
+	assert_ne(Music._current_track, before, "skip lands on a different track")
+	Music.stop()

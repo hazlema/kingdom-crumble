@@ -195,6 +195,7 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
   Loading/clearing a level always deselects.
 - TEST runs the real game spawners — what you test is what ships.
 - Keys: **S** save, **A** save as, **T** test, **C** toggle scenery,
+  **M** next music track,
   **DELETE** remove selection, **Esc** leave scenery / drop carried
   piece (Ctrl+S / Ctrl+T also work on desktop; browsers keep those).
 

@@ -635,7 +635,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		and event.pressed
 		and not event.alt_pressed
 		and not event.meta_pressed
-		and event.keycode in [KEY_S, KEY_A, KEY_T, KEY_C]
+		and event.keycode in [KEY_S, KEY_A, KEY_T, KEY_C, KEY_M]
 		and not _shortcut_blocked()
 	):
 		# Bare letters — same convention as the game's L/B keys, and the
@@ -652,6 +652,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					_exit_scenery()
 				else:
 					_enter_scenery()
+			KEY_M:
+				Music.skip()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		if mode == Mode.SCENERY:
 			_delete_selected_piece()

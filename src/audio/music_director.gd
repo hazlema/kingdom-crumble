@@ -82,6 +82,13 @@ func stop() -> void:
 	_player.stop()
 
 
+## User-initiated next-track (the editor's M key). A deliberate skip is
+## not a "cut" — the no-cut doctrine guards against the GAME interrupting,
+## not against the owner escaping a song they've heard 3 million times.
+func skip() -> void:
+	_play_next()
+
+
 func _play_next() -> void:
 	var pool := list_pool(_tier)
 	var track := pick_track(pool, _current_track)
