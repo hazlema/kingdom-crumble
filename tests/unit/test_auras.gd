@@ -76,18 +76,18 @@ func _nuke_toybox() -> void:
 # ---------------------------------------------------------------------------
 
 func test_known_table_is_curated_v1() -> void:
-	# Exactly ["embers", "mist", "smog-green", "sparkle"] when sorted.
+	# Exactly ["embers", "mist", "smog", "sparkle"] when sorted.
 	var keys := Auras.KNOWN.keys().duplicate()
 	keys.sort()
-	assert_eq(keys, ["embers", "mist", "smog-green", "sparkle"])
+	assert_eq(keys, ["embers", "mist", "smog", "sparkle"])
 
 
 func test_attach_known_adds_capped_emitter() -> void:
-	# attach("smog-green") → exactly one CPUParticles2D child,
+	# attach("smog") → exactly one CPUParticles2D child,
 	# emitting, local_coords == false, amount <= 12.
 	var host := Node2D.new()
 	add_child_autofree(host)
-	Auras.attach(host, "smog-green")
+	Auras.attach(host, "smog")
 	var particles := host.get_children().filter(func(c): return c is CPUParticles2D)
 	assert_eq(particles.size(), 1, "exactly one CPUParticles2D child")
 	var p: CPUParticles2D = particles[0]
@@ -120,8 +120,8 @@ func test_attach_empty_is_silent_noop() -> void:
 
 func test_parse_sidecar_aura_curated() -> void:
 	# Known id accepted.
-	var meta := Pieces.parse_sidecar("t", {"aura": "smog-green"})
-	assert_eq(meta.get("aura", ""), "smog-green", "known aura passes through")
+	var meta := Pieces.parse_sidecar("t", {"aura": "smog"})
+	assert_eq(meta.get("aura", ""), "smog", "known aura passes through")
 
 	# Unknown string warns and is omitted (or set to "").
 	var meta_bad := Pieces.parse_sidecar("t", {"aura": "nonsense"})  # warns
@@ -206,3 +206,33 @@ func test_prop_spawn_attaches_aura() -> void:
 	var body: Node2D = spawned[0]
 	var aura_particles := body.get_children().filter(func(c): return c is CPUParticles2D)
 	assert_eq(aura_particles.size(), 1, "aura prop has a CPUParticles2D child")
+
+# ---------------------------------------------------------------------------
+# Tests — aura_color (the amendment: verbs recolorable, never opacifiable)
+# ---------------------------------------------------------------------------
+
+func test_attach_color_override_retints_keeps_alpha() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	Auras.attach(host, "smog", "#ff0000")
+	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
+	assert_almost_eq(p.color.r, 1.0, 0.01, "override red applied")
+	assert_almost_eq(p.color.g, 0.0, 0.01, "override green applied")
+	assert_almost_eq(p.color.a, 0.6, 0.001, "alpha stays at the verb capped value")
+
+
+func test_attach_bad_color_warns_uses_default() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	Auras.attach(host, "smog", "chartreuse")  # warns
+	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
+	assert_almost_eq(p.color.g, 0.85, 0.01, "verb default color used")
+
+
+func test_parse_sidecar_aura_color_rules() -> void:
+	var meta := Pieces.parse_sidecar("t", {"aura": "smog", "aura_color": "#7ec8ff"})
+	assert_eq(meta.get("aura_color", ""), "#7ec8ff", "valid color stored")
+	var meta_bad := Pieces.parse_sidecar("t", {"aura": "smog", "aura_color": "blue"})  # warns
+	assert_eq(meta_bad.get("aura_color", ""), "", "bad color dropped to verb default")
+	var meta_orphan := Pieces.parse_sidecar("t", {"aura_color": "#112233"})  # warns
+	assert_eq(meta_orphan.get("aura_color", ""), "", "aura_color without aura ignored")

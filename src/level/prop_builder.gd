@@ -45,7 +45,7 @@ static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 		wshape.shape = wrect
 		hole.add_child(wshape)
 		_attach_sprite(hole, e, prop)
-		Auras.attach(hole, e.get("aura", ""))
+		Auras.attach(hole, e.get("aura", ""), e.get("aura_color", ""))
 		parent.add_child(hole)
 		return hole
 	var body := StaticBody2D.new()
@@ -79,7 +79,7 @@ static func spawn_one(parent: Node, prop: Dictionary) -> Node2D:
 		mat.bounce = e["bounce"]
 		body.physics_material_override = mat
 	_attach_sprite(body, e, prop)
-	Auras.attach(body, e.get("aura", ""))
+	Auras.attach(body, e.get("aura", ""), e.get("aura_color", ""))
 	parent.add_child(body)
 	return body
 

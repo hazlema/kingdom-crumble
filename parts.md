@@ -117,7 +117,8 @@ physically). Rules:
 | `cells` | [int, int] | each 1–4 | `[1, 1]` | all (footprint: x → right, y → up) |
 | `tip` | String | ≤ 200 chars | the id | all (palette tooltip) |
 | `powerup` | String | `free_shot` \| `exploding` \| `multishot` \| `super_bounce` \| `mystery` | none | crate |
-| `aura` | String | `smog-green` \| `mist` \| `sparkle` \| `embers` | none | crate + any prop |
+| `aura` | String | `smog` \| `mist` \| `sparkle` \| `embers` | none | crate + any prop |
+| `aura_color` | String | strict `#RRGGBB` (retints the verb; alpha stays baked) | verb default | anything with an `aura` |
 | `tilt` | int | `-45` \| `0` \| `45` | `0` | trampoline |
 | `bounce` | float | 0.5–2.0 | `1.5` | trampoline |
 | `animatable` | bool | strict `true` only | `false` | any prop (see below) |
@@ -134,12 +135,16 @@ configuration inside `Auras` (`src/level/auras.gd`). The four curated ids:
 
 - **`embers`** — slow upward orange sparks, campfire feel
 - **`mist`** — soft blue-white wisps, cool and quiet
-- **`smog-green`** — toxic green haze, subtle menace
+- **`smog`** — toxic haze, subtle menace (default green)
 - **`sparkle`** — bright yellow glitter, celebratory
 
 Auras are applied at spawn (both crates and props). Unknown or non-String
 values warn and are silently ignored — a missing aura is always a no-op,
-never a crash. New aura ids require a code change (adding an entry to
+never a crash. `aura_color` recolors any verb — `"aura": "smog",
+`"aura_color": "#7ec8ff"` is blue ghost-smoke; a bad color warns and
+falls back to the verb's default, and the tint can never change the
+baked alpha (content recolors, never opacifies). New aura ids require
+a code change (adding an entry to
 `Auras.KNOWN`) and can never be scripted from content alone.
 
 ## Per-placement keys (in the level file's `props` entries)

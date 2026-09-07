@@ -312,8 +312,17 @@ static func parse_sidecar(id: String, raw: Dictionary) -> Dictionary:
 			push_warning("Pieces: %s has unknown aura '%s' — no aura" % [id, aura_str])
 		elif aura_str in Auras.KNOWN:
 			aura = aura_str
-	elif not (raw_aura is String) and raw.has("aura"):
+	elif raw.has("aura"):
 		push_warning("Pieces: %s aura must be a String — no aura" % id)
+	var aura_color := ""
+	if raw.has("aura_color"):
+		var raw_ac: Variant = raw.get("aura_color")
+		if aura == "":
+			push_warning("Pieces: %s aura_color without a valid aura — ignored" % id)
+		elif raw_ac is String and Auras.is_valid_color(raw_ac as String):
+			aura_color = raw_ac as String
+		else:
+			push_warning("Pieces: %s aura_color must be '#RRGGBB' — verb default" % id)
 	var animatable := false
 	var raw_anim: Variant = raw.get("animatable", false)
 	if raw_anim is bool:
@@ -321,7 +330,7 @@ static func parse_sidecar(id: String, raw: Dictionary) -> Dictionary:
 	else:
 		if raw_anim != null:
 			push_warning("Pieces: %s animatable must be true/false — off" % id)
-	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip, "powerup": power, "aura": aura, "animatable": animatable}
+	return {"class": cls, "cells": cells, "tilt": tilt, "bounce": bounce, "tip": tip, "powerup": power, "aura": aura, "aura_color": aura_color, "animatable": animatable}
 
 
 static func entries() -> Array[Dictionary]:

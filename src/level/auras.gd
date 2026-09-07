@@ -9,7 +9,7 @@ extends RefCounted
 
 const KNOWN: Dictionary = {
 	"embers": {
-		"color": Color(1.0, 0.45, 0.05, 0.85),
+		"color": Color(1.0, 0.45, 0.05, 0.6),
 		"color_ramp_end": Color(1.0, 0.1, 0.0, 0.0),
 		"spread": 25.0,
 		"gravity": Vector2(0.0, -30.0),
@@ -30,8 +30,8 @@ const KNOWN: Dictionary = {
 		"lifetime": 3.0,
 		"amount": 10,
 	},
-	"smog-green": {
-		"color": Color(0.3, 0.85, 0.2, 0.65),
+	"smog": {
+		"color": Color(0.3, 0.85, 0.2, 0.6),
 		"color_ramp_end": Color(0.3, 0.85, 0.2, 0.0),
 		"spread": 35.0,
 		"gravity": Vector2(0.0, -12.0),
@@ -42,7 +42,7 @@ const KNOWN: Dictionary = {
 		"amount": 12,
 	},
 	"sparkle": {
-		"color": Color(1.0, 0.95, 0.4, 1.0),
+		"color": Color(1.0, 0.95, 0.4, 0.6),
 		"color_ramp_end": Color(1.0, 0.95, 0.4, 0.0),
 		"spread": 50.0,
 		"gravity": Vector2(0.0, 10.0),
@@ -55,11 +55,18 @@ const KNOWN: Dictionary = {
 }
 
 
+## True for a strict "#RRGGBB" string — the only color form sidecars may use.
+static func is_valid_color(s: String) -> bool:
+	return s.begins_with("#") and s.length() == 7 and s.substr(1).is_valid_hex_number(false)
+
+
 ## Attach a configured CPUParticles2D child to host.
 ## Empty id → silent no-op (every plain piece calls this).
 ## Unknown id → push_warning + skip (no child added).
 ## Known id → one CPUParticles2D with emitting = true, local_coords = false.
-static func attach(host: Node2D, id: String) -> void:
+## color_override ("#RRGGBB") retints the verb; alpha ALWAYS comes from the
+## verb table entry (through the 0.6 cap) — content can recolor, never opacify.
+static func attach(host: Node2D, id: String, color_override: String = "") -> void:
 	if id == "":
 		return
 	if id not in KNOWN:
@@ -80,13 +87,21 @@ static func attach(host: Node2D, id: String) -> void:
 	p.scale_amount_max = scale_val * 1.5
 	# Color: start color directly, ramp end via gradient
 	var start_color: Color = cfg.get("color", Color.WHITE) as Color
+	start_color.a = minf(start_color.a, 0.6)  # cosmetic cap — auras never obscure play
 	var end_color: Color = cfg.get("color_ramp_end", Color(start_color.r, start_color.g, start_color.b, 0.0)) as Color
+	if color_override != "":
+		if is_valid_color(color_override):
+			var tint := Color.html(color_override)
+			start_color = Color(tint.r, tint.g, tint.b, start_color.a)
+			end_color = Color(tint.r, tint.g, tint.b, end_color.a)
+		else:
+			push_warning("Auras: bad aura_color '%s' — using the verb default" % color_override)
 	p.color = start_color
 	var grad := Gradient.new()
 	grad.set_color(0, start_color)
 	grad.set_color(1, end_color)
 	p.color_ramp = grad
-	# z-index: behind the sprite (sprite is added after, so this is already behind
-	# in child order — also set z_index to ensure visual stacking)
+	# z_index below the sibling sprite's default 0 draws the aura behind the art
+	# regardless of child order (the spawners attach auras after the sprite)
 	p.z_index = -1
 	host.add_child(p)
