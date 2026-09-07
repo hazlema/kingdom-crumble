@@ -52,6 +52,11 @@ var _popups: Array[Window] = []
 # (scenery mode).
 var _ui_panels: Array[Dictionary] = []
 
+# flash_overlay tween — killed on re-entry to avoid compounding pulses.
+# Documented transient-cosmetic exception: flash_overlay writes modulate
+# temporarily and must NOT be routed through _sync_views (selection unchanged).
+var _flash_tween: Tween = null
+
 
 # Derived property — tests and _unhandled_input read this; it stays as the
 # single authoritative mode indicator, driven by which tool is active.
@@ -334,6 +339,36 @@ static func _piece_for_overlay_from_array(pieces: Array, overlay_idx: int) -> Na
 # Instance wrapper for test contract — tests call ed._piece_for_overlay(idx).
 func _piece_for_overlay(overlay_idx: int) -> NarfDecor:
 	return LevelEditor._piece_for_overlay_from_array(_scenery_pieces, overlay_idx)
+
+
+# Transient-cosmetic view exception (see Global Constraints):
+# 3-pulse modulate tween (~0.6s total) on the live piece for the given
+# overlay index. Kills any prior flash tween on re-entry (never compounds).
+# Restores modulate exactly to what it was before the flash.
+# No-op for invalid idx or missing piece — never errors.
+func flash_overlay(idx: int) -> void:
+	if idx < 0 or idx >= current.overlays.size():
+		return
+	var piece := _piece_for_overlay(idx)
+	if piece == null:
+		return
+	# Kill prior tween if one is running
+	if _flash_tween != null and _flash_tween.is_valid():
+		_flash_tween.kill()
+		_flash_tween = null
+	# Capture original modulate (AFTER killing prior tween so it's already restored)
+	var orig := piece.modulate
+	_flash_tween = create_tween()
+	# 3 pulses: bright → back, each ~0.1s on + 0.1s off = 0.2s × 3 = 0.6s total
+	for _i in 3:
+		_flash_tween.tween_property(piece, "modulate", Color(1.5, 1.5, 0.2, orig.a), 0.1)
+		_flash_tween.tween_property(piece, "modulate", orig, 0.1)
+	# Restore exactly on finish (guard against floating-point drift)
+	_flash_tween.finished.connect(func() -> void:
+		if is_instance_valid(piece):
+			piece.modulate = orig
+		_flash_tween = null
+	)
 
 
 func _on_save() -> void:
