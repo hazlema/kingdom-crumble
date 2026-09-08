@@ -218,7 +218,8 @@ func test_attach_color_override_retints_keeps_alpha() -> void:
 	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
 	assert_almost_eq(p.color.r, 1.0, 0.01, "override red applied")
 	assert_almost_eq(p.color.g, 0.0, 0.01, "override green applied")
-	assert_almost_eq(p.color.a, 0.6, 0.001, "alpha stays at the verb capped value")
+	var table_alpha: float = (Auras.KNOWN["smog"]["color"] as Color).a
+	assert_almost_eq(p.color.a, minf(table_alpha, 0.6), 0.001, "alpha stays the verb value, capped at 0.6")
 
 
 func test_attach_bad_color_warns_uses_default() -> void:
