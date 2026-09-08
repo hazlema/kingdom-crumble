@@ -180,6 +180,8 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
   tramps, wormholes).
 - Everything places on the grid. Multi-cell pieces need their whole
   footprint free; the ghost preview spans it (green = fits, red = no).
+  **Hold Shift while placing to stamp multiples** without re-picking
+  from the palette.
 - Imported scenery gets an automatic **name** from its filename
   (sanitized, deduped: `sign`, `sign2`...) — right-click the piece →
   **Copy Name** for a clipboard-ready `show:`/`hide:` trigger target.

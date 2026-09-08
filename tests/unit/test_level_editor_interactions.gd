@@ -731,3 +731,23 @@ func test_deleting_a_crate_deletes_its_trigger_key() -> void:
 	ed._press(cell)  # select it
 	ed._delete_selected()
 	assert_false(ed.current.triggers.has(key), "deleted crate takes its trigger along")
+
+
+func test_shift_place_keeps_carrying() -> void:
+	# Iggy's request: hold shift to place multiple blocks.
+	var shift := InputEventKey.new()
+	shift.keycode = KEY_SHIFT
+	shift.physical_keycode = KEY_SHIFT
+	shift.pressed = true
+	Input.parse_input_event(shift)
+	await get_tree().process_frame
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(8, 0))
+	assert_eq(ed.carrying, "crate-wood", "shift keeps the stamp loaded")
+	ed._press(Vector2i(9, 0))
+	shift.pressed = false
+	Input.parse_input_event(shift)
+	await get_tree().process_frame
+	ed._press(Vector2i(10, 0))
+	assert_eq(ed.carrying, "", "no shift, stamp drops after placing")
+	assert_eq(ed.current.crates.size(), 3, "three crates stamped")

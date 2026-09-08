@@ -94,8 +94,10 @@ func _try_place(cell: Vector2i) -> void:
 		return
 	if e["class"] == "crate":
 		if EditorGrid.in_zone(cell) and not ed.occupancy.has(cell):
-			_place(carrying, cell)
-			carrying = ""
+			var id := carrying
+			_place(id, cell)
+			# Shift = stamp mode: keep placing (Iggy's request)
+			carrying = id if Input.is_key_pressed(KEY_SHIFT) else ""
 		return
 	var cells: Vector2i = e["cells"]
 	for c in LevelEditor.footprint(cell, cells):
@@ -108,7 +110,8 @@ func _try_place(cell: Vector2i) -> void:
 	ed._spawned_props.append(body)
 	for c in LevelEditor.footprint(cell, cells):
 		ed.occupancy[c] = body
-	carrying = ""
+	if not Input.is_key_pressed(KEY_SHIFT):  # Shift = stamp mode
+		carrying = ""
 	ed.overlay.refresh()
 
 
