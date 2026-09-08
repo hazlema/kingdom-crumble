@@ -702,3 +702,32 @@ func test_image_import_assigns_unique_names() -> void:
 	assert_eq(str(ed.current.overlays[n - 1].get("name", "")), "gut_sign2")
 	assert_true(Effects.valid_name(str(ed.current.overlays[n - 1].get("name", ""))))
 	DirAccess.remove_absolute(abs_tmp)
+
+
+# ---------------------------------------------------------------------------
+# Triggers follow their crate (the three-smoking-crates bug: moving a
+# triggered crate orphaned its hit: key silently).
+# ---------------------------------------------------------------------------
+
+func test_moving_a_crate_moves_its_trigger_key() -> void:
+	var from := Vector2i(4, 0)
+	var to := Vector2i(6, 0)
+	ed.carrying = "crate-wood"
+	ed._press(from)
+	var old_key := LevelEditor.crate_trigger_key(from)
+	ed.current.triggers[old_key] = ["smoke:#112233"]
+	ed._press(from)
+	ed._release(to, false)
+	assert_false(ed.current.triggers.has(old_key), "old key gone")
+	assert_eq(ed.current.triggers[LevelEditor.crate_trigger_key(to)], ["smoke:#112233"], "trigger followed the crate")
+
+
+func test_deleting_a_crate_deletes_its_trigger_key() -> void:
+	var cell := Vector2i(5, 0)
+	ed.carrying = "crate-wood"
+	ed._press(cell)
+	var key := LevelEditor.crate_trigger_key(cell)
+	ed.current.triggers[key] = ["confetti"]
+	ed._press(cell)  # select it
+	ed._delete_selected()
+	assert_false(ed.current.triggers.has(key), "deleted crate takes its trigger along")

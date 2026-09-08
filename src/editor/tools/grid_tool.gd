@@ -128,6 +128,13 @@ func _move(from: Vector2i, to: Vector2i) -> void:
 			c["x"] = tw.x
 			c["y"] = tw.y
 			break
+	# Triggers follow their crate (a moved crate used to orphan its
+	# hit: key silently — the three-smoking-crates bug).
+	var old_key := LevelEditor.crate_trigger_key(from)
+	var new_key := LevelEditor.crate_trigger_key(to)
+	if ed.current.triggers.has(old_key):
+		ed.current.triggers[new_key] = ed.current.triggers[old_key]
+		ed.current.triggers.erase(old_key)
 	# staged; _rebuild()'s _sync_views re-resolves — do not "fix" into a double-sync
 	ed.selection = {"kind": "cell", "cell": to, "cells": Vector2i(1, 1), "node": null}
 	ed._rebuild()
@@ -150,6 +157,8 @@ func _delete_selected() -> void:
 		if is_equal_approx(c["x"], w.x) and is_equal_approx(c["y"], w.y):
 			ed.current.crates.remove_at(i)
 			break
+	# A deleted crate takes its trigger with it — no silent orphans.
+	ed.current.triggers.erase(LevelEditor.crate_trigger_key(cell))
 	_drag_from = Vector2i(-1, -1)
 	ed.deselect()
 	ed._rebuild()
