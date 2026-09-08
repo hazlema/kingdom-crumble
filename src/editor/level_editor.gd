@@ -639,8 +639,8 @@ func _rebuild() -> void:
 		var e := Pieces.entry(str(p["id"]))
 		if e.is_empty() or e["class"] == "crate":
 			# Unknown/disabled pack: keep the prop dict verbatim (REFERENCE,
-			# not a copy — _delete_prop matches by identity equality of the
-			# dict stored in current.props).
+			# not a copy — _delete_prop matches by (prop_id, anchor_cell),
+			# unambiguous because occupancy forbids two props in one cell).
 			# Snap coordinates to the cell centre so the placeholder aligns.
 			var snapped := EditorGrid.cell_to_world(anchor)
 			p["x"] = snapped.x

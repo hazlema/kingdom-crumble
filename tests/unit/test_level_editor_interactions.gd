@@ -995,3 +995,37 @@ func test_opening_file_dialog_resets_scenery_drag_state() -> void:
 	# Cleanup
 	panel._file_dialog.visible = false
 	ed._exit_scenery()
+
+
+func test_crate_on_ghost_prop_anchor_keeps_prop_in_document() -> void:
+	# Reviewer follow-up (audit finding 3): a crate occupying a missing-pack
+	# prop's anchor cell spawns no placeholder node, but the prop must
+	# survive the document and the save round-trip.
+	var w := EditorGrid.cell_to_world(Vector2i(6, 1))
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed.current.crates.append({"x": w.x, "y": w.y, "type": "crate-wood"})
+	ed._rebuild()
+	assert_eq(ed.current.props.size(), 1, "prop retained despite crate at its anchor")
+	var text := LevelJson.serialize(ed.current)
+	var reparsed := LevelJson.parse(text)
+	assert_eq(reparsed.props.size(), 1, "prop survives the round trip")
+	assert_eq(str(reparsed.props[0]["id"]), "missing:wall")
+
+
+func test_trigger_merge_overflow_caps_at_sixteen() -> void:
+	# Reviewer follow-up (audit finding 4): two off-grid crates snapping to
+	# one cell merge their action lists — the 16 cap must hold with a warning.
+	var w := EditorGrid.cell_to_world(Vector2i(7, 1))
+	var actions_a: Array = []
+	var actions_b: Array = []
+	for i in 10:
+		actions_a.append("display:msg-a-%d" % i)
+		actions_b.append("display:msg-b-%d" % i)
+	ed.current.crates.append({"x": w.x + 0.4, "y": w.y, "type": "crate-wood"})
+	ed.current.triggers["hit:%d,%d" % [int(w.x + 0.4), int(w.y)]] = actions_a
+	ed.current.crates.append({"x": w.x - 0.4, "y": w.y, "type": "crate-wood"})
+	ed.current.triggers["hit:%d,%d" % [int(w.x - 0.4), int(w.y)]] = actions_b
+	ed._rebuild()  # warns about the drop
+	var key := LevelEditor.crate_trigger_key(Vector2i(7, 1))
+	assert_true(ed.current.triggers.has(key), "merged onto the snapped key")
+	assert_eq((ed.current.triggers[key] as Array).size(), 16, "merge capped at 16")
