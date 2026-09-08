@@ -774,3 +774,15 @@ func test_dropping_carry_off_grid_or_on_palette_cancels() -> void:
 	ed._press(Vector2i(4, 0))
 	ed._release(Vector2i(4, 0), false)
 	assert_eq(ed.carrying, "crate-wood", "occupied in-grid spot keeps the carry")
+
+
+func test_ghost_visible_flag_not_fooled_by_negative_cells() -> void:
+	# Cells left of the grid have negative x — the old draw guard read
+	# them as the hidden sentinel, so the ghost stayed invisible until
+	# the mouse first crossed the grid (owner report).
+	ed._grid_tool.carrying = "crate-wood"
+	ed._grid_tool._update_ghost()
+	assert_true(ed.overlay.ghost_visible, "carrying shows the ghost wherever the mouse is")
+	ed._grid_tool.carrying = ""
+	ed._grid_tool._update_ghost()
+	assert_false(ed.overlay.ghost_visible, "no cargo, no ghost")

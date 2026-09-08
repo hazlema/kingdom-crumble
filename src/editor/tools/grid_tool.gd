@@ -261,7 +261,8 @@ func _update_ghost() -> void:
 		elif _drag_prop != null:
 			id = str(_drag_prop.get_meta("prop_id"))
 	if id == "":
-		if ed.overlay.ghost_cell != Vector2i(-1, -1):
+		if ed.overlay.ghost_visible:
+			ed.overlay.ghost_visible = false
 			ed.overlay.ghost_cell = Vector2i(-1, -1)
 			ed.overlay.refresh()
 		ed.overlay.ghost_cells = Vector2i(1, 1)
@@ -288,6 +289,7 @@ func _update_ghost() -> void:
 	ed.overlay.ghost_cell = cell
 	ed.overlay.ghost_tex = Pieces.texture_for(id)
 	ed.overlay.ghost_ok = ok
+	ed.overlay.ghost_visible = true
 	ed.overlay.refresh()
 
 

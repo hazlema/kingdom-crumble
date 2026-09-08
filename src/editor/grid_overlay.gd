@@ -4,6 +4,9 @@ extends Node2D
 # Faint build-zone grid + ghost/selection markers, all draw-only.
 
 var ghost_cell := Vector2i(-1, -1)
+var ghost_visible := false  # explicit — cells LEFT of the grid have negative
+							# x, which the old ghost_cell.x >= 0 guard read as
+							# the hidden sentinel (ghost invisible near the palette)
 var ghost_ok := false
 var ghost_tex: Texture2D
 var ghost_cells := Vector2i(1, 1)
@@ -24,7 +27,7 @@ func _draw() -> void:
 	for ry in range(EditorGrid.MAX_ROWS + 1):
 		var y := EditorGrid.FLOOR_Y - ry * EditorGrid.ROW_H
 		draw_line(Vector2(EditorGrid.MIN_X, y), Vector2(EditorGrid.MAX_X, y), col, 2)
-	if ghost_cell.x >= 0 and ghost_tex:
+	if ghost_visible and ghost_tex:
 		var p := EditorGrid.cell_to_world(ghost_cell)
 		var tint := Color(0.6, 1.0, 0.6, 0.6) if ghost_ok else Color(1.0, 0.4, 0.4, 0.6)
 		var size := Vector2(ghost_cells.x * 64.0, ghost_cells.y * 63.0)
