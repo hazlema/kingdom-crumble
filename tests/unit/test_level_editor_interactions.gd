@@ -801,3 +801,150 @@ func test_drag_preview_shows_over_ui_and_hides_off() -> void:
 	ed._grid_tool.carrying = ""
 	ed._update_drag_preview(Vector2(60, 300), true)
 	assert_false(ed._drag_preview.visible, "no cargo, no preview")
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — Finding 3: missing-pack props are retained as placeholders
+# (audit 2026-09-08, finding 3)
+# ---------------------------------------------------------------------------
+
+func test_missing_pack_prop_survives_rebuild_in_document() -> void:
+	# Audit reproduction: a document containing a prop whose pack is absent
+	# must NOT have that prop deleted from current.props during _rebuild.
+	# After _rebuild, current.props.size() must still be 1.
+	var w := EditorGrid.cell_to_world(Vector2i(3, 1))
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	assert_eq(ed.current.props.size(), 1, "missing-pack prop stays in document after _rebuild")
+
+
+func test_missing_pack_prop_placeholder_occupies_cell() -> void:
+	# The placeholder must block the cell so nothing is placed on top of it.
+	var w := EditorGrid.cell_to_world(Vector2i(3, 1))
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	assert_true(ed.occupancy.has(Vector2i(3, 1)), "placeholder occupies its cell in ed.occupancy")
+
+
+func test_missing_pack_prop_placeholder_is_selectable() -> void:
+	# The placeholder must be a selectable Node2D (not a Crate).
+	var cell := Vector2i(3, 1)
+	var w := EditorGrid.cell_to_world(cell)
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	var node: Variant = ed.occupancy.get(cell)
+	assert_not_null(node, "placeholder node present")
+	assert_false(node is Crate, "placeholder is not a Crate")
+	assert_true(node is Node2D, "placeholder is a Node2D")
+
+
+func test_missing_pack_prop_placeholder_deletable() -> void:
+	# DELETE on a selected placeholder removes the prop from the document.
+	var cell := Vector2i(3, 1)
+	var w := EditorGrid.cell_to_world(cell)
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	var node: Node2D = ed.occupancy[cell] as Node2D
+	ed.select_cell(cell, Vector2i(1, 1), node)
+	ed._delete_selected()
+	assert_eq(ed.current.props.size(), 0, "placeholder DELETE removes the prop from the document")
+	assert_false(ed.occupancy.has(cell), "cell freed after placeholder delete")
+
+
+func test_missing_pack_prop_save_round_trips() -> void:
+	# The prop must survive a serialize → parse round trip unchanged.
+	var w := EditorGrid.cell_to_world(Vector2i(3, 1))
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	# Serialize and re-parse.
+	var json_str := LevelJson.serialize(ed.current)
+	var parsed := LevelJson.parse(json_str)
+	assert_not_null(parsed, "serialized document is valid JSON")
+	assert_eq(parsed.props.size(), 1, "prop count preserved through serialize/parse")
+	assert_eq(str(parsed.props[0]["id"]), "missing:wall", "prop id round-trips verbatim")
+
+
+func test_rebuild_does_not_duplicate_props_on_repeated_rebuilds() -> void:
+	# Regression guard: repeated rebuilds must not accumulate extra prop entries.
+	var w := EditorGrid.cell_to_world(Vector2i(3, 1))
+	ed.current.props.append({"id": "missing:wall", "x": w.x, "y": w.y})
+	ed._rebuild()
+	ed._rebuild()
+	assert_eq(ed.current.props.size(), 1, "no duplicate props after two rebuilds")
+	assert_eq(ed._spawned_props.size(), 1, "no duplicate bodies after two rebuilds")
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — Finding 4: load-time crate snap migrates trigger keys
+# (audit 2026-09-08, finding 4)
+# ---------------------------------------------------------------------------
+
+func test_offgrid_crate_snap_migrates_trigger_key() -> void:
+	# Audit reproduction: a crate at (833,443) with hit:833,443 → after
+	# _rebuild the trigger is at hit:832,443 (the snapped cell) and the
+	# original key is gone.
+	ed.current.crates.append({"x": 833.0, "y": 443.0, "type": "crate-wood"})
+	ed.current.triggers["hit:833,443"] = ["confetti"]
+	ed._rebuild()
+	# The snapped cell for (833,443):
+	var snapped_cell := EditorGrid.world_to_cell(Vector2(833.0, 443.0))
+	var new_key := LevelEditor.crate_trigger_key(snapped_cell)
+	assert_true(ed.current.triggers.has(new_key), "trigger migrated to snapped key: %s" % new_key)
+	assert_false(ed.current.triggers.has("hit:833,443"), "original off-grid key removed")
+	assert_eq(ed.current.triggers[new_key], ["confetti"], "trigger actions preserved after snap migration")
+
+
+func test_trigger_snap_no_mutation_when_already_on_grid() -> void:
+	# A crate that is already on a grid cell must NOT lose its trigger key.
+	var cell := Vector2i(5, 1)
+	var w := EditorGrid.cell_to_world(cell)
+	ed.current.crates.append({"x": w.x, "y": w.y, "type": "crate-wood"})
+	var key := LevelEditor.crate_trigger_key(cell)
+	ed.current.triggers[key] = ["smoke:#ff0000"]
+	ed._rebuild()
+	assert_true(ed.current.triggers.has(key), "on-grid trigger key preserved")
+	assert_eq(ed.current.triggers[key], ["smoke:#ff0000"], "actions preserved")
+
+
+func test_trigger_snap_collision_merges_and_deduplicates() -> void:
+	# Two crates at different off-grid positions that both snap to the same
+	# cell: their trigger action lists are merged (deduped, capped at 16).
+	var snapped_cell := EditorGrid.world_to_cell(Vector2(833.0, 443.0))
+	var snapped_w := EditorGrid.cell_to_world(snapped_cell)
+	# Use the snapped position for the second crate so the first gets
+	# removed as a duplicate (seen_cells dedup) and the trigger gets merged.
+	# Place first crate off-grid (snaps to snapped_cell).
+	ed.current.crates.append({"x": 833.0, "y": 443.0, "type": "crate-wood"})
+	# Place second crate off-grid at a slightly different off-grid position
+	# that also snaps to the same cell — to ensure collision we use the same
+	# snapped world pos (already on grid) as "another" source.
+	# Actually per the snap dedup logic, the second crate AT THE SAME CELL
+	# is dropped. So we need to test via triggers: two off-grid keys that
+	# BOTH map to the same snapped key.
+	ed.current.triggers["hit:833,443"] = ["confetti", "smoke:#112233"]
+	# Add a second trigger at an adjacent off-grid coord that snaps to the same cell.
+	# We inject it directly — the snap loop must merge both into the new key.
+	var snapped_key := LevelEditor.crate_trigger_key(snapped_cell)
+	# Use a different off-grid trigger key that would also snap to the same cell.
+	# Since we are testing the TRIGGER migration (not crate placement),
+	# we can have one crate and two old trigger keys pointing to the same new key.
+	# But the snap loop only builds old→new from crate positions.
+	# Instead: place the first crate off-grid (snaps to snapped_cell) with actions A+B,
+	# and manually insert a SECOND old trigger key for the SAME new cell
+	# to test collision merge.
+	# Clear and redo with a direct collision scenario:
+	ed.current.crates.clear()
+	ed.current.triggers.clear()
+	ed.current.crates.append({"x": 833.0, "y": 443.0, "type": "crate-wood"})
+	# Inject a second old key that maps to the SAME snapped key
+	# (simulate a case where two different sources snap to the same destination).
+	ed.current.triggers["hit:833,443"] = ["confetti"]
+	# Add the snapped key itself as a pre-existing trigger (collision source).
+	ed.current.triggers[snapped_key] = ["smoke:#112233"]
+	ed._rebuild()
+	# After migration, snapped_key should have merged actions (confetti + smoke, deduped).
+	assert_true(ed.current.triggers.has(snapped_key), "merged key present")
+	var merged: Array = ed.current.triggers[snapped_key]
+	assert_true(merged.has("confetti"), "first source action present")
+	assert_true(merged.has("smoke:#112233"), "second source action present")
+	assert_false(ed.current.triggers.has("hit:833,443"), "old off-grid key removed")

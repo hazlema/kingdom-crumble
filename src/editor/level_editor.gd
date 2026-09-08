@@ -565,26 +565,83 @@ func _rebuild() -> void:
 			p.queue_free()
 	_spawned_props.clear()
 	occupancy.clear()
-	# Snap all coords to cell centres and drop duplicates.
+	# Snap all crate coords to cell centres and drop duplicates.
+	# Build old→new key map for trigger migration (finding 4).
 	var seen_cells: Array[Vector2i] = []
 	var snapped_crates: Array[Dictionary] = []
+	# old_to_new maps old trigger key -> new trigger key (only when they differ).
+	var old_to_new: Dictionary = {}
 	for c in current.crates:
-		var cell := EditorGrid.world_to_cell(Vector2(c["x"], c["y"]))
+		var old_pos := Vector2(c["x"], c["y"])
+		var cell := EditorGrid.world_to_cell(old_pos)
 		var snapped_pos := EditorGrid.cell_to_world(cell)
+		# Record key migration before dedup (every off-grid source needs remapping).
+		var old_key := "hit:%d,%d" % [int(old_pos.x), int(old_pos.y)]
+		var new_key := crate_trigger_key(cell)
+		if old_key != new_key:
+			old_to_new[old_key] = new_key
 		if seen_cells.has(cell):
 			continue
 		seen_cells.append(cell)
 		snapped_crates.append({"x": snapped_pos.x, "y": snapped_pos.y, "type": c["type"]})
 	current.crates = snapped_crates
+	# Apply trigger key migration: rewrite old keys → new keys, merging
+	# collisions (two old keys pointing to the same new key). Dedup and
+	# cap at 16 actions with a warning (finding 4).
+	if not old_to_new.is_empty():
+		for old_key: String in old_to_new:
+			if not current.triggers.has(old_key):
+				continue
+			var new_key: String = old_to_new[old_key]
+			var actions: Array = current.triggers[old_key]
+			if current.triggers.has(new_key):
+				# Collision: merge into the existing new_key list in source order, dedup.
+				var existing: Array = current.triggers[new_key]
+				for action: String in actions:
+					if not existing.has(action):
+						existing.append(action)
+				if existing.size() > 16:
+					push_warning(
+						"editor: trigger '%s' overflow — capped at 16 (dropped %d)" % [
+							new_key, existing.size() - 16
+						]
+					)
+					while existing.size() > 16:
+						existing.pop_back()
+				current.triggers[new_key] = existing
+			else:
+				current.triggers[new_key] = actions
+			current.triggers.erase(old_key)
 	_spawned = LevelBuilder.spawn_crates(self, current, true, Pieces.texture_for)
 	for crate in _spawned:
 		occupancy[EditorGrid.world_to_cell(crate.position)] = crate
-	var kept_props: Array[Dictionary] = []
+	# Rebuild props — unknown-pack props are retained in current.props verbatim
+	# (finding 3: loading must never mutate the document). Known props are
+	# snapped to grid and spawned normally; unknown ones get a dim placeholder
+	# node so the cell is occupied and the author can explicitly DELETE them.
+	var rebuilt_props: Array[Dictionary] = []
 	for p in current.props:
 		var anchor := EditorGrid.world_to_cell(Vector2(p["x"], p["y"]))
 		var e := Pieces.entry(str(p["id"]))
 		if e.is_empty() or e["class"] == "crate":
-			push_warning("editor: dropping unknown prop '%s'" % p.get("id"))
+			# Unknown/disabled pack: keep the prop dict verbatim (REFERENCE,
+			# not a copy — _delete_prop matches by identity equality of the
+			# dict stored in current.props).
+			# Snap coordinates to the cell centre so the placeholder aligns.
+			var snapped := EditorGrid.cell_to_world(anchor)
+			p["x"] = snapped.x
+			p["y"] = snapped.y
+			rebuilt_props.append(p)
+			# Spawn a placeholder only if the cell is free (can't block crates).
+			# Unknown footprint — treat as 1×1 (we have no registry entry to
+			# consult; a 1×1 is conservative: it blocks the anchor cell and
+			# lets adjacent cells remain usable).
+			if not occupancy.has(anchor) and EditorGrid.in_zone(anchor):
+				var placeholder := _spawn_placeholder(p, anchor)
+				_spawned_props.append(placeholder)
+				occupancy[anchor] = placeholder
+			else:
+				push_warning("editor: missing-pack prop '%s' at %s cannot occupy cell (blocked)" % [p.get("id"), anchor])
 			continue
 		var blocked := false
 		for c in LevelEditor.footprint(anchor, e["cells"]):
@@ -595,16 +652,16 @@ func _rebuild() -> void:
 			push_warning("editor: dropping overlapping prop '%s'" % p["id"])
 			continue
 		var snapped := EditorGrid.cell_to_world(anchor)
-		var kept := (p as Dictionary).duplicate()
-		kept["id"] = str(p["id"])
-		kept["x"] = snapped.x
-		kept["y"] = snapped.y
-		kept_props.append(kept)
-		var body := PropBuilder.spawn_one(self, kept)
+		# Snap in-place on the ORIGINAL dict (reference-stable through rebuild).
+		p["id"] = str(p["id"])
+		p["x"] = snapped.x
+		p["y"] = snapped.y
+		rebuilt_props.append(p)
+		var body := PropBuilder.spawn_one(self, p)
 		_spawned_props.append(body)
 		for c in LevelEditor.footprint(anchor, e["cells"]):
 			occupancy[c] = body
-	current.props = kept_props
+	current.props = rebuilt_props
 	# One spawn path for scenery: _rebuild_scenery owns z-order, pending
 	# edit-state, hidden-piece ghosting, and rehome (load used to spawn
 	# inline and skipped the ghost pass — hidden pieces were invisible
@@ -613,6 +670,33 @@ func _rebuild() -> void:
 	# Re-resolve selection against the fresh nodes/dicts. If the selected
 	# thing no longer exists, downgrade to none. _sync_views calls overlay.refresh().
 	_sync_views()
+
+
+# Spawn a dim 1×1 gray placeholder node for a prop whose pack is absent
+# or disabled (finding 3). The node rides the PROP delete path:
+#   - group "props" membership
+#   - "prop_id" meta = the prop's id string
+#   - "anchor_cell" meta = the snap cell
+# _delete_prop matches by (prop_id, anchor_cell) and removes by dict
+# identity from current.props — the placeholder carries the SAME dict
+# object that lives in current.props so the identity check works.
+# Footprint is 1×1 (unknown piece → conservative; comment in _rebuild).
+func _spawn_placeholder(prop: Dictionary, anchor: Vector2i) -> Node2D:
+	var body := StaticBody2D.new()
+	var w := EditorGrid.cell_to_world(anchor)
+	body.position = w  # 1×1 footprint center == anchor center
+	body.add_to_group("props")
+	body.set_meta("prop_id", str(prop.get("id", "")))
+	body.set_meta("anchor_cell", anchor)
+	# Visual: 64×63 gray semi-transparent box (matches cell dimensions).
+	var sprite := Sprite2D.new()
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.5, 0.5, 0.5, 1.0))
+	sprite.texture = ImageTexture.create_from_image(img)
+	sprite.modulate = Color(1.0, 1.0, 1.0, 0.5)  # dim: ~0.5 alpha
+	body.add_child(sprite)
+	add_child(body)
+	return body
 
 
 var _drag_preview: TextureRect = null
