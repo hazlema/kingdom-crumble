@@ -282,6 +282,7 @@ func _process(_delta: float) -> void:
 		_clamp_camera()
 	_last_mouse = mouse
 
+	_update_drag_preview(mouse, over_ui_at(mouse))
 	# Geometry, not gui_get_hovered_control(): during a drag that began
 	# on a palette Button the Control keeps mouse capture, so the hover
 	# API still reports UI at release and would veto the drop.
@@ -612,6 +613,34 @@ func _rebuild() -> void:
 	# Re-resolve selection against the fresh nodes/dicts. If the selected
 	# thing no longer exists, downgrade to none. _sync_views calls overlay.refresh().
 	_sync_views()
+
+
+var _drag_preview: TextureRect = null
+
+
+# The carried piece follows the cursor OVER UI too. The palette lives in
+# the Ui CanvasLayer, which composites above the whole world canvas — the
+# world-space ghost can never draw there, so a fresh palette pick looked
+# like nothing happened until the cursor left the panel (owner report).
+func _update_drag_preview(mouse: Vector2, over_ui: bool) -> void:
+	var id := _grid_tool.carrying
+	if id == "" or mode != Mode.CRATES or not over_ui:
+		if _drag_preview != null:
+			_drag_preview.visible = false
+		return
+	if _drag_preview == null:
+		_drag_preview = TextureRect.new()
+		_drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_drag_preview.modulate = Color(1, 1, 1, 0.7)
+		$Ui.add_child(_drag_preview)
+	var tex := Pieces.texture_for(id)
+	if tex == null:
+		_drag_preview.visible = false
+		return
+	_drag_preview.texture = tex
+	_drag_preview.size = tex.get_size()
+	_drag_preview.position = mouse - tex.get_size() / 2.0
+	_drag_preview.visible = true
 
 
 # Bare-letter shortcuts stay quiet while the user is typing or any dialog

@@ -786,3 +786,18 @@ func test_ghost_visible_flag_not_fooled_by_negative_cells() -> void:
 	ed._grid_tool.carrying = ""
 	ed._grid_tool._update_ghost()
 	assert_false(ed.overlay.ghost_visible, "no cargo, no ghost")
+
+
+func test_drag_preview_shows_over_ui_and_hides_off() -> void:
+	# The palette lives in a CanvasLayer above the world — the world ghost
+	# can never draw there, so a UI-layer preview carries the picked piece.
+	ed._grid_tool.carrying = "crate-wood"
+	ed._update_drag_preview(Vector2(60, 300), true)
+	assert_not_null(ed._drag_preview, "preview created on demand")
+	assert_true(ed._drag_preview.visible, "visible while carrying over UI")
+	assert_not_null(ed._drag_preview.texture)
+	ed._update_drag_preview(Vector2(900, 300), false)
+	assert_false(ed._drag_preview.visible, "hidden off-UI (world ghost takes over)")
+	ed._grid_tool.carrying = ""
+	ed._update_drag_preview(Vector2(60, 300), true)
+	assert_false(ed._drag_preview.visible, "no cargo, no preview")
