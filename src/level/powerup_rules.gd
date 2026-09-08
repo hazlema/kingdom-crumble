@@ -28,7 +28,10 @@ static func route_crate(crate: Node, skunk_unlocked: bool, roll: Callable) -> Di
 	if crate.has_meta("powerup"):
 		power = str(crate.get_meta("powerup"))
 	else:
-		power = str(Pieces.entry(crate.get_meta("json_coords", {}).get("type", "")).get("powerup", "")) if crate.has_meta("json_coords") else ""
+		# Non-builder crates (no spawn snapshot): route by type_id through
+		# the registry, same as the string API. (Final-review catch: the
+		# old fallback called .get() on json_coords — a Vector2i.)
+		power = str(Pieces.entry(str(crate.get("type_id"))).get("powerup", ""))
 	return _route_power(power, skunk_unlocked, roll)
 
 
