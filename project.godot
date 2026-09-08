@@ -11,12 +11,18 @@ config_version=5
 [application]
 
 config/name="Kingdom Crumble"
+config/version="0.10.1"
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[kingdom]
+
+testing_reset=true
+
 [autoload]
 
+VersionGate="*res://src/settings/version_gate.gd"
 Settings="*res://src/settings/settings.gd"
 GameInput="*res://src/settings/game_input.gd"
 Music="*res://src/audio/music_director.gd"

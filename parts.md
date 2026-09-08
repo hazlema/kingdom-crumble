@@ -170,7 +170,14 @@ the piece inspector in a reduced mode with exactly these dials.
 Crates live in the separate `crates` array (`{"x", "y", "type"}`) and
 are additionally the targets of linked triggers: the trigger key is
 `"hit:X,Y"` with the crate's exact ints — right-click a crate in the
-editor → **Info** → **Copy Key** to get it clipboard-ready.
+editor → **Info** → **Copy Key** to get it clipboard-ready. The full
+action vocabulary (editor dialog or hand-written): `show:<name>`,
+`hide:<name>`, `confetti`, `sound:<stem>`, `smoke` /
+`smoke:#RRGGBB` (the hit crate starts smoldering), and
+`display:<message>` / `display:<secs>:<message>` (HUD toast, ≤ 80
+chars, seconds from 3/10/20/30; other leading tokens are just message
+text). The editor keeps keys honest for you: moving a crate moves its
+trigger, deleting a crate deletes it.
 
 ---
 
@@ -328,3 +335,16 @@ Pause menu → **TOYBOX** (the section only appears when packs are
 installed). Changes apply on the next level load or editor open.
 Persistence: `user://toybox.cfg` — delete it to reset all pack
 settings to defaults.
+
+---
+
+## Versioning & testing builds
+
+Project Settings hold two dials (Project → Project Settings):
+
+- **Application → Config → Version** — the build's version string.
+- **Kingdom → Testing Reset** — the tester checkbox. While CHECKED, a
+  version change wipes `progress.cfg` and `unlocks.cfg` on first boot
+  so every test build starts fresh. UNCHECK it for real releases —
+  players keep their progress across updates. Fresh installs are never
+  wiped either way, and levels/settings are untouched.
