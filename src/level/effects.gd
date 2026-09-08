@@ -8,6 +8,8 @@ const SFX_DIR := "res://assets/sfx"
 
 # Overlay-name charset shared with LevelJson (single direction:
 # level_json calls Effects, never the reverse — no circular statics).
+const DISPLAY_CAP := 80  # display: payload cap — one toast line
+
 static var _name_rx := RegEx.create_from_string("^[a-z0-9_-]{1,16}$")
 
 
@@ -28,6 +30,11 @@ static func is_known(id: String) -> bool:
 	# here we only vouch for the shape.
 	if id.begins_with("show:") or id.begins_with("hide:"):
 		return valid_name(id.split(":", true, 1)[1])
+	# display:<message> — inert text on the HUD toast (tutorial beats).
+	# A string can't act (the intro precedent); only length is policed.
+	if id.begins_with("display:"):
+		var msg := id.trim_prefix("display:")
+		return msg.length() >= 1 and msg.length() <= DISPLAY_CAP
 	return false
 
 

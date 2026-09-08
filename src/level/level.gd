@@ -473,6 +473,9 @@ func _fire_action_list(ids: Array, at: Vector2) -> void:
 	var effect_ids: Array = []
 	for id in ids:
 		var s := str(id)
+		if s.begins_with("display:"):
+			hud.toast(s.trim_prefix("display:"))
+			continue
 		if s.begins_with("show:") or s.begins_with("hide:"):
 			_set_scenery_visible(s.split(":", true, 1)[1], s.begins_with("show:"))
 		else:

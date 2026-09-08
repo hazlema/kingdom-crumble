@@ -24,12 +24,12 @@ func before_each() -> void:
 # ---------------------------------------------------------------------------
 
 func test_catalog_covers_current_action_vocabulary() -> void:
-	# ids exactly ["confetti", "hide", "show", "sound"] sorted — catalog drift breaks authoring silently
+	# ids exactly ["confetti", "display", "hide", "show", "sound"] sorted — catalog drift breaks authoring silently
 	var ids: Array[String] = []
 	for entry in TriggerDialog.ACTIONS:
 		ids.append(entry["id"])
 	ids.sort()
-	assert_eq(ids, ["confetti", "hide", "show", "sound"])
+	assert_eq(ids, ["confetti", "display", "hide", "show", "sound"])
 
 
 # ---------------------------------------------------------------------------
@@ -224,3 +224,19 @@ func test_flash_overlay_restores_modulate_and_survives_bad_idx() -> void:
 	assert_almost_eq(piece.modulate.g, orig_mod.g, 0.01, "green restored")
 	assert_almost_eq(piece.modulate.b, orig_mod.b, 0.01, "blue restored")
 	assert_almost_eq(piece.modulate.a, orig_mod.a, 0.01, "alpha restored")
+
+
+func test_add_display_action_writes_message() -> void:
+	var layout := LevelLayout.new()
+	dlg.open("hit:2,0", layout)
+	dlg.set_action_by_id("display")
+	dlg.get_text_edit().text = "Nice shot! Multi-shot loads 3 stones."
+	dlg.add_action()
+	assert_eq(layout.triggers["hit:2,0"], ["display:Nice shot! Multi-shot loads 3 stones."])
+
+
+func test_display_action_validates_shape() -> void:
+	assert_true(Effects.is_known("display:Boom goes the tower"), "plain message is a valid action")
+	assert_true(Effects.is_known("display:with: colons: inside"), "colons in the payload are fine")
+	assert_false(Effects.is_known("display:"), "empty message rejected")
+	assert_false(Effects.is_known("display:" + "x".repeat(Effects.DISPLAY_CAP + 1)), "over-cap rejected")

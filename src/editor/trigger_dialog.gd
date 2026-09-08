@@ -23,6 +23,7 @@ const ACTIONS: Array[Dictionary] = [
 	{"id": "hide",     "label": "Hide",     "param": "overlay"},
 	{"id": "confetti", "label": "Confetti", "param": "none"},
 	{"id": "sound",    "label": "Sound",    "param": "stem"},
+	{"id": "display",  "label": "Display message", "param": "text"},
 ]
 
 const ACTION_CAP := 16
@@ -42,6 +43,7 @@ var _action_option: OptionButton     # the "new action" picker
 var _param_container: VBoxContainer  # rebuilt per selected action
 var _overlay_list: ItemList          # overlay param: ItemList of named overlays
 var _stem_option: OptionButton       # stem param: OptionButton
+var _text_edit: LineEdit             # text param: LineEdit (display message)
 var _footer_label: Label             # unnamed-overlay count when > 0
 var _warning_label: Label            # cap/validation warning
 var _add_button: Button
@@ -130,6 +132,14 @@ func _ready() -> void:
 	for stem in _get_stems():
 		_stem_option.add_item(stem)
 	_param_container.add_child(_stem_option)
+
+	# Text LineEdit — permanent child of param_container, shown/hidden per action
+	_text_edit = LineEdit.new()
+	_text_edit.name = "TextEdit"
+	_text_edit.visible = false
+	_text_edit.max_length = Effects.DISPLAY_CAP
+	_text_edit.placeholder_text = "Message shown on screen (max %d chars)" % Effects.DISPLAY_CAP
+	_param_container.add_child(_text_edit)
 
 	# --- Footer: unnamed overlay count ---
 	_footer_label = Label.new()
@@ -245,6 +255,10 @@ func get_overlay_list() -> ItemList:
 	return _overlay_list
 
 
+func get_text_edit() -> LineEdit:
+	return _text_edit
+
+
 func get_stem_option() -> OptionButton:
 	return _stem_option
 
@@ -335,11 +349,13 @@ func _rebuild_param_area() -> void:
 	if idx < 0 or idx >= ACTIONS.size():
 		_overlay_list.visible = false
 		_stem_option.visible = false
+		_text_edit.visible = false
 		return
 
 	var param_type: String = ACTIONS[idx]["param"]
 	_overlay_list.visible = (param_type == "overlay")
 	_stem_option.visible = (param_type == "stem")
+	_text_edit.visible = (param_type == "text")
 
 
 func _on_action_selected(_idx: int) -> void:
@@ -358,6 +374,12 @@ func _compose_action() -> String:
 	match param_type:
 		"none":
 			return action_id
+		"text":
+			var msg := _text_edit.text.strip_edges()
+			if msg == "":
+				_show_warning("Type a message to display.")
+				return ""
+			return "%s:%s" % [action_id, msg]
 		"overlay":
 			var sel := _overlay_list.get_selected_items()
 			if sel.is_empty():

@@ -188,6 +188,7 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
   it. Right-click a **crate** for Info/Copy-Key.
 - Right-click a **crate** → **Add Trigger…** opens the trigger dialog:
   pick named scenery overlays as `show:`/`hide:` targets, `confetti`,
+  `display:` (a short on-screen message, ≤ 80 chars — tutorial beats),
   or a `sound:` stem. Each action is parameterized per type; up to 16
   actions per crate. This is why overlays want names — anonymous
   overlays don't appear in the picker.
