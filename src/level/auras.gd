@@ -107,6 +107,8 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 	var p := CPUParticles2D.new()
 	p.texture = _puff()
 	p.emitting = true
+	# Global-space simulation: trails linger when the piece tumbles.
+	# (CPUParticles2D has no visibility_rect — that dial is GPU-only.)
 	p.local_coords = false
 	# Spread emission across the piece top, not a point jet
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
