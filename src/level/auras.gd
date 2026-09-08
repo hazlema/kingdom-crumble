@@ -16,7 +16,7 @@ const KNOWN: Dictionary = {
 		"initial_velocity_min": 15.0,
 		"initial_velocity_max": 35.0,
 		"scale_amount": 2.0,
-		"lifetime": 1.8,
+		"lifetime": 5,
 		"amount": 8,
 	},
 	"mist": {
@@ -31,14 +31,15 @@ const KNOWN: Dictionary = {
 		"amount": 10,
 	},
 	"smog": {
-		"color": Color(0.3, 0.85, 0.2, 0.6),
+		"color": Color(0.3, 0.85, 0.2, 0.45),
 		"color_ramp_end": Color(0.3, 0.85, 0.2, 0.0),
-		"spread": 35.0,
-		"gravity": Vector2(0.0, -12.0),
-		"initial_velocity_min": 6.0,
-		"initial_velocity_max": 20.0,
-		"scale_amount": 4.0,
-		"lifetime": 2.5,
+		"spread": 20.0,
+		"gravity": Vector2(0.0, -6.0),
+		"initial_velocity_min": 22.0,
+		"initial_velocity_max": 40.0,
+		"damping": 8.0,
+		"scale_amount": 5.0,
+		"lifetime": 4.5,
 		"amount": 12,
 	},
 	"sparkle": {
@@ -113,6 +114,18 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 	# Spread emission across the piece top, not a point jet
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	p.emission_rect_extents = Vector2(20, 6)
+	# Plume anatomy: puffs launch UPWARD (the engine default direction is
+	# (1,0) — unset, the smoke oozed sideways and pooled into one fuzzy
+	# dot), decelerate via damping so they HANG, and grow as they rise.
+	p.direction = Vector2(0, -1)
+	p.damping_min = float(cfg.get("damping", 6.0))
+	p.damping_max = p.damping_min * 1.5
+	p.lifetime_randomness = 0.4
+	var growth := Curve.new()
+	growth.add_point(Vector2(0.0, 0.35))
+	growth.add_point(Vector2(0.6, 1.0))
+	growth.add_point(Vector2(1.0, 1.2))
+	p.scale_amount_curve = growth
 	p.amount = int(cfg.get("amount", 8))
 	p.lifetime = float(cfg.get("lifetime", 2.0))
 	p.spread = float(cfg.get("spread", 30.0))
