@@ -24,12 +24,12 @@ func before_each() -> void:
 # ---------------------------------------------------------------------------
 
 func test_catalog_covers_current_action_vocabulary() -> void:
-	# ids exactly ["confetti", "display", "hide", "show", "sound"] sorted — catalog drift breaks authoring silently
+	# ids exactly ["confetti", "display", "hide", "show", "smoke", "sound"] sorted — catalog drift breaks authoring silently
 	var ids: Array[String] = []
 	for entry in TriggerDialog.ACTIONS:
 		ids.append(entry["id"])
 	ids.sort()
-	assert_eq(ids, ["confetti", "display", "hide", "show", "sound"])
+	assert_eq(ids, ["confetti", "display", "hide", "show", "smoke", "sound"])
 
 
 # ---------------------------------------------------------------------------
@@ -250,3 +250,13 @@ func test_display_duration_parsing() -> void:
 	assert_eq(Effects.display_secs("display:7:not curated"), 3.0, "7 is not a curated duration")
 	assert_eq(Effects.display_message("display:7:not curated"), "7:not curated", "uncurated prefix stays message text")
 	assert_true(Effects.is_known("display:30:take your time"))
+
+
+func test_add_smoke_action_composes_hex() -> void:
+	var layout := LevelLayout.new()
+	dlg.open("hit:3,0", layout)
+	dlg.set_action_by_id("smoke")
+	dlg.get_color_pick().color = Color(1.0, 0.0, 0.0)
+	dlg.add_action()
+	assert_eq(layout.triggers["hit:3,0"], ["smoke:#ff0000"])
+	assert_true(Effects.is_known(layout.triggers["hit:3,0"][0] as String), "dialog composes a valid action")

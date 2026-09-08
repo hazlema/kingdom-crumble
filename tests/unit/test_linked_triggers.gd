@@ -205,3 +205,26 @@ func test_round_trip_preserves_linked_trigger_keys() -> void:
 	assert_eq(back.overlays[0].get("name", ""), "warning")
 	assert_eq(back.overlays[1].get("hidden", false), true)
 	assert_true(back.triggers.has("hit:5,1"), "trigger entry survives")
+
+
+func test_smoke_trigger_ignites_the_hit_crate() -> void:
+	var l := _layout_with_named_scenery()
+	l.crates.append({"x": 5, "y": 1, "type": "crate-wood"})
+	l.triggers = {"hit:5,1": ["smoke:#ff4400"]}
+	l.shots = 3
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var crate: Crate = lvl.get_tree().get_nodes_in_group("crates")[0]
+	var before := crate.get_children().filter(func(c): return c is CPUParticles2D).size()
+	lvl._on_crate_knocked(crate)
+	var after := crate.get_children().filter(func(c): return c is CPUParticles2D).size()
+	assert_eq(after, before + 1, "the hit crate starts smoldering")
+
+
+func test_smoke_action_shapes() -> void:
+	assert_true(Effects.is_known("smoke"), "bare smoke = smog default color")
+	assert_true(Effects.is_known("smoke:#ff4400"), "hex-tinted smoke")
+	assert_false(Effects.is_known("smoke:red"), "non-hex tint rejected")
+	assert_false(Effects.is_known("smoke:#-12345"), "hostile hex rejected")

@@ -188,6 +188,7 @@ editor → **Info** → **Copy Key** to get it clipboard-ready.
   it. Right-click a **crate** for Info/Copy-Key.
 - Right-click a **crate** → **Add Trigger…** opens the trigger dialog:
   pick named scenery overlays as `show:`/`hide:` targets, `confetti`,
+  `smoke` (the hit crate starts smoldering — color picker tints it),
   `display:` (a short on-screen message, ≤ 80 chars, with a duration
   dropdown: 3/10/20/30 s — tutorial beats; saved as
   `display:<secs>:<message>`, bare `display:<message>` = 3 s),

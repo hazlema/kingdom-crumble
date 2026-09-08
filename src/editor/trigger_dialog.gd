@@ -24,6 +24,7 @@ const ACTIONS: Array[Dictionary] = [
 	{"id": "confetti", "label": "Confetti", "param": "none"},
 	{"id": "sound",    "label": "Sound",    "param": "stem"},
 	{"id": "display",  "label": "Display message", "param": "text"},
+	{"id": "smoke",    "label": "Start smoking",   "param": "color"},
 ]
 
 const ACTION_CAP := 16
@@ -45,6 +46,7 @@ var _overlay_list: ItemList          # overlay param: ItemList of named overlays
 var _stem_option: OptionButton       # stem param: OptionButton
 var _text_edit: LineEdit             # text param: LineEdit (display message)
 var _secs_option: OptionButton       # text param: curated display durations
+var _color_pick: ColorPickerButton   # color param: smoke tint
 var _footer_label: Label             # unnamed-overlay count when > 0
 var _warning_label: Label            # cap/validation warning
 var _add_button: Button
@@ -150,6 +152,15 @@ func _ready() -> void:
 		_secs_option.add_item("%d seconds" % secs)
 	_secs_option.selected = 0
 	_param_container.add_child(_secs_option)
+
+	# Color picker — smoke tint (starts at smog's default green)
+	_color_pick = ColorPickerButton.new()
+	_color_pick.name = "ColorPick"
+	_color_pick.visible = false
+	_color_pick.edit_alpha = false
+	_color_pick.color = Color(0.3, 0.85, 0.2)
+	_color_pick.custom_minimum_size = Vector2(0, 34)
+	_param_container.add_child(_color_pick)
 
 	# --- Footer: unnamed overlay count ---
 	_footer_label = Label.new()
@@ -273,6 +284,10 @@ func get_secs_option() -> OptionButton:
 	return _secs_option
 
 
+func get_color_pick() -> ColorPickerButton:
+	return _color_pick
+
+
 func get_stem_option() -> OptionButton:
 	return _stem_option
 
@@ -371,6 +386,7 @@ func _rebuild_param_area() -> void:
 	_stem_option.visible = (param_type == "stem")
 	_text_edit.visible = (param_type == "text")
 	_secs_option.visible = (param_type == "text")
+	_color_pick.visible = (param_type == "color")
 
 
 func _on_action_selected(_idx: int) -> void:
@@ -389,6 +405,8 @@ func _compose_action() -> String:
 	match param_type:
 		"none":
 			return action_id
+		"color":
+			return "%s:#%s" % [action_id, _color_pick.color.to_html(false)]
 		"text":
 			var msg := _text_edit.text.strip_edges()
 			if msg == "":

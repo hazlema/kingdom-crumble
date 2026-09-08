@@ -465,16 +465,21 @@ func _fire_crate_triggers(crate: Crate) -> void:
 	var key := "hit:%d,%d" % [jc.x, jc.y]
 	if not layout.triggers.has(key):
 		return
-	_fire_action_list(layout.triggers[key], crate.global_position)
+	_fire_action_list(layout.triggers[key], crate.global_position, crate)
 
 
 # Unified action router used by both crate-hit triggers and on_all_cleared.
 # show:/hide: prefixed ids go directly to _set_scenery_visible; everything
 # else is collected and forwarded to Effects.fire_all in one call.
-func _fire_action_list(ids: Array, at: Vector2) -> void:
+# source = the hit crate (null for on_all_cleared) — smoke ignites on it.
+func _fire_action_list(ids: Array, at: Vector2, source: Node2D = null) -> void:
 	var effect_ids: Array = []
 	for id in ids:
 		var s := str(id)
+		if s == "smoke" or s.begins_with("smoke:"):
+			if is_instance_valid(source):
+				Auras.attach(source, "smog", s.trim_prefix("smoke").trim_prefix(":"))
+			continue
 		if s.begins_with("display:"):
 			hud.toast(Effects.display_message(s), Effects.display_secs(s))
 			continue

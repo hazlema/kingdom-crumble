@@ -52,6 +52,12 @@ static func is_known(id: String) -> bool:
 	# display:<message> or display:<secs>:<message> — inert text on the
 	# HUD toast (tutorial beats). Durations are CURATED (3/10/20/30);
 	# any other leading token is just message text. Length policed only.
+	# smoke / smoke:#RRGGBB — the hit crate starts smoldering (ignites a
+	# smog aura on the SOURCE crate; color optional, strict hex).
+	if id == "smoke":
+		return true
+	if id.begins_with("smoke:"):
+		return Auras.is_valid_color(id.trim_prefix("smoke:"))
 	if id.begins_with("display:"):
 		var msg := display_message(id)
 		return msg.length() >= 1 and msg.length() <= DISPLAY_CAP
