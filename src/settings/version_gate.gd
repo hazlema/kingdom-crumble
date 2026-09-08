@@ -6,8 +6,10 @@ extends Node
 # version — players never lose progress to an update.
 #
 # The dials live in Project Settings:
-#   Application > Config > Version   (the version string — bump per build)
-#   Kingdom     > Testing Reset      (the checkbox: ON for testing builds)
+#   Application > Config > Version        (the version string — bump per build)
+#   Application > Config > Testing Reset  (the checkbox: ON for testing builds;
+#   custom top-level categories don't render in the settings panel — riding
+#   the built-in Config category keeps both dials side by side)
 
 const STAMP_PATH := "user://version.cfg"
 const WIPE_FILES: Array[String] = ["user://progress.cfg", "user://unlocks.cfg"]
@@ -15,7 +17,7 @@ const WIPE_FILES: Array[String] = ["user://progress.cfg", "user://unlocks.cfg"]
 
 func _init() -> void:
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
-	var testing := bool(ProjectSettings.get_setting("kingdom/testing_reset", false))
+	var testing := bool(ProjectSettings.get_setting("application/config/testing_reset", false))
 	apply(version, testing, WIPE_FILES, STAMP_PATH)
 
 

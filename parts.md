@@ -343,7 +343,7 @@ settings to defaults.
 Project Settings hold two dials (Project → Project Settings):
 
 - **Application → Config → Version** — the build's version string.
-- **Kingdom → Testing Reset** — the tester checkbox. While CHECKED, a
+- **Application → Config → Testing Reset** — the tester checkbox. While CHECKED, a
   version change wipes `progress.cfg` and `unlocks.cfg` on first boot
   so every test build starts fresh. UNCHECK it for real releases —
   players keep their progress across updates. Fresh installs are never
