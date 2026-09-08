@@ -31,16 +31,16 @@ const KNOWN: Dictionary = {
 		"amount": 10,
 	},
 	"smog": {
-		"color": Color(0.3, 0.85, 0.2, 0.45),
-		"color_ramp_end": Color(0.3, 0.85, 0.2, 0.0),
+		"color": Color(0.18, 0.2, 0.15, 0.6),
+		"color_ramp_end": Color(0.18, 0.2, 0.15, 0.0),
 		"spread": 20.0,
 		"gravity": Vector2(0.0, -6.0),
-		"initial_velocity_min": 22.0,
-		"initial_velocity_max": 40.0,
+		"initial_velocity_min": 26.0,
+		"initial_velocity_max": 46.0,
 		"damping": 8.0,
 		"scale_amount": 5.0,
 		"lifetime": 4.5,
-		"amount": 12,
+		"amount": 16,
 	},
 	"sparkle": {
 		"color": Color(1.0, 0.95, 0.4, 0.6),
@@ -138,7 +138,7 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 	p.scale_amount_max = scale_val * 1.5
 	# Color: start color directly, ramp end via gradient
 	var start_color: Color = cfg.get("color", Color.WHITE) as Color
-	start_color.a = minf(start_color.a, 0.6)  # cosmetic cap — auras never obscure play
+	start_color.a = minf(start_color.a, 0.75)  # cosmetic cap — auras never obscure play
 	var end_color: Color = cfg.get("color_ramp_end", Color(start_color.r, start_color.g, start_color.b, 0.0)) as Color
 	if color_override != "":
 		if is_valid_color(color_override):

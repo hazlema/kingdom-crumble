@@ -135,7 +135,7 @@ configuration inside `Auras` (`src/level/auras.gd`). The four curated ids:
 
 - **`embers`** — slow upward orange sparks, campfire feel
 - **`mist`** — soft blue-white wisps, cool and quiet
-- **`smog`** — toxic haze, subtle menace (default green)
+- **`smog`** — sooty haze, subtle menace (default dark olive-charcoal — green smoke vanishes against the meadow; recolor via `aura_color`)
 - **`sparkle`** — bright yellow glitter, celebratory
 
 Auras are applied at spawn (both crates and props). Unknown or non-String
