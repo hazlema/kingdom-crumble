@@ -490,11 +490,16 @@ func _on_upload() -> void:
 	_upload_cb = JavaScriptBridge.create_callback(_on_upload_text)
 	var window := JavaScriptBridge.get_interface("window")
 	window.kcLevelUploadCallback = _upload_cb
+	# Audit finding 8d: check file.size BEFORE readAsText to avoid whole-file allocation
+	# of hostile uploads. Oversize → call the callback with a sentinel so the GDScript
+	# side can surface the existing LoadError dialog with a named reason.
+	var max_bytes := LevelJson.MAX_FILE_BYTES
 	JavaScriptBridge.eval(
 		(
 			"(function(){var inp=document.createElement('input');"
 			+ "inp.type='file';inp.accept='.json';"
 			+ "inp.onchange=function(e){var f=e.target.files[0];if(!f)return;"
+			+ "if(f.size>%d){window.kcLevelUploadCallback(f.name,'__OVERSIZE__');return;}" % max_bytes
 			+ "var r=new FileReader();"
 			+ "r.onload=function(){window.kcLevelUploadCallback(f.name,r.result);};"
 			+ "r.readAsText(f);};inp.click();})();"
@@ -505,6 +510,11 @@ func _on_upload() -> void:
 
 func _on_upload_text(args: Array) -> void:
 	if args.size() < 2:
+		return
+	# Audit finding 8d: sentinel from the JS bridge when file.size exceeded the cap.
+	if str(args[1]) == "__OVERSIZE__":
+		LevelJson.last_error = "file too large (max %d MB)" % (LevelJson.MAX_FILE_BYTES / 1_000_000)
+		menu.show_load_error(LevelJson.last_error)
 		return
 	var loaded := LevelJson.parse(str(args[1]))
 	if loaded == null:

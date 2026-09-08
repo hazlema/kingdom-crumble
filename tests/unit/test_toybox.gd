@@ -493,3 +493,120 @@ func test_overlong_basename_skipped() -> void:
 	_make_pack("longpack", {"title": "Long Pack", "kind": "objects"}, {"%s.png" % long_name: img})
 	Pieces.scan()
 	assert_true(Pieces.entry("longpack:%s" % long_name).is_empty(), "overlong namespaced id skipped")
+
+
+# ---------------------------------------------------------------------------
+# Audit 2026-09-08 — Finding 8: pre-read size caps
+# ---------------------------------------------------------------------------
+
+## 8(b): pack.json oversized → rejected BEFORE reading full content, no engine error.
+## The size check must use FileAccess.get_size (or open+get_length) BEFORE get_file_as_bytes.
+func test_oversized_manifest_rejected_before_read() -> void:
+	# Write a pack with a pack.json that is 65537 bytes (cap is 65536)
+	var pack_dir := "%s/bigmanifest" % TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	_created_folders.append("bigmanifest")
+	# Write oversized manifest (65537 bytes of non-JSON junk — would error the parser if read)
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	var chunk := "X".repeat(1000).to_utf8_buffer()
+	var total := 65537
+	var written := 0
+	while written < total:
+		var to_write := mini(1000, total - written)
+		mf.store_buffer(chunk.slice(0, to_write))
+		written += to_write
+	mf.close()
+	var _msz := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.READ)
+	var manifest_actual_size: int = _msz.get_length() if _msz != null else 0
+	_msz = null
+	assert_eq(manifest_actual_size, 65537, "manifest is 65537 bytes")
+	# Scan must not produce engine errors (GUT counts engine errors as failures).
+	# Pack must be absent from packs() because its manifest was too large.
+	Pieces.scan()
+	var found := false
+	for p in Pieces.packs():
+		if p["folder"] == "bigmanifest":
+			found = true
+	assert_false(found, "oversized manifest pack absent from packs()")
+
+
+## 8(b): sidecar oversized → piece rejected, no engine error.
+## Pre-existing behavior since tasks 1-3; pin it explicitly for Finding 8.
+func test_oversized_sidecar_pre_read_check() -> void:
+	# Create a valid pack + valid PNG + oversized sidecar (65537 bytes)
+	var pack_dir := "%s/bigside2" % TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	_created_folders.append("bigside2")
+	# Write valid manifest
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	mf.store_string(JSON.stringify({"title": "BigSide2", "kind": "objects"}))
+	mf.close()
+	# Write valid PNG
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color.CYAN)
+	img.save_png("%s/valid-piece.png" % pack_dir)
+	# Write oversized sidecar
+	var sf := FileAccess.open("%s/valid-piece.json" % pack_dir, FileAccess.WRITE)
+	var chunk := "X".repeat(1000).to_utf8_buffer()
+	var total := 65537
+	var written := 0
+	while written < total:
+		var to_write := mini(1000, total - written)
+		sf.store_buffer(chunk.slice(0, to_write))
+		written += to_write
+	sf.close()
+	# Scan must not produce engine errors
+	Pieces.scan()
+	assert_true(Pieces.entry("bigside2:valid-piece").is_empty(), "oversized sidecar piece absent")
+
+
+## 8(c): encoded PNG files exceeding 2_000_000 bytes must be rejected with a warning,
+## no engine error. The encoded-file-size cap fires BEFORE any decode.
+func test_oversized_png_file_rejected_before_decode() -> void:
+	# We cannot easily create a real PNG of exactly 2_000_001 bytes that passes magic,
+	# but we CAN craft a file with valid PNG magic + hostile IHDR that also exceeds the cap.
+	# However, since the dimension gate fires first for valid-magic files, let's use
+	# junk bytes at offset 16 (IHDR) that are too large, and also make it > 2MB.
+	# Actually simpler: use valid magic + an IHDR claiming 2000x2000 and large body,
+	# which ALSO triggers the encoded-size cap.
+	# Strategy: write 2_000_001 bytes with valid PNG magic prefix — encoded cap fires first.
+	var pack_dir := "%s/bigpng_pack" % TOYBOX_DIR
+	DirAccess.make_dir_recursive_absolute(pack_dir)
+	_created_folders.append("bigpng_pack")
+	var mf := FileAccess.open("%s/pack.json" % pack_dir, FileAccess.WRITE)
+	mf.store_string(JSON.stringify({"title": "BigPNG", "kind": "objects"}))
+	mf.close()
+	# Write a file with valid PNG magic + enough padding to exceed 2MB
+	var bf := FileAccess.open("%s/big-piece.png" % pack_dir, FileAccess.WRITE)
+	# PNG magic
+	bf.store_buffer(PackedByteArray([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
+	# IHDR: 64x64 (valid dims) so dimension gate does NOT fire first
+	# chunk length (13)
+	bf.store_buffer(PackedByteArray([0x00, 0x00, 0x00, 0x0D]))
+	# "IHDR"
+	bf.store_buffer(PackedByteArray([0x49, 0x48, 0x44, 0x52]))
+	# width = 64 (0x00000040)
+	bf.store_buffer(PackedByteArray([0x00, 0x00, 0x00, 0x40]))
+	# height = 64 (0x00000040)
+	bf.store_buffer(PackedByteArray([0x00, 0x00, 0x00, 0x40]))
+	# bit depth, color type, compression, filter, interlace
+	bf.store_buffer(PackedByteArray([0x08, 0x02, 0x00, 0x00, 0x00]))
+	# fake CRC
+	bf.store_buffer(PackedByteArray([0x00, 0x00, 0x00, 0x00]))
+	# Now pad to 2_000_001 bytes total (already have 33 bytes)
+	var already := 33
+	var target := 2_000_001
+	var pad := "P".repeat(1000).to_utf8_buffer()
+	while already < target:
+		var n := mini(1000, target - already)
+		bf.store_buffer(pad.slice(0, n))
+		already += n
+	bf.close()
+	var _pngsz := FileAccess.open("%s/big-piece.png" % pack_dir, FileAccess.READ)
+	var png_actual_size: int = _pngsz.get_length() if _pngsz != null else 0
+	_pngsz = null
+	assert_gte(png_actual_size, 2_000_001, "file is > 2MB")
+	# Scan must warn and skip — no engine errors (GUT counts them as failures)
+	Pieces.scan()
+	assert_true(Pieces.entry("bigpng_pack:big-piece").is_empty(),
+		"oversized PNG file rejected by encoded-size cap before decode")

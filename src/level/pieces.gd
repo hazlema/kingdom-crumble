@@ -105,7 +105,18 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 		if not FileAccess.file_exists(manifest_path):
 			push_warning("Pieces toybox: '%s' has no pack.json — skipping" % folder)
 			continue
-		# Parse manifest: check size first
+		# Pre-read size gate: check length BEFORE allocating manifest content (audit finding 8b).
+		var _mf_check := FileAccess.open(manifest_path, FileAccess.READ)
+		if _mf_check == null:
+			push_warning("Pieces toybox: '%s' pack.json unreadable — skipping" % folder)
+			continue
+		var manifest_file_size := _mf_check.get_length()
+		_mf_check = null  # close
+		if manifest_file_size > 65536:
+			push_warning(
+				"Pieces toybox: '%s' pack.json exceeds 64 KB size cap (%d bytes) — skipping" % [folder, manifest_file_size]
+			)
+			continue
 		var manifest_bytes := FileAccess.get_file_as_bytes(manifest_path)
 		if manifest_bytes.size() > 65536:
 			push_warning("Pieces toybox: '%s' pack.json too large — skipping" % folder)
@@ -201,6 +212,13 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		var raw := {}
 		var sidecar_path := "%s/%s.json" % [pack_path, basename]
 		if FileAccess.file_exists(sidecar_path):
+			# Pre-read size gate BEFORE allocating sidecar content (audit finding 8b).
+			var _sc_check := FileAccess.open(sidecar_path, FileAccess.READ)
+			var sidecar_file_size := _sc_check.get_length() if _sc_check != null else 0
+			_sc_check = null  # close
+			if sidecar_file_size > 65536:
+				push_warning("Pieces toybox: %s sidecar exceeds 64 KB size cap — skipping" % namespaced_id)
+				continue
 			var sidecar_bytes := FileAccess.get_file_as_bytes(sidecar_path)
 			if sidecar_bytes.is_empty():
 				push_warning("Pieces toybox: %s sidecar unreadable — skipping" % namespaced_id)
@@ -258,9 +276,27 @@ static func _load_theme_textures(theme_path: String) -> void:
 		_theme_textures[base_id] = tex
 
 
+## Maximum encoded PNG file size (bytes) checked BEFORE reading user:// PNGs.
+## Arithmetic: 1024×1024×4 bytes decoded ≈ 4 MB; encoded PNG is smaller, but we allow
+## a generous 2 MB for the encoded form while still bounding hostile allocation (audit finding 8c).
+const MAX_PNG_FILE_BYTES := 2_000_000
+
+
 ## Load a PNG from a user:// path safely.
 ## Returns null (with warning) on any failure. Never passes junk to load_png_from_buffer.
 static func _load_user_texture(path: String) -> Texture2D:
+	# Encoded-file-size gate BEFORE any read (audit finding 8c): a hostile 2MB+ PNG
+	# file must be rejected without allocating its content.
+	var _sz_check := FileAccess.open(path, FileAccess.READ)
+	var file_size: int = _sz_check.get_length() if _sz_check != null else 0
+	_sz_check = null  # close
+	if file_size > MAX_PNG_FILE_BYTES:
+		push_warning(
+			"Pieces toybox: '%s' encoded size %d exceeds %d byte cap — skipping" % [
+				path, file_size, MAX_PNG_FILE_BYTES
+			]
+		)
+		return null
 	var bytes := FileAccess.get_file_as_bytes(path)
 	if bytes.size() < 8:
 		push_warning("Pieces toybox: '%s' too small to be a PNG — skipping" % path)

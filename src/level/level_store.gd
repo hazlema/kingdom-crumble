@@ -87,5 +87,17 @@ static func sanitize_stem(s: String) -> String:
 static func _read(path: String) -> String:
 	if not FileAccess.file_exists(path):
 		return ""
+	# Pre-read size gate: open, check length, then read (audit finding 8a).
+	# We open once and reuse the handle to avoid a double open.
 	var f := FileAccess.open(path, FileAccess.READ)
-	return "" if f == null else f.get_as_text()
+	if f == null:
+		return ""
+	var file_size := f.get_length()
+	if file_size > LevelJson.MAX_FILE_BYTES:
+		push_warning(
+			"LevelStore: '%s' exceeds size cap (%d > %d bytes) — rejecting without reading" % [
+				path, file_size, LevelJson.MAX_FILE_BYTES
+			]
+		)
+		return ""
+	return f.get_as_text()

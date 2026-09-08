@@ -32,6 +32,10 @@ static func spawn_crates(
 			push_warning("Unknown crate type: %s" % c["type"])
 		crate.apply_type(c["type"], _tex)
 		var piece_entry := Pieces.entry(c["type"])
+		# Snapshot gameplay metadata at spawn time so mid-level registry changes
+		# (e.g. disabling a pack via the pause menu) cannot alter an already-spawned
+		# crate's reward. PowerupRules.route_crate consults this meta first (audit finding 7).
+		crate.set_meta("powerup", piece_entry.get("powerup", ""))
 		Auras.attach(crate, piece_entry.get("aura", ""), piece_entry.get("aura_color", ""))
 		out.append(crate)
 	return out
