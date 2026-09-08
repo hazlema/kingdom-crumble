@@ -160,6 +160,15 @@ func _ready() -> void:
 	_color_pick.edit_alpha = false
 	_color_pick.color = Color(0.3, 0.85, 0.2)
 	_color_pick.custom_minimum_size = Vector2(0, 34)
+	# Slim picker: the full panel (modes, presets, swatches, sampler)
+	# overflows the screen from a dialog (owner report) — wheel + hex only.
+	var picker := _color_pick.get_picker()
+	picker.sampler_visible = false
+	picker.color_modes_visible = false
+	picker.sliders_visible = false
+	picker.presets_visible = false
+	picker.can_add_swatches = false
+	picker.hex_visible = true
 	_param_container.add_child(_color_pick)
 
 	# --- Footer: unnamed overlay count ---
