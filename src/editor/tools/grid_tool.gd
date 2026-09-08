@@ -7,6 +7,8 @@ extends EditorTool
 # nothing except what is listed below.
 
 var carrying := ""  # asset id while placing, "" = none
+var _saw_press := false  # canvas press seen this gesture — a palette pick's
+						 # release never saw one, so it must not cancel the carry
 var _drag_from := Vector2i(-1, -1)  # cell a drag-move started on
 var _drag_prop: Node2D = null  # prop being drag-moved, null = none/crate
 var _lmb_down := false
@@ -15,6 +17,7 @@ var _lmb_down := false
 # Called by SceneryTool.enter() and .exit() to reset stale input state so
 # a held drag/carry in CRATES mode does not ghost into SCENERY mode and back.
 func reset_input_state() -> void:
+	_saw_press = false
 	carrying = ""
 	_drag_from = Vector2i(-1, -1)
 	_drag_prop = null
@@ -49,6 +52,7 @@ func process(mouse: Vector2, over_ui: bool) -> void:
 
 
 func _press(cell: Vector2i) -> void:
+	_saw_press = true
 	if carrying != "":
 		_try_place(cell)
 		return
@@ -72,8 +76,18 @@ func _press(cell: Vector2i) -> void:
 
 
 func _release(cell: Vector2i, over_ui: bool) -> void:
-	if carrying != "" and not over_ui:
-		_try_place(cell)
+	var saw := _saw_press
+	_saw_press = false
+	if carrying != "":
+		# Changed your mind: a gesture that STARTED on the canvas and ends
+		# on the palette/UI or off the grid cancels the carry (owner
+		# request). A palette pick's release never saw a canvas press and
+		# keeps carrying; an in-grid blocked spot keeps it too (try the
+		# next cell).
+		if saw and (over_ui or not EditorGrid.in_zone(cell)):
+			carrying = ""
+		elif not over_ui:
+			_try_place(cell)
 	elif _drag_prop != null and _drag_from.x >= 0 and not over_ui and cell != _drag_from:
 		_move_prop(_drag_prop, cell - _drag_from)
 	elif (

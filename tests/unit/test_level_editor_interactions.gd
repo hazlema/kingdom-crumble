@@ -751,3 +751,26 @@ func test_shift_place_keeps_carrying() -> void:
 	ed._press(Vector2i(10, 0))
 	assert_eq(ed.carrying, "", "no shift, stamp drops after placing")
 	assert_eq(ed.current.crates.size(), 3, "three crates stamped")
+
+
+func test_dropping_carry_off_grid_or_on_palette_cancels() -> void:
+	# Gesture starting on canvas, ending off-grid: cancel.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(-3, 0))
+	ed._release(Vector2i(-3, 0), false)
+	assert_eq(ed.carrying, "", "off-grid drop cancels the carry")
+	# Gesture starting on canvas (blocked spot), dragged onto the palette: cancel.
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(4, 0))  # places it
+	ed.carrying = "crate-wood"
+	ed._press(Vector2i(4, 0))  # blocked — keeps carrying
+	ed._release(Vector2i(4, 0), true)
+	assert_eq(ed.carrying, "", "dragging the carry onto the palette cancels")
+	# A palette pick's release (no canvas press) must NOT cancel.
+	ed.carrying = "crate-wood"
+	ed._release(Vector2i(4, 0), true)
+	assert_eq(ed.carrying, "crate-wood", "palette pick survives its own release")
+	# Blocked in-grid spot keeps carrying (try the next cell).
+	ed._press(Vector2i(4, 0))
+	ed._release(Vector2i(4, 0), false)
+	assert_eq(ed.carrying, "crate-wood", "occupied in-grid spot keeps the carry")
