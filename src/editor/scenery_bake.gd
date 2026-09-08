@@ -263,41 +263,11 @@ static func _compensate_pivot_position(o: Dictionary, img: Image, rot: float) ->
 	var ox: float = float(o.get("x", 0.0))
 	var oy: float = float(o.get("y", 0.0))
 
-	# The overlay x/y was set when the image had its PRE-bake dimensions.
-	# We need those to find old_center. They were stored in the overlay before
-	# the edit keys were stripped, but the baked image (passed here) has the
-	# POST-rotation dimensions. For a pure rotation the baked width/height come
-	# from _rotate_image — those ARE the new dims. To find the old dims we need
-	# the original, but they were already overwritten. Instead we recover them
-	# from the baked dims using the inverse:
-	#   baked_w = |orig_w*cos| + |orig_h*sin|   (epsilon-guarded ceil)
-	#   baked_h = |orig_w*sin| + |orig_h*cos|
-	# This is a 2×2 system but has no clean closed form for arbitrary angles.
-	# INSTEAD: the pivot_world (ox, oy) IS the pivot, so we can compute
-	# old_center from the OVERLAY'S _original_ position relative to pivot.
-	# Conveniently, the pivot stays the pivot after the bake. The delta from
-	# pivot_world to old_center is encoded in the new image's bounding box
-	# via the inverse rotation: old_center = pivot + R(-rot) * (new_center - pivot)?
-	# No — we don't know new_center either yet.
-	#
-	# Cleaner approach: recover old image dims from new dims.
-	# For the rotated-bbox formula:
-	#   bw = ceil(sw*|cos|+sh*|sin|-ε)
-	#   bh = ceil(sw*|sin|+sh*|cos|-ε)
-	# We know bw, bh, cos, sin. Solve for sw, sh:
-	#   bw ≈ sw*|cos|+sh*|sin|
-	#   bh ≈ sw*|sin|+sh*|cos|
-	# Determinant: cos²-sin² = cos(2θ). When this is 0 (45°, 135°...) the
-	# system is singular (square → square). For singular case we use bw=bh≈sw≈sh.
-	# Generally: sw=(bw*|cos|-bh*|sin|)/(cos²-sin²)  ... from Cramer's rule.
-	# BUT floating point + ceil makes this inexact. Use the un-ceiled values
-	# (recompute from bw/bh minus the known epsilon and half-pixel slack).
-	#
-	# Safest: keep the original image dims. We pass them in from the caller.
-	# REDESIGN: the caller should pass in orig_w, orig_h. To avoid changing
-	# the signature here we use a meta trick: store them on the dict before
-	# rotating, read them here, erase them. This keeps _compensate_pivot_position
-	# self-contained while the caller is the only one who writes them.
+	# The stored x/y anchors the PRE-bake image; computing where its center
+	# went needs the pre-rotation (post-scale) dimensions. Recovering them
+	# from the rotated bbox is singular at 45° — so the caller stashes them
+	# on the dict as _bake_orig_w/h before rotating (erased in every exit
+	# path; see bake()). Keeps this function pure-of-signature.
 	var orig_w: float = float(o.get("_bake_orig_w", img.get_width()))
 	var orig_h: float = float(o.get("_bake_orig_h", img.get_height()))
 

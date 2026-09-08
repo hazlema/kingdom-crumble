@@ -247,3 +247,32 @@ func test_finding2_no_rotation_no_position_change() -> void:
 	var o: Dictionary = layout.overlays[0]
 	assert_almost_eq(float(o["x"]), 100.0, 0.001, "flip does not change x")
 	assert_almost_eq(float(o["y"]), 200.0, 0.001, "flip does not change y")
+
+
+func test_finding2_scale_plus_rotation_uses_post_scale_dims() -> void:
+	# Reviewer coverage note: the pivot compensation must use POST-scale,
+	# pre-rotate dimensions (_bake_orig_w/h stashed AFTER the scale step).
+	# 64x64 at (1000,400), _scale=2 (-> 128x128), LOWER_CENTER, 90 deg:
+	#   scaled image_center = (1000, 400 - 64) = (1000, 336)
+	#   delta from pivot (1000,400) = (0, -64); Rot(90): (64, 0)
+	#   new_center = (1064, 400)  <- a stash placed BEFORE the scale step
+	#   would compute (1032, 400) and silently drift.
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.CYAN)
+	var result := _layout_one(
+		img,
+		{"x": 1000.0, "y": 400.0, "pivot": "LOWER_CENTER", "_scale": 2.0, "_rot": PI / 2.0}
+	)
+	var layout: LevelLayout = result[0]
+
+	SceneryBake.bake(layout)
+
+	var o: Dictionary = layout.overlays[0]
+	var baked := LevelJson.decode_png_b64(layout.images[o["image"]])
+	assert_not_null(baked, "baked image decodable")
+	var bw := float(baked.get_width())
+	var bh := float(baked.get_height())
+	var world_cx: float = float(o["x"]) + bw * (0.5 - 0.5)
+	var world_cy: float = float(o["y"]) + bh * (0.5 - 1.0)
+	assert_almost_eq(world_cx, 1064.0, 1.5, "scale+rotate center X (post-scale dims)")
+	assert_almost_eq(world_cy, 400.0, 1.5, "scale+rotate center Y")
