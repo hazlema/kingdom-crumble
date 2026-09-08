@@ -51,3 +51,35 @@ func test_crates_row_hold_bridges_the_check_action() -> void:
 	release.pressed = false
 	card._on_crates_row_input(release)
 	assert_false(Input.is_action_pressed("check"), "let go = H up")
+
+
+# ---------------------------------------------------------------------------
+# Banner sequencing — a real banner waits for an active display: toast
+# (same control; they replace, not stack — the winner-winner bug).
+# ---------------------------------------------------------------------------
+
+func test_banner_waits_for_active_toast() -> void:
+	var hud: Node = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(hud)
+	hud.toast("Winner winner chicken dinner")
+	hud.banner("KINGDOM CRUMBLED!", "press ENTER")
+	assert_eq(hud.get_node("%Banner").text, "Winner winner chicken dinner", "toast keeps the slot")
+	assert_false(hud.get_node("%BannerSub").visible, "banner not applied yet")
+	await wait_seconds(hud.TOAST_SECS + 0.4)
+	assert_eq(hud.get_node("%Banner").text, "KINGDOM CRUMBLED!", "banner lands after the toast beat")
+	assert_true(hud.get_node("%BannerSub").visible)
+
+
+func test_banner_immediate_without_toast() -> void:
+	var hud: Node = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(hud)
+	hud.banner("OUT OF STONES", "press ENTER")
+	assert_eq(hud.get_node("%Banner").text, "OUT OF STONES", "no toast, no wait")
+
+
+func test_late_toast_never_steals_a_real_banner() -> void:
+	var hud: Node = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(hud)
+	hud.banner("KINGDOM CRUMBLED!", "press ENTER")
+	hud.toast("too late")
+	assert_eq(hud.get_node("%Banner").text, "KINGDOM CRUMBLED!", "banner outranks a late toast")

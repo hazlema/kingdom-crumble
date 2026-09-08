@@ -67,16 +67,44 @@ func set_power(ratio: float) -> void:
 
 # Short-lived level-title announcement at level start — clears itself
 # unless a real banner (lean bonus, cleared) has taken the stage since.
+const TOAST_SECS := 1.8
+
+var _toast_until := 0.0  # while now < this, a display: toast owns the banner slot
+var _banner_seq := 0     # stale-request guard for the deferred paths
+
+
 func toast(text: String) -> void:
-	banner(text, "")
-	get_tree().create_timer(1.8).timeout.connect(
+	if %BannerCenter.visible and %BannerSub.visible:
+		return  # a real banner outranks a late toast
+	_banner_seq += 1
+	var seq := _banner_seq
+	_toast_until = Time.get_ticks_msec() * 0.001 + TOAST_SECS
+	_apply_banner(text, "")
+	get_tree().create_timer(TOAST_SECS).timeout.connect(
 		func() -> void:
-			if %Banner.text == text and not %BannerSub.visible:
+			if _banner_seq == seq:
 				clear_banner()
 	)
 
 
+# Real banners (sub != "") wait for an active toast to finish its beat —
+# a display: message on the winning hit was being overwritten instantly
+# by KINGDOM CRUMBLED (same control; they replace, not stack).
 func banner(title: String, sub: String) -> void:
+	_banner_seq += 1
+	var seq := _banner_seq
+	var now := Time.get_ticks_msec() * 0.001
+	if sub != "" and now < _toast_until:
+		get_tree().create_timer(_toast_until - now + 0.15).timeout.connect(
+			func() -> void:
+				if _banner_seq == seq and is_inside_tree():
+					_apply_banner(title, sub)
+		)
+		return
+	_apply_banner(title, sub)
+
+
+func _apply_banner(title: String, sub: String) -> void:
 	%Banner.text = title
 	%BannerSub.text = sub
 	%BannerSub.visible = sub != ""

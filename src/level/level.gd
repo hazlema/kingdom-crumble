@@ -287,18 +287,20 @@ func _settle() -> void:
 		state = State.CLEARED
 		_record_clear()
 		_chain_end = current_stem != "" and _next_path_after_clear() == ""
-		if _editor_session:
-			hud.banner("KINGDOM CRUMBLED!", _advance_hint("to return to editor"))
-		elif _chain_end:
-			hud.banner("KINGDOM CONQUERED!", _advance_hint("for the throne room"))
-		else:
-			hud.banner("KINGDOM CRUMBLED!", _advance_hint("for the next level"))
+		# on_all_cleared fires FIRST so its display: toasts claim the banner
+		# slot; the victory banner then queues politely behind them.
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
 		if not effects.is_empty():
 			var center := Vector2(1400, 400)
 			if not _crates().is_empty():
 				center = _crates()[0].global_position
 			_fire_action_list(effects, center)
+		if _editor_session:
+			hud.banner("KINGDOM CRUMBLED!", _advance_hint("to return to editor"))
+		elif _chain_end:
+			hud.banner("KINGDOM CONQUERED!", _advance_hint("for the throne room"))
+		else:
+			hud.banner("KINGDOM CRUMBLED!", _advance_hint("for the next level"))
 	elif shots_left <= 0:
 		state = State.FAILED
 		var _failed_sub := (
