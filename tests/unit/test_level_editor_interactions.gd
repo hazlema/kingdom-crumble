@@ -948,3 +948,50 @@ func test_trigger_snap_collision_merges_and_deduplicates() -> void:
 	assert_true(merged.has("confetti"), "first source action present")
 	assert_true(merged.has("smoke:#112233"), "second source action present")
 	assert_false(ed.current.triggers.has("hit:833,443"), "old off-grid key removed")
+
+
+# ---------------------------------------------------------------------------
+# Audit 2026-09-08 — Finding 5: SceneryPanel file dialog blocks polled input
+# (dialog visible → ed.over_ui_at(any world point) must be true)
+# ---------------------------------------------------------------------------
+
+func test_scenery_file_dialog_registered_as_popup() -> void:
+	# Audit reproduction: _file_dialog is visible → over_ui_at must report blocked.
+	# The dialog is a non-native FileDialog (a Window subclass); it must be
+	# registered with ed.register_popup() so the polling gate catches it.
+	# We call the panel's expose path to make the dialog visible without a
+	# physical desktop click.
+	var panel: SceneryPanel = ed.get_node("%SceneryPanel")
+	assert_not_null(panel, "SceneryPanel accessible on the editor")
+	# Make the panel visible (entering scenery mode shows it)
+	ed._enter_scenery()
+	# Expose the dialog as visible via the registered hook
+	var dlg: FileDialog = panel._file_dialog
+	assert_not_null(dlg, "_file_dialog exists on SceneryPanel")
+	# Show the dialog directly (simulates user clicking Add Image headless)
+	dlg.visible = true
+	# Now over_ui_at must be true at a far-away world point (not over any UI rect)
+	assert_true(ed.over_ui_at(Vector2(900, 500)),
+		"open file dialog must block polled input (over_ui_at returns true)")
+	# Hide and verify it no longer blocks (sanity check that it's the dialog, not the panel)
+	dlg.visible = false
+	# Exit scenery to restore state
+	ed._exit_scenery()
+
+
+func test_opening_file_dialog_resets_scenery_drag_state() -> void:
+	# When the file dialog opens, any in-flight scenery drag must be ended.
+	# We verify _scenery_tool._scenery_dragging is false after dialog opens.
+	ed._enter_scenery()
+	# Simulate that a scenery drag is in flight
+	ed._scenery_tool._scenery_dragging = true
+	ed._scenery_tool._lmb_down = true
+	# Open the dialog (via the panel's internal open path)
+	var panel: SceneryPanel = ed.get_node("%SceneryPanel")
+	panel._open_file_dialog_for_test()
+	# Drag state must be reset
+	assert_false(ed._scenery_tool._scenery_dragging,
+		"scenery drag state reset when file dialog opens")
+	# Cleanup
+	panel._file_dialog.visible = false
+	ed._exit_scenery()

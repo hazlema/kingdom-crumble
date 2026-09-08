@@ -267,6 +267,20 @@ func _ready() -> void:
 	%SceneryPanel.background_picked.connect(_on_background_picked)
 	%SceneryPanel.image_chosen.connect(_on_image_chosen)
 	%SceneryPanel.done.connect(_exit_scenery)
+	# Register the SceneryPanel's file picker in the central popup registry so
+	# over_ui_at() blocks polled canvas gestures while the dialog is open.
+	# (Finding 5: the dialog was never registered, allowing drag-through when
+	# a scenery piece happened to lie beneath the open dialog.)
+	var _sp_dialog: FileDialog = %SceneryPanel._file_dialog
+	register_popup(_sp_dialog)
+	# End any in-flight canvas gesture when the file picker is about to open —
+	# mirrors the idiom SceneryTool.enter() uses for mode switches.
+	_sp_dialog.about_to_popup.connect(func() -> void:
+		_scenery_tool._scenery_dragging = false
+		_scenery_tool._scenery_handle = -1
+		_scenery_tool._lmb_down = false
+		_grid_tool.reset_input_state()
+	)
 	if resume_layout != null:
 		current = resume_layout
 		resume_layout = null

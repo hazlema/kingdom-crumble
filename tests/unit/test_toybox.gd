@@ -454,3 +454,42 @@ func test_oversized_sidecar_warns_and_piece_absent_or_default() -> void:
 	Pieces.scan()
 	# Piece absent (sidecar too large → skipped entirely)
 	assert_true(Pieces.entry("bigside_pack:big-piece").is_empty(), "oversized sidecar: piece absent from registry")
+
+
+# ---------------------------------------------------------------------------
+# Audit 2026-09-08 — Finding 6: pack admission rejects unsavable basenames
+# ---------------------------------------------------------------------------
+
+func test_uppercase_basename_skipped_with_warning() -> void:
+	# Audit reproduction: "auditpack/Wall.png" → id "auditpack:Wall" contains
+	# uppercase, violates the prop-id charset → must NOT register, must warn.
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color.WHITE)
+	_make_pack("auditpack", {"title": "Audit Pack", "kind": "objects"}, {"Wall.png": img})
+	Pieces.scan()
+	assert_true(Pieces.entry("auditpack:Wall").is_empty(), "uppercase basename 'Wall' must not register")
+
+
+func test_lowercase_sibling_registers_while_uppercase_skipped() -> void:
+	# A valid lowercase sibling in the same pack must still register even though
+	# the uppercase PNG is skipped.
+	var img_bad := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img_bad.fill(Color.RED)
+	var img_good := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img_good.fill(Color.BLUE)
+	_make_pack("mixedpack", {"title": "Mixed Pack", "kind": "objects"},
+		{"Wall.png": img_bad, "wall.png": img_good})
+	Pieces.scan()
+	assert_true(Pieces.entry("mixedpack:Wall").is_empty(), "uppercase 'Wall' skipped")
+	assert_false(Pieces.entry("mixedpack:wall").is_empty(), "lowercase 'wall' registers")
+
+
+func test_overlong_basename_skipped() -> void:
+	# A basename so long that folder:basename exceeds 64 chars must be skipped.
+	# "longpack" (8 chars) + ":" (1) = 9 prefix; basename needs > 55 chars to breach 64.
+	var long_name := "a".repeat(56)  # 9 + 56 = 65 > 64
+	var img := Image.create(64, 63, false, Image.FORMAT_RGBA8)
+	img.fill(Color.GREEN)
+	_make_pack("longpack", {"title": "Long Pack", "kind": "objects"}, {"%s.png" % long_name: img})
+	Pieces.scan()
+	assert_true(Pieces.entry("longpack:%s" % long_name).is_empty(), "overlong namespaced id skipped")

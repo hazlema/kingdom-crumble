@@ -18,6 +18,14 @@ const TIP_CAP := 200
 const POWERUPS := ["free_shot", "exploding", "multishot", "super_bounce", "mystery"]
 ## Folder name charset: lowercase letters, digits, hyphen, underscore; 1-32 chars.
 const FOLDER_PATTERN := "^[a-z0-9_-]{1,32}$"
+## Piece basename charset: lowercase letters, digits, hyphen, underscore (no colon — colons are
+## the namespace separator in namespaced ids). Total namespaced id (folder + ":" + basename)
+## must also be ≤ 64 chars — mirrors the LevelJson._prop_id_rx contract so every selectable
+## piece can survive a save/load round trip without a bad-id error.
+const BASENAME_PATTERN := "^[a-z0-9_-]+$"
+## Maximum total length of a namespaced piece id ("folder:basename"). Must match
+## the single-char-class budget in LevelJson._prop_id_rx ("^[a-z0-9_:-]{1,64}$").
+const NAMESPACED_ID_MAX_LEN := 64
 
 static var _cache := {}  # id -> entry Dictionary
 static var _packs: Array[Dictionary] = []  # discovered pack metadata
@@ -29,6 +37,7 @@ static var _theme_textures := {}  # base id -> Texture2D
 ## Test seam: -1 = system clock
 static var clock_month: int = -1
 static var _folder_rx := RegEx.create_from_string(FOLDER_PATTERN)
+static var _basename_rx := RegEx.create_from_string(BASENAME_PATTERN)
 
 
 static func scan() -> void:
@@ -167,7 +176,21 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		if f.get_extension() != "png":
 			continue
 		var basename := f.get_basename()
+		# Validate basename charset: must be ^[a-z0-9_-]+$ so the namespaced id is
+		# savable (LevelJson._prop_id_rx contract: ^[a-z0-9_:-]{1,64}$).
+		if _basename_rx.search(basename) == null:
+			push_warning(
+				"Pieces toybox: '%s/%s' has invalid basename chars (must be lowercase a-z0-9_-) — skipping" % [folder, f]
+			)
+			continue
 		var namespaced_id := "%s:%s" % [folder, basename]
+		# Validate total namespaced id length ≤ NAMESPACED_ID_MAX_LEN (64) — same budget as
+		# LevelJson._prop_id_rx so placed pieces can always be serialized without a bad-id error.
+		if namespaced_id.length() > NAMESPACED_ID_MAX_LEN:
+			push_warning(
+				"Pieces toybox: '%s/%s' namespaced id '%s' exceeds %d chars — skipping" % [folder, f, namespaced_id, NAMESPACED_ID_MAX_LEN]
+			)
+			continue
 		if _cache.has(namespaced_id):
 			continue
 		# Load PNG via bytes → magic gate → Image.load_png_from_buffer → ImageTexture
