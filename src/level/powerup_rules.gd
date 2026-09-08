@@ -16,6 +16,26 @@ const BUFF_LABELS := {
 
 static func route(type_id: String, skunk_unlocked: bool, roll: Callable) -> Dictionary:
 	var power := str(Pieces.entry(type_id).get("powerup", ""))
+	return _route_power(power, skunk_unlocked, roll)
+
+
+## Route using a spawned crate node. Consults crate's "powerup" meta (snapshot set at
+## spawn time) when present, so mid-level registry changes cannot alter a live crate's
+## reward. Falls back to the registry for crates without the meta (compat with any
+## non-builder spawn path).
+static func route_crate(crate: Node, skunk_unlocked: bool, roll: Callable) -> Dictionary:
+	var power: String
+	if crate.has_meta("powerup"):
+		power = str(crate.get_meta("powerup"))
+	else:
+		# Non-builder crates (no spawn snapshot): route by type_id through
+		# the registry, same as the string API. (Final-review catch: the
+		# old fallback called .get() on json_coords — a Vector2i.)
+		power = str(Pieces.entry(str(crate.get("type_id"))).get("powerup", ""))
+	return _route_power(power, skunk_unlocked, roll)
+
+
+static func _route_power(power: String, skunk_unlocked: bool, roll: Callable) -> Dictionary:
 	match power:
 		"free_shot":
 			return {"kind": "refund", "label": "+Free Shot"}

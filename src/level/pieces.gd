@@ -18,6 +18,14 @@ const TIP_CAP := 200
 const POWERUPS := ["free_shot", "exploding", "multishot", "super_bounce", "mystery"]
 ## Folder name charset: lowercase letters, digits, hyphen, underscore; 1-32 chars.
 const FOLDER_PATTERN := "^[a-z0-9_-]{1,32}$"
+## Piece basename charset: lowercase letters, digits, hyphen, underscore (no colon — colons are
+## the namespace separator in namespaced ids). Total namespaced id (folder + ":" + basename)
+## must also be ≤ 64 chars — mirrors the LevelJson._prop_id_rx contract so every selectable
+## piece can survive a save/load round trip without a bad-id error.
+const BASENAME_PATTERN := "^[a-z0-9_-]+$"
+## Maximum total length of a namespaced piece id ("folder:basename"). Must match
+## the single-char-class budget in LevelJson._prop_id_rx ("^[a-z0-9_:-]{1,64}$").
+const NAMESPACED_ID_MAX_LEN := 64
 
 static var _cache := {}  # id -> entry Dictionary
 static var _packs: Array[Dictionary] = []  # discovered pack metadata
@@ -29,6 +37,7 @@ static var _theme_textures := {}  # base id -> Texture2D
 ## Test seam: -1 = system clock
 static var clock_month: int = -1
 static var _folder_rx := RegEx.create_from_string(FOLDER_PATTERN)
+static var _basename_rx := RegEx.create_from_string(BASENAME_PATTERN)
 
 
 static func scan() -> void:
@@ -96,7 +105,18 @@ static func _scan_toybox(cfg: ConfigFile) -> void:
 		if not FileAccess.file_exists(manifest_path):
 			push_warning("Pieces toybox: '%s' has no pack.json — skipping" % folder)
 			continue
-		# Parse manifest: check size first
+		# Pre-read size gate: check length BEFORE allocating manifest content (audit finding 8b).
+		var _mf_check := FileAccess.open(manifest_path, FileAccess.READ)
+		if _mf_check == null:
+			push_warning("Pieces toybox: '%s' pack.json unreadable — skipping" % folder)
+			continue
+		var manifest_file_size := _mf_check.get_length()
+		_mf_check = null  # close
+		if manifest_file_size > 65536:
+			push_warning(
+				"Pieces toybox: '%s' pack.json exceeds 64 KB size cap (%d bytes) — skipping" % [folder, manifest_file_size]
+			)
+			continue
 		var manifest_bytes := FileAccess.get_file_as_bytes(manifest_path)
 		if manifest_bytes.size() > 65536:
 			push_warning("Pieces toybox: '%s' pack.json too large — skipping" % folder)
@@ -167,7 +187,21 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		if f.get_extension() != "png":
 			continue
 		var basename := f.get_basename()
+		# Validate basename charset: must be ^[a-z0-9_-]+$ so the namespaced id is
+		# savable (LevelJson._prop_id_rx contract: ^[a-z0-9_:-]{1,64}$).
+		if _basename_rx.search(basename) == null:
+			push_warning(
+				"Pieces toybox: '%s/%s' has invalid basename chars (must be lowercase a-z0-9_-) — skipping" % [folder, f]
+			)
+			continue
 		var namespaced_id := "%s:%s" % [folder, basename]
+		# Validate total namespaced id length ≤ NAMESPACED_ID_MAX_LEN (64) — same budget as
+		# LevelJson._prop_id_rx so placed pieces can always be serialized without a bad-id error.
+		if namespaced_id.length() > NAMESPACED_ID_MAX_LEN:
+			push_warning(
+				"Pieces toybox: '%s/%s' namespaced id '%s' exceeds %d chars — skipping" % [folder, f, namespaced_id, NAMESPACED_ID_MAX_LEN]
+			)
+			continue
 		if _cache.has(namespaced_id):
 			continue
 		# Load PNG via bytes → magic gate → Image.load_png_from_buffer → ImageTexture
@@ -178,6 +212,13 @@ static func _scan_object_pack(pack_path: String, folder: String) -> void:
 		var raw := {}
 		var sidecar_path := "%s/%s.json" % [pack_path, basename]
 		if FileAccess.file_exists(sidecar_path):
+			# Pre-read size gate BEFORE allocating sidecar content (audit finding 8b).
+			var _sc_check := FileAccess.open(sidecar_path, FileAccess.READ)
+			var sidecar_file_size := _sc_check.get_length() if _sc_check != null else 0
+			_sc_check = null  # close
+			if sidecar_file_size > 65536:
+				push_warning("Pieces toybox: %s sidecar exceeds 64 KB size cap — skipping" % namespaced_id)
+				continue
 			var sidecar_bytes := FileAccess.get_file_as_bytes(sidecar_path)
 			if sidecar_bytes.is_empty():
 				push_warning("Pieces toybox: %s sidecar unreadable — skipping" % namespaced_id)
@@ -235,9 +276,27 @@ static func _load_theme_textures(theme_path: String) -> void:
 		_theme_textures[base_id] = tex
 
 
+## Maximum encoded PNG file size (bytes) checked BEFORE reading user:// PNGs.
+## Arithmetic: 1024×1024×4 bytes decoded ≈ 4 MB; encoded PNG is smaller, but we allow
+## a generous 2 MB for the encoded form while still bounding hostile allocation (audit finding 8c).
+const MAX_PNG_FILE_BYTES := 2_000_000
+
+
 ## Load a PNG from a user:// path safely.
 ## Returns null (with warning) on any failure. Never passes junk to load_png_from_buffer.
 static func _load_user_texture(path: String) -> Texture2D:
+	# Encoded-file-size gate BEFORE any read (audit finding 8c): a hostile 2MB+ PNG
+	# file must be rejected without allocating its content.
+	var _sz_check := FileAccess.open(path, FileAccess.READ)
+	var file_size: int = _sz_check.get_length() if _sz_check != null else 0
+	_sz_check = null  # close
+	if file_size > MAX_PNG_FILE_BYTES:
+		push_warning(
+			"Pieces toybox: '%s' encoded size %d exceeds %d byte cap — skipping" % [
+				path, file_size, MAX_PNG_FILE_BYTES
+			]
+		)
+		return null
 	var bytes := FileAccess.get_file_as_bytes(path)
 	if bytes.size() < 8:
 		push_warning("Pieces toybox: '%s' too small to be a PNG — skipping" % path)

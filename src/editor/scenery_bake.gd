@@ -60,8 +60,31 @@ static func bake(layout: LevelLayout) -> int:
 
 		# Apply rotation via inverse-mapping into a rotated bounding box.
 		var rot: float = o.get("_rot", 0.0)
-		if not is_equal_approx(fmod(rot, TAU), 0.0):
+		var has_rotation := not is_equal_approx(fmod(rot, TAU), 0.0)
+		if has_rotation:
+			# Record the pre-rotation dimensions for pivot compensation (finding 2).
+			# Stash as internal temp keys so _compensate_pivot_position can read them.
+			# They start with "_" so _strip_edit_keys will clean them if the bake
+			# proceeds; the explicit erases below cover the early-exit paths.
+			o["_bake_orig_w"] = img.get_width()
+			o["_bake_orig_h"] = img.get_height()
 			img = _rotate_image(img, rot)
+			# Finding 1 (audit 2026-09-08): the rotated bounding box can
+			# exceed the decoded-image budget even when the compressed b64
+			# passes the byte cap (flat-color art compresses extremely well).
+			# Check dimension/pixel limits BEFORE replacing the old blob so
+			# the original content and underscore edit keys are preserved.
+			var rw := img.get_width()
+			var rh := img.get_height()
+			if rw > LevelJson.MAX_IMAGE_DIM or rh > LevelJson.MAX_IMAGE_DIM or rw * rh > LevelJson.MAX_IMAGE_PIXELS:
+				push_warning(
+					"SceneryBake: skipping overlay %d — rotated dimensions %dx%d exceed decode budget" % [i, rw, rh]
+				)
+				# Remove the internal temp keys so they don't pollute the overlay.
+				o.erase("_bake_orig_w")
+				o.erase("_bake_orig_h")
+				skipped += 1
+				continue
 
 		# Re-encode and cap.
 		var cap_result := _cap_image_to_max(img)
@@ -76,6 +99,9 @@ static func bake(layout: LevelLayout) -> int:
 			if not layout.images.has(new_key) and old_still_needed and layout.images.size() >= LevelJson.MAX_IMAGES:
 				# Cap hit: skip bake for this overlay, keep its underscore edit-state.
 				push_warning("SceneryBake: skipping overlay %d — image cap full" % i)
+				# Remove internal temp keys so they don't pollute the overlay.
+				o.erase("_bake_orig_w")
+				o.erase("_bake_orig_h")
 				skipped += 1
 				continue
 			# Store the new blob (dedup: might already exist under new_key).
@@ -90,6 +116,15 @@ static func bake(layout: LevelLayout) -> int:
 			ref_count[old_key] = ref_count.get(old_key, 1) - 1
 			if ref_count.get(old_key, 0) <= 0:
 				layout.images.erase(old_key)
+
+		# Finding 2 (audit 2026-09-08): if a rotation was baked, compensate the
+		# stored overlay x/y so the piece appears at the same world position as
+		# the live preview. The live preview rotates around the named pivot;
+		# the bake rotates pixels around the image center. We compensate by
+		# computing where the image center ends up after rotating around the
+		# pivot and re-deriving the stored position for the baked image size.
+		if has_rotation:
+			_compensate_pivot_position(o, img, rot)
 
 		# Strip edit-state keys (always — identity bake still consumed them).
 		_strip_edit_keys(o)
@@ -189,6 +224,75 @@ static func _bilinear_sample(
 	if a < 0.00001:
 		return Color(0, 0, 0, 0)
 	return Color(r / a, g / a, b / a, a)
+
+
+# Finding 2 — pivot-true placement.
+# Replicates the NarfDecor pivot → offset math (addons/narfkit/narf_decor.gd
+# _apply_pivot) without importing editor state.
+#
+# The 9-pivot enum order matches NarfDecor.Pivot exactly:
+#   TOP_LEFT=0  TOP_CENTER=1  TOP_RIGHT=2
+#   CENTER_LEFT=3  CENTER=4  CENTER_RIGHT=5
+#   LOWER_LEFT=6  LOWER_CENTER=7  LOWER_RIGHT=8
+#
+# offset = -Vector2(w * fx, h * fy)
+# so top-left = position + offset = position - Vector2(w*fx, h*fy)
+# and image_center = top-left + (w/2, h/2) = position + Vector2(w*(0.5-fx), h*(0.5-fy))
+#
+# Returns [fx, fy] for the named pivot. Unknown names fall back to CENTER (0.5, 0.5).
+static func _pivot_factors(pivot_name: String) -> Vector2:
+	var pivot_keys := NarfDecor.Pivot.keys()
+	var idx: int = pivot_keys.find(pivot_name)
+	if idx == -1:
+		return Vector2(0.5, 0.5)  # fallback: CENTER
+	var fx := float(idx % 3) * 0.5
+	var fy := float(idx / 3) * 0.5
+	return Vector2(fx, fy)
+
+
+# Adjust the overlay's x/y after a rotation has been baked into the image.
+# `img` is the BAKED (post-rotation) image whose dimensions are now stored.
+# `rot` is the rotation in radians that was applied.
+# The overlay dict's x/y IS the pivot_world (piece.position = pivot point).
+# We find where the image center moved to after rotating around that pivot,
+# then write back the new position so the piece centres correctly.
+static func _compensate_pivot_position(o: Dictionary, img: Image, rot: float) -> void:
+	var pivot_name: String = str(o.get("pivot", "CENTER"))
+	var pf := _pivot_factors(pivot_name)
+
+	var ox: float = float(o.get("x", 0.0))
+	var oy: float = float(o.get("y", 0.0))
+
+	# The stored x/y anchors the PRE-bake image; computing where its center
+	# went needs the pre-rotation (post-scale) dimensions. Recovering them
+	# from the rotated bbox is singular at 45° — so the caller stashes them
+	# on the dict as _bake_orig_w/h before rotating (erased in every exit
+	# path; see bake()). Keeps this function pure-of-signature.
+	var orig_w: float = float(o.get("_bake_orig_w", img.get_width()))
+	var orig_h: float = float(o.get("_bake_orig_h", img.get_height()))
+
+	# image center before bake (relative to pivot_world = ox, oy):
+	# top-left = pivot - Vector2(orig_w*pf.x, orig_h*pf.y)
+	# image_center = top-left + (orig_w/2, orig_h/2)
+	#              = pivot + Vector2(orig_w*(0.5-pf.x), orig_h*(0.5-pf.y))
+	var delta_old := Vector2(orig_w * (0.5 - pf.x), orig_h * (0.5 - pf.y))
+
+	# Rotate delta_old by rot to get new_center − pivot_world.
+	var c := cos(rot)
+	var s := sin(rot)
+	var delta_new := Vector2(delta_old.x * c - delta_old.y * s, delta_old.x * s + delta_old.y * c)
+
+	# new_center (world) = pivot_world + delta_new
+	var new_cx := ox + delta_new.x
+	var new_cy := oy + delta_new.y
+
+	# new_position (piece.position = pivot for the NEW image size) so that:
+	# image_center = new_position + Vector2(bw*(0.5-pf.x), bh*(0.5-pf.y))
+	# → new_position = new_center - Vector2(bw*(0.5-pf.x), bh*(0.5-pf.y))
+	var bw := float(img.get_width())
+	var bh := float(img.get_height())
+	o["x"] = new_cx - bw * (0.5 - pf.x)
+	o["y"] = new_cy - bh * (0.5 - pf.y)
 
 
 # Shared size-cap: halve the image until its base64 fits MAX_IMAGE_CHARS.

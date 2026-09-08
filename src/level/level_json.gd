@@ -15,6 +15,10 @@ const MAX_IMAGE_PIXELS := 1048576  # 1024x1024 budget, pre-decode
 const MAX_OVERLAYS := 16
 const MAX_PROPS := 64
 const PROP_BEHAVIORS := ["NONE", "SPIN", "SWAY", "BOB"]
+## Pre-read budget for level document files: checked BEFORE any read.
+## Arithmetic: thumb 600 KB + 8 images × 600 KB = 5.4 MB, plus JSON structure slack → 8 MB.
+## This bounds hostile allocation without excluding any legitimately authored level.
+const MAX_FILE_BYTES := 8_000_000
 
 # Why the last parse() said no -- shown to the level author verbatim,
 # so every message names the suspect ("crate 13: missing type").

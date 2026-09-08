@@ -66,6 +66,15 @@ func _open_file_dialog() -> void:
 	_file_dialog.popup_centered_clamped(Vector2i(940, 640), 0.8)
 
 
+## Test seam: opens the file dialog via the same non-web path, but using
+## popup() instead of popup_centered_clamped() so it works headless without
+## a display server that supports centering/clamping. Fires about_to_popup
+## the same as the real path, letting tests verify the registration and
+## drag-reset idiom without a physical desktop click.
+func _open_file_dialog_for_test() -> void:
+	_file_dialog.popup()
+
+
 # The browser guards the real disk and Godot's web backend has no native
 # dialog — so we spawn the browser's OWN <input type=file>, read the
 # bytes in JS, and hand them across the bridge. Must run inside the
