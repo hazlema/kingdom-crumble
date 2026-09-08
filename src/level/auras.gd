@@ -147,7 +147,10 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 			end_color = Color(tint.r, tint.g, tint.b, end_color.a)
 		else:
 			push_warning("Auras: bad aura_color '%s' — using the verb default" % color_override)
-	p.color = start_color
+	# The ramp OWNS the tint; base color stays white. Setting both squared
+	# the color (final = color * ramp) — every dark tint collapsed to the
+	# same near-black sludge (owner field bug: three colors, one result).
+	p.color = Color.WHITE
 	var grad := Gradient.new()
 	grad.set_color(0, start_color)
 	grad.set_color(1, end_color)

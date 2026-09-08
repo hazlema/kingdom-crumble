@@ -216,10 +216,12 @@ func test_attach_color_override_retints_keeps_alpha() -> void:
 	add_child_autofree(host)
 	Auras.attach(host, "smog", "#ff0000")
 	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
-	assert_almost_eq(p.color.r, 1.0, 0.01, "override red applied")
-	assert_almost_eq(p.color.g, 0.0, 0.01, "override green applied")
+	var c0: Color = (p.color_ramp as Gradient).get_color(0)
+	assert_almost_eq(c0.r, 1.0, 0.01, "override red applied")
+	assert_almost_eq(c0.g, 0.0, 0.01, "override green applied")
+	assert_eq(p.color, Color.WHITE, "base color stays white — ramp owns the tint (no squaring)")
 	var table_alpha: float = (Auras.KNOWN["smog"]["color"] as Color).a
-	assert_almost_eq(p.color.a, minf(table_alpha, 0.75), 0.001, "alpha stays the verb value, capped at 0.75")
+	assert_almost_eq(c0.a, minf(table_alpha, 0.75), 0.001, "alpha stays the verb value, capped at 0.75")
 
 
 func test_attach_bad_color_warns_uses_default() -> void:
@@ -227,7 +229,7 @@ func test_attach_bad_color_warns_uses_default() -> void:
 	add_child_autofree(host)
 	Auras.attach(host, "smog", "chartreuse")  # warns
 	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
-	assert_almost_eq(p.color.g, (Auras.KNOWN["smog"]["color"] as Color).g, 0.01, "verb default color used")
+	assert_almost_eq((p.color_ramp as Gradient).get_color(0).g, (Auras.KNOWN["smog"]["color"] as Color).g, 0.01, "verb default color used")
 
 
 func test_parse_sidecar_aura_color_rules() -> void:
@@ -246,7 +248,7 @@ func test_attach_hostile_color_rejected_before_engine() -> void:
 	add_child_autofree(host)
 	Auras.attach(host, "smog", "#-1a2b3")  # warns
 	var p: CPUParticles2D = host.get_child(0) as CPUParticles2D
-	assert_almost_eq(p.color.g, (Auras.KNOWN["smog"]["color"] as Color).g, 0.01, "hostile color falls back to verb default")
+	assert_almost_eq((p.color_ramp as Gradient).get_color(0).g, (Auras.KNOWN["smog"]["color"] as Color).g, 0.01, "hostile color falls back to verb default")
 	assert_false(Auras.is_valid_color("#-1a2b3"), "leading minus rejected")
 	assert_false(Auras.is_valid_color("#12345"), "short rejected")
 	assert_false(Auras.is_valid_color("#1234567"), "long rejected")
