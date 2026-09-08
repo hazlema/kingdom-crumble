@@ -231,8 +231,9 @@ func test_add_display_action_writes_message() -> void:
 	dlg.open("hit:2,0", layout)
 	dlg.set_action_by_id("display")
 	dlg.get_text_edit().text = "Nice shot! Multi-shot loads 3 stones."
+	dlg.get_secs_option().selected = 1  # 10 seconds
 	dlg.add_action()
-	assert_eq(layout.triggers["hit:2,0"], ["display:Nice shot! Multi-shot loads 3 stones."])
+	assert_eq(layout.triggers["hit:2,0"], ["display:10:Nice shot! Multi-shot loads 3 stones."])
 
 
 func test_display_action_validates_shape() -> void:
@@ -240,3 +241,12 @@ func test_display_action_validates_shape() -> void:
 	assert_true(Effects.is_known("display:with: colons: inside"), "colons in the payload are fine")
 	assert_false(Effects.is_known("display:"), "empty message rejected")
 	assert_false(Effects.is_known("display:" + "x".repeat(Effects.DISPLAY_CAP + 1)), "over-cap rejected")
+
+
+func test_display_duration_parsing() -> void:
+	assert_eq(Effects.display_secs("display:10:read slowly"), 10.0)
+	assert_eq(Effects.display_message("display:10:read slowly"), "read slowly")
+	assert_eq(Effects.display_secs("display:plain message"), 3.0, "no prefix = 3s default")
+	assert_eq(Effects.display_secs("display:7:not curated"), 3.0, "7 is not a curated duration")
+	assert_eq(Effects.display_message("display:7:not curated"), "7:not curated", "uncurated prefix stays message text")
+	assert_true(Effects.is_known("display:30:take your time"))

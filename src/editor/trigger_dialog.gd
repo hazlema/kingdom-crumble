@@ -44,6 +44,7 @@ var _param_container: VBoxContainer  # rebuilt per selected action
 var _overlay_list: ItemList          # overlay param: ItemList of named overlays
 var _stem_option: OptionButton       # stem param: OptionButton
 var _text_edit: LineEdit             # text param: LineEdit (display message)
+var _secs_option: OptionButton       # text param: curated display durations
 var _footer_label: Label             # unnamed-overlay count when > 0
 var _warning_label: Label            # cap/validation warning
 var _add_button: Button
@@ -140,6 +141,15 @@ func _ready() -> void:
 	_text_edit.max_length = Effects.DISPLAY_CAP
 	_text_edit.placeholder_text = "Message shown on screen (max %d chars)" % Effects.DISPLAY_CAP
 	_param_container.add_child(_text_edit)
+
+	# Duration dropdown — the display action's optional dial
+	_secs_option = OptionButton.new()
+	_secs_option.name = "SecsOption"
+	_secs_option.visible = false
+	for secs in Effects.DISPLAY_SECS:
+		_secs_option.add_item("%d seconds" % secs)
+	_secs_option.selected = 0
+	_param_container.add_child(_secs_option)
 
 	# --- Footer: unnamed overlay count ---
 	_footer_label = Label.new()
@@ -259,6 +269,10 @@ func get_text_edit() -> LineEdit:
 	return _text_edit
 
 
+func get_secs_option() -> OptionButton:
+	return _secs_option
+
+
 func get_stem_option() -> OptionButton:
 	return _stem_option
 
@@ -356,6 +370,7 @@ func _rebuild_param_area() -> void:
 	_overlay_list.visible = (param_type == "overlay")
 	_stem_option.visible = (param_type == "stem")
 	_text_edit.visible = (param_type == "text")
+	_secs_option.visible = (param_type == "text")
 
 
 func _on_action_selected(_idx: int) -> void:
@@ -379,7 +394,8 @@ func _compose_action() -> String:
 			if msg == "":
 				_show_warning("Type a message to display.")
 				return ""
-			return "%s:%s" % [action_id, msg]
+			var secs: int = Effects.DISPLAY_SECS[_secs_option.selected]
+			return "%s:%d:%s" % [action_id, secs, msg]
 		"overlay":
 			var sel := _overlay_list.get_selected_items()
 			if sel.is_empty():

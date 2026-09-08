@@ -73,14 +73,14 @@ var _toast_until := 0.0  # while now < this, a display: toast owns the banner sl
 var _banner_seq := 0     # stale-request guard for the deferred paths
 
 
-func toast(text: String) -> void:
+func toast(text: String, secs: float = TOAST_SECS) -> void:
 	if %BannerCenter.visible and %BannerSub.visible:
 		return  # a real banner outranks a late toast
 	_banner_seq += 1
 	var seq := _banner_seq
-	_toast_until = Time.get_ticks_msec() * 0.001 + TOAST_SECS
+	_toast_until = Time.get_ticks_msec() * 0.001 + secs
 	_apply_banner(text, "")
-	get_tree().create_timer(TOAST_SECS).timeout.connect(
+	get_tree().create_timer(secs).timeout.connect(
 		func() -> void:
 			if _banner_seq == seq:
 				clear_banner()
@@ -95,7 +95,9 @@ func banner(title: String, sub: String) -> void:
 	var seq := _banner_seq
 	var now := Time.get_ticks_msec() * 0.001
 	if sub != "" and now < _toast_until:
-		get_tree().create_timer(_toast_until - now + 0.15).timeout.connect(
+		# Courtesy beat, capped: a short toast finishes its say, but a long
+		# instructional display never holds the victory banner hostage.
+		get_tree().create_timer(minf(_toast_until - now, 2.5) + 0.15).timeout.connect(
 			func() -> void:
 				if _banner_seq == seq and is_inside_tree():
 					_apply_banner(title, sub)

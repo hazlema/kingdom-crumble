@@ -9,6 +9,25 @@ const SFX_DIR := "res://assets/sfx"
 # Overlay-name charset shared with LevelJson (single direction:
 # level_json calls Effects, never the reverse — no circular statics).
 const DISPLAY_CAP := 80  # display: payload cap — one toast line
+const DISPLAY_SECS := [3, 10, 20, 30]  # curated durations (dialog dropdown)
+
+
+## The message part of a display: action (duration prefix stripped).
+static func display_message(id: String) -> String:
+	var payload := id.trim_prefix("display:")
+	var head := payload.split(":", true, 1)
+	if head.size() == 2 and int(head[0]) in DISPLAY_SECS and head[0] == str(int(head[0])):
+		return head[1]
+	return payload
+
+
+## The duration of a display: action in seconds (default 3.0).
+static func display_secs(id: String) -> float:
+	var payload := id.trim_prefix("display:")
+	var head := payload.split(":", true, 1)
+	if head.size() == 2 and int(head[0]) in DISPLAY_SECS and head[0] == str(int(head[0])):
+		return float(int(head[0]))
+	return 3.0
 
 static var _name_rx := RegEx.create_from_string("^[a-z0-9_-]{1,16}$")
 
@@ -30,10 +49,11 @@ static func is_known(id: String) -> bool:
 	# here we only vouch for the shape.
 	if id.begins_with("show:") or id.begins_with("hide:"):
 		return valid_name(id.split(":", true, 1)[1])
-	# display:<message> — inert text on the HUD toast (tutorial beats).
-	# A string can't act (the intro precedent); only length is policed.
+	# display:<message> or display:<secs>:<message> — inert text on the
+	# HUD toast (tutorial beats). Durations are CURATED (3/10/20/30);
+	# any other leading token is just message text. Length policed only.
 	if id.begins_with("display:"):
-		var msg := id.trim_prefix("display:")
+		var msg := display_message(id)
 		return msg.length() >= 1 and msg.length() <= DISPLAY_CAP
 	return false
 
