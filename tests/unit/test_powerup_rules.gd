@@ -187,3 +187,27 @@ func test_newly_spawned_crate_after_disable_has_no_powerup() -> void:
 func test_route_string_api_compat_still_works() -> void:
 	# The original string route() must remain callable and correct for baked types
 	assert_eq(PowerupRules.route("crate-gold", false, _fixed(0.0))["kind"], "refund")
+
+
+## The call-site pin the first pass lacked: the fix is only real if the
+## GAMEPLAY knock path uses the snapshot. Drive level.gd's actual
+## _on_crate_knocked with a pack crate, disable the pack mid-level, and
+## watch the refund land in shots_left — through the game, not the API.
+func test_knock_path_uses_snapshot_after_pack_disable() -> void:
+	_make_pack("livepack", {"title": "Live Pack", "kind": "objects"},
+		{"live-crate": {"class": "crate", "powerup": "free_shot"}})
+	Pieces.scan()
+	var layout := LevelLayout.new()
+	layout.title = "snapshot_gate"
+	layout.crates.append({"x": 832.0, "y": 443.0, "type": "livepack:live-crate"})
+	layout.shots = 3
+	Level.next_layout = layout
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var crate: Crate = lvl.get_tree().get_nodes_in_group("crates")[0]
+	Pieces.set_pack_enabled("livepack", false)  # mid-level toggle
+	var shots_before: int = lvl.shots_left
+	lvl._on_crate_knocked(crate)
+	assert_eq(lvl.shots_left, shots_before + 1,
+		"gold-style refund fired from the spawn-time snapshot, not the gutted registry")

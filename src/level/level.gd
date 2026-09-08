@@ -431,8 +431,10 @@ func _on_crate_knocked(crate: Crate) -> void:
 	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
 	# the once-ever ceremony never fires — the plain pool rolls instead.
-	var verdict := PowerupRules.route(
-		crate.type_id, Unlocks.has_flag("skunk") or _editor_session, _ghost_roll
+	# route_crate reads the crate's SPAWN-TIME powerup snapshot (audit
+	# finding 7): a pack toggled mid-level cannot change a live reward.
+	var verdict := PowerupRules.route_crate(
+		crate, Unlocks.has_flag("skunk") or _editor_session, _ghost_roll
 	)
 	match verdict["kind"]:
 		"refund":
