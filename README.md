@@ -65,8 +65,7 @@ learn each mechanic. No scripting, no code: just clicks.
 
 ![Animating scenery in the editor](docs/screenshots/scenery-editor.png)
 
-<!-- 📸 screenshot wanted: docs/screenshots/trigger-dialog.png — the Add
-     Trigger dialog open over the "basics" tutorial level -->
+![Wiring a trigger — no code, just clicks](docs/screenshots/trigger-dialog.png)
 
 ## The Toybox 🧸
 
@@ -92,11 +91,9 @@ none of it can break your game: pack files pass the same hostile-input
 gates as everything else. A broken pack is a log warning, never a
 crash.
 
-<!-- 📸 screenshot wanted: docs/screenshots/toybox.png — the pause-menu
-     Toybox section with the Halloween pack + Spooky Season theme -->
+![The Toybox switchboard — note the Spooky Season theme already dressing the level behind it](docs/screenshots/toybox.png)
 
-<!-- 📸 screenshot wanted: docs/screenshots/halloween.png — a level with
-     pumpkin crates smoking green + skull banners -->
+![The Halloween pack having a perfectly normal day](docs/screenshots/halloween.png)
 
 ## Roll Your Own Pieces 🔧
 
