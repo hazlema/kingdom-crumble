@@ -57,6 +57,27 @@ const KNOWN: Dictionary = {
 
 const _HEX_CHARS := "0123456789abcdefABCDEF"
 
+# Shared soft-circle puff texture (radial white -> transparent), built once.
+# CPUParticles2D without a texture draws 1px quads — the original auras
+# were 4px specks, invisible in play (owner field report: "doesn't work").
+static var _puff_tex: Texture2D = null
+
+
+static func _puff() -> Texture2D:
+	if _puff_tex == null:
+		var grad := Gradient.new()
+		grad.set_color(0, Color(1, 1, 1, 1))
+		grad.set_color(1, Color(1, 1, 1, 0))
+		var gt := GradientTexture2D.new()
+		gt.gradient = grad
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(0.5, 0.0)
+		gt.width = 32
+		gt.height = 32
+		_puff_tex = gt
+	return _puff_tex
+
 
 ## True for a strict "#RRGGBB" string — the only color form sidecars may use.
 ## Per-character check: is_valid_hex_number accepts a leading minus sign,
@@ -84,15 +105,20 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 		return
 	var cfg: Dictionary = KNOWN[id]
 	var p := CPUParticles2D.new()
+	p.texture = _puff()
 	p.emitting = true
 	p.local_coords = false
+	# Spread emission across the piece top, not a point jet
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	p.emission_rect_extents = Vector2(20, 6)
 	p.amount = int(cfg.get("amount", 8))
 	p.lifetime = float(cfg.get("lifetime", 2.0))
 	p.spread = float(cfg.get("spread", 30.0))
 	p.gravity = cfg.get("gravity", Vector2(0.0, -20.0)) as Vector2
 	p.initial_velocity_min = float(cfg.get("initial_velocity_min", 10.0))
 	p.initial_velocity_max = float(cfg.get("initial_velocity_max", 30.0))
-	var scale_val := float(cfg.get("scale_amount", 2.0))
+	# scale is relative to the 32px puff texture now (1.0 = 32px puff)
+	var scale_val := float(cfg.get("scale_amount", 2.0)) * 0.25
 	p.scale_amount_min = scale_val
 	p.scale_amount_max = scale_val * 1.5
 	# Color: start color directly, ramp end via gradient
@@ -111,7 +137,8 @@ static func attach(host: Node2D, id: String, color_override: String = "") -> voi
 	grad.set_color(0, start_color)
 	grad.set_color(1, end_color)
 	p.color_ramp = grad
-	# z_index below the sibling sprite's default 0 draws the aura behind the art
-	# regardless of child order (the spawners attach auras after the sprite)
-	p.z_index = -1
+	# In FRONT of the art (z above siblings): behind-the-art at z=-1 hid the
+	# aura under neighboring canvas items in play; the 0.6 alpha cap keeps
+	# the piece face readable through the smoke.
+	p.z_index = 1
 	host.add_child(p)
