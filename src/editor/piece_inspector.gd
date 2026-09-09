@@ -428,8 +428,10 @@ func _rebuild_behavior_options(full: bool) -> void:
 # Called when solid is toggled.  Only affects items that actually exist (full mode
 # has 6 items; reduced mode only has 4 and travel verbs never appear there).
 func _set_travel_verbs_disabled(disabled: bool) -> void:
-	# Items 4 (DRIFT) and 5 (WANDER) only exist in full mode (6 items).
-	if _behavior_option.item_count > 4:
-		_behavior_option.set_item_disabled(4, disabled)
-	if _behavior_option.item_count > 5:
-		_behavior_option.set_item_disabled(5, disabled)
+	# Name-driven, not index-hardcoded — a BEHAVIOR_NAMES reorder must
+	# never silently disable the wrong verbs (review catch). The travel
+	# items only exist in full mode.
+	for verb in ["DRIFT", "WANDER"]:
+		var idx := BEHAVIOR_NAMES.find(verb)
+		if idx >= 0 and _behavior_option.item_count > idx:
+			_behavior_option.set_item_disabled(idx, disabled)
