@@ -66,14 +66,32 @@ func test_hidden_solid_has_no_collision() -> void:
 
 ---
 
-### Task 2: Editor checkbox + docs
+### Task 2: Foreground layer + auto-peek (owner-approved 2026-09-08 — "auto-peek for all users, it's 2026")
 
 **Files:**
-- Modify: `src/editor/piece_inspector.gd` (Solid CheckBox, full mode only), `src/editor/level_editor.gd` only if wiring requires, `parts.md` (scenery section: Solid — what it does, the ≤1024px image guidance, gaps/transparency notes, travel-verb rule, point-budget fallback)
+- Modify: `src/level/level_json.gd` (two new overlay bools), `src/level/scenery_builder.gd` (front-layer spawn), `src/level/level.gd` (peek watcher), possibly `scenes/level.tscn` (front container node)
+- Test: `tests/unit/test_solid_scenery.gd` (append) or a new `test_front_scenery.gd` — implementer's call, follow suite idioms
+
+**Interfaces:**
+- Format: overlay gains `"front": true` (strict bool, default absent/back — mirrors `hidden`/`solid` gates verbatim) and `"peek": true` (strict bool; REQUIRES front — `peek` without `front` = named validation error "overlay %d: peek requires front", the aura_color-requires-aura precedent). Both round-trip; bake leaves them.
+- Rendering: front overlays spawn into a container ABOVE gameplay (crates/stones/props) and BELOW the HUD. Read the level scene's z/tree structure first; add a dedicated front-scenery parent. Editor canvas mirrors the split so the preview is honest (front pieces draw over placed crates in edit mode too — read _rebuild_scenery z handling).
+- Auto-peek: for each front+peek piece, when any node in groups "stones" or "crates" (standing crates — use the same standing test count_standing uses if cheap, else all crates) has its center inside the piece's world rect → tween the piece's modulate alpha to 0.65 over ~0.2s; when clear again → back to 1.0. Poll on a ~0.1s timer or physics process in level.gd (gameplay-side only; the editor never peeks). Tween per-piece, kill-on-retarget (the flash_overlay hygiene pattern). Cosmetic only — never touches visibility/collision/selection.
+- Solid×front is legal (collision is layer-independent); solid+peek fades the picture while the wall stays real — fine, the fade is a reveal, not a lie about physics.
+
+- [ ] **Step 1: failing tests**: strict-bool gates for front/peek; peek-requires-front error; front piece spawns under the front container (assert parent/order) in game spawn; peek fade — spawn front+peek piece with known rect, place a stone inside the rect, run the watcher tick, assert modulate.a tweens toward 0.65 (await the tween; physical-condition termination); stone leaves → returns to 1.0; round-trip + bake-survival pins.
+- [ ] **Step 2-4:** RED → implement → focused + FULL green (baseline = post-Task-1 count).
+- [ ] **Step 5: Commit** `feat: foreground scenery + auto-peek — the roof fades when the action goes behind it`
+
+---
+
+### Task 3: Editor checkboxes + docs
+
+**Files:**
+- Modify: `src/editor/piece_inspector.gd` (Solid + Front + Peek CheckBoxes, full mode only), `src/editor/level_editor.gd` only if wiring requires, `parts.md` (scenery section: Solid — what it does, the ≤1024px guidance, gaps/transparency, travel-verb rule, point-budget fallback; Front/Peek — layering + auto-peek behavior, why-not-mouseover touch note)
 - Test: `tests/unit/test_solid_scenery.gd` (append) or the inspector's existing test home (read where inspector tests live and follow)
 
 **Interfaces:**
-- Produces: full-mode inspector shows a "Solid" CheckBox bound to `overlay["solid"]` (absent = unchecked; unchecking ERASES the key rather than writing false — keep saved files minimal). Interlock: while Solid is checked, the behavior dropdown's DRIFT/WANDER entries are disabled (`set_item_disabled`); if the overlay already has a travel verb when Solid is checked, behavior resets to NONE (and the live piece updates through the existing verb-change path — mind the `_updating` guard idiom, see the radio-helpers battle scar in this file's history).
+- Produces: full-mode inspector shows "Solid", "Front", and "Peek" CheckBoxes bound to their overlay keys (absent = unchecked; unchecking ERASES the key — keep saved files minimal). Peek's checkbox is enabled only while Front is checked (unchecking Front also erases peek — the validator would reject the orphan). Interlock: while Solid is checked, the behavior dropdown's DRIFT/WANDER entries are disabled (`set_item_disabled`); if the overlay already has a travel verb when Solid is checked, behavior resets to NONE (and the live piece updates through the existing verb-change path — mind the `_updating` guard idiom, see the radio-helpers battle scar in this file's history).
 - Editor edit-canvas spawns NO collision (canvas draws pictures; only TEST/game spawn bodies) — confirm the checkbox doesn't accidentally trigger body spawns in edit mode.
 - Reduced mode (animatable props) does NOT show the checkbox (solid is a scenery concept).
 
