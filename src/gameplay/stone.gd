@@ -22,6 +22,12 @@ var _boomed := false
 
 
 func _ready() -> void:
+	# Fast stones (bounce-boosted, deflected off corners) can hit 3000+ px/s;
+	# a 16px body at 60Hz then jumps >50px/step and TUNNELS thin static
+	# geometry (tramp ramps, block-stone, solid scenery, thin floors) — the
+	# rare "corner clip → stone vanishes" bug. Ray-cast CCD closes it without
+	# touching velocity/bounce/damping, so the feel is untouched.
+	continuous_cd = RigidBody2D.CCD_MODE_CAST_RAY
 	mass = 2.0 * (Settings.preset.impact_force if Settings.preset else 1.0)
 	$Visual.texture = VARIANTS[randi() % VARIANTS.size()]
 	if super_bounce:
