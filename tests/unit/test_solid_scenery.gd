@@ -360,3 +360,75 @@ func test_hidden_solid_has_no_collision() -> void:
 
 	assert_eq(body.process_mode, Node.PROCESS_MODE_INHERIT,
 		"after show, body process_mode restored to INHERIT")
+
+
+# ---------------------------------------------------------------------------
+# Review follow-ups (Task 1 gate): non-default pivot, escalation proof,
+# and the real _set_scenery_visible wiring.
+# ---------------------------------------------------------------------------
+
+func test_solid_body_aligned_for_non_default_pivot() -> void:
+	# Reviewer P2: the top-left-anchor math is pivot-proof by construction —
+	# pin it so a NarfDecor pivot-enum change can never silently skew collision.
+	var b64 := _building_b64()
+	var raw := Marshalls.base64_to_raw(b64)
+	var key := LevelJson.image_key(raw)
+	var l := LevelLayout.new()
+	l.title = "pivot_solid"
+	l.images[key] = b64
+	l.overlays.append({"image": key, "x": 500.0, "y": 400.0, "solid": true,
+		"name": "pivoted", "pivot": "LOWER_CENTER"})
+	var host := Node2D.new()
+	add_child_autofree(host)
+	var pieces := SceneryBuilder.spawn(host, l)
+	var body: StaticBody2D = host.get_tree().get_nodes_in_group("scenery_solid")[0]
+	var piece := pieces[0]
+	var sprite_tl: Vector2 = piece.global_position + piece.offset
+	assert_almost_eq(body.global_position.x, sprite_tl.x, 0.5, "body x anchors the pivoted sprite's top-left")
+	assert_almost_eq(body.global_position.y, sprite_tl.y, 0.5, "body y anchors the pivoted sprite's top-left")
+
+
+func test_solid_polygons_escalation_actually_rescues() -> void:
+	# Reviewer P3: prove the epsilon ladder MATTERS — an outline whose
+	# eps-2.0 trace busts the budget but simplifies under it at higher eps.
+	var img := Image.create(600, 80, false, Image.FORMAT_RGBA8)
+	for x in range(0, 600):
+		var top: int = 10 if (x % 2 == 0) else 14  # per-pixel sawtooth edge
+		for y in range(top, 80):
+			img.set_pixel(x, y, Color.WHITE)
+	var bm := BitMap.new()
+	bm.create_from_image_alpha(img, 0.5)
+	var raw_pts := 0
+	for poly in bm.opaque_to_polygons(Rect2i(Vector2i.ZERO, img.get_size()), 2.0):
+		raw_pts += poly.size()
+	assert_gt(raw_pts, 512, "eps 2.0 alone busts the budget on this fixture")
+	var rescued := SceneryBuilder.solid_polygons(img)
+	assert_true(rescued.size() > 0, "escalation rescues the outline instead of dropping to visual-only")
+	var total := 0
+	for poly in rescued:
+		total += poly.size()
+	assert_lte(total, 512, "rescued outline is within budget")
+
+
+func test_set_scenery_visible_toggles_collision_through_level() -> void:
+	# Reviewer P3: drive the REAL level.gd wiring, not a hand toggle.
+	var b64 := _building_b64()
+	var raw := Marshalls.base64_to_raw(b64)
+	var key := LevelJson.image_key(raw)
+	var l := LevelLayout.new()
+	l.title = "wall_reveal"
+	l.images[key] = b64
+	l.overlays.append({"image": key, "x": 900.0, "y": 400.0, "solid": true,
+		"name": "wall", "hidden": true})
+	l.crates.append({"x": 832.0, "y": 443.0, "type": "crate-wood"})
+	l.shots = 3
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var body: StaticBody2D = lvl.get_tree().get_nodes_in_group("scenery_solid")[0]
+	assert_eq(body.process_mode, Node.PROCESS_MODE_DISABLED, "hidden solid spawns without collision")
+	lvl._set_scenery_visible("wall", true)
+	assert_eq(body.process_mode, Node.PROCESS_MODE_INHERIT, "show: reveals a real wall")
+	lvl._set_scenery_visible("wall", false)
+	assert_eq(body.process_mode, Node.PROCESS_MODE_DISABLED, "hide: retracts it")
