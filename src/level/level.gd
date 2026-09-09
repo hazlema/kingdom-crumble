@@ -51,6 +51,10 @@ var _chain_end := false
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
 @onready var hud: Hud = $Hud
+@onready var _front_scenery: Node2D = $FrontScenery
+
+# Per-piece tween trackers for peek fade (kill-on-retarget hygiene).
+var _peek_tweens: Dictionary = {}  # NarfDecor instance_id → Tween
 
 
 func _ready() -> void:
@@ -81,12 +85,23 @@ func _ready() -> void:
 		push_warning("No loadable layout (default included)")
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
-	var _pieces := SceneryBuilder.spawn(self, layout)
-	# Scenery lives BEHIND the whole stage (spec: below crates AND the
-	# trebuchet) — tuck pieces right after the Environment backdrop.
-	for i in _pieces.size():
-		move_child(_pieces[i], 1 + i)
+	var _pieces := SceneryBuilder.spawn(self, layout, _front_scenery)
+	# Back scenery lives BEHIND the whole stage (spec: below crates AND the
+	# trebuchet) — tuck back pieces right after the Environment backdrop.
+	# Front pieces are already in _front_scenery (above gameplay, below HUD)
+	# and need no reordering here.
+	var _back_idx := 1
+	for piece in _pieces:
+		if piece.get_parent() == self:
+			move_child(piece, _back_idx)
+			_back_idx += 1
 	_spawn_crates()
+	# Start the peek watcher timer (0.1s poll, gameplay-side only).
+	var _peek_timer := Timer.new()
+	_peek_timer.wait_time = 0.1
+	_peek_timer.autostart = true
+	_peek_timer.timeout.connect(_tick_peek)
+	add_child(_peek_timer)
 	PropBuilder.spawn_props(self, layout)
 	if layout.title != "":
 		hud.toast(layout.title)
@@ -534,6 +549,69 @@ func _next_path_after_clear() -> String:
 	var chain := LevelChain.entries()
 	var nxt := LevelChain.next_index_after(chain, current_stem)
 	return "" if nxt == -1 else chain[nxt]["path"]
+
+
+# Peek watcher: for each front+peek scenery piece, check whether any stone or
+# crate has its center inside the piece's world rect.  If so, tween modulate.a
+# to 0.65 (0.2s); otherwise restore to 1.0.  Kill-on-retarget hygiene matches
+# flash_overlay in level_editor.gd: a new target direction kills the prior tween
+# and starts fresh so directions never compound.
+func _tick_peek() -> void:
+	for piece_node in get_tree().get_nodes_in_group("scenery"):
+		var piece := piece_node as NarfDecor
+		if piece == null:
+			continue
+		if not piece.get_meta("peek", false):
+			continue
+
+		# Compute the piece's world-space rect (texture bounds).
+		var tex := piece.texture
+		if tex == null:
+			continue
+		var sz := tex.get_size()
+		# NarfDecor: centered=false, offset is pivot-derived top-left offset.
+		var world_tl: Vector2 = piece.global_position + piece.offset
+		var world_rect := Rect2(world_tl, sz)
+
+		# Check any stone in group "stones" or crate in group "crates".
+		var occupied := false
+		for stone in get_tree().get_nodes_in_group("stones"):
+			var sn := stone as Node2D
+			if sn != null and world_rect.has_point(sn.global_position):
+				occupied = true
+				break
+		if not occupied:
+			for crate in get_tree().get_nodes_in_group("crates"):
+				var cn := crate as Node2D
+				if cn != null and world_rect.has_point(cn.global_position):
+					occupied = true
+					break
+		# Also check active stones (not in a group — tracked directly by Level).
+		if not occupied:
+			for stone in _active_stones:
+				if is_instance_valid(stone) and world_rect.has_point(stone.global_position):
+					occupied = true
+					break
+
+		var target_alpha := 0.65 if occupied else 1.0
+		var current_alpha := piece.modulate.a
+		# Skip if already at target (avoid needless tween churn).
+		if absf(current_alpha - target_alpha) < 0.01:
+			continue
+
+		# Kill any running tween for this piece before starting a new one.
+		var iid := piece.get_instance_id()
+		if _peek_tweens.has(iid):
+			var old_tw: Tween = _peek_tweens[iid]
+			if old_tw != null and old_tw.is_valid():
+				old_tw.kill()
+		var tw := create_tween()
+		_peek_tweens[iid] = tw
+		tw.tween_property(piece, "modulate:a", target_alpha, 0.2)
+		tw.finished.connect(func() -> void:
+			if _peek_tweens.get(iid) == tw:
+				_peek_tweens.erase(iid)
+		)
 
 
 func _floaty(text: String, world_pos: Vector2) -> void:

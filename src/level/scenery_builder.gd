@@ -40,7 +40,7 @@ static func solid_polygons(img: Image) -> Array[PackedVector2Array]:
 	return []
 
 
-static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
+static func spawn(parent: Node, layout: LevelLayout, front_parent: Node = null) -> Array[NarfDecor]:
 	var out: Array[NarfDecor] = []
 	if layout.overlays.is_empty():
 		return out
@@ -118,14 +118,31 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 			piece.set_meta("overlay_name", _nm)
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
-		parent.add_child(piece)
+
+		# front: true pieces go into front_parent (when provided) so they render
+		# above gameplay nodes (crates/stones/props).  Fall back to parent when
+		# no front container is supplied (editor with single-parent or legacy callers).
+		var is_front: Variant = (entry as Dictionary).get("front", false)
+		var piece_parent: Node = parent
+		if is_front is bool and is_front == true and front_parent != null:
+			piece_parent = front_parent
+		piece_parent.add_child(piece)
+		# Store the front flag and peek flag as meta so level.gd can find peek pieces.
+		var is_peek: Variant = (entry as Dictionary).get("peek", false)
+		if is_front is bool and is_front == true:
+			piece.set_meta("front", true)
+		if is_peek is bool and is_peek == true:
+			piece.set_meta("peek", true)
 		out.append(piece)
 
 		# Solid overlay: spawn a sibling StaticBody2D whose collision polygon
 		# matches the painted alpha shape exactly (the picture IS the physics).
+		# Bodies always live in piece_parent (same container as the sprite) so
+		# the sibling relationship is preserved regardless of which layer the
+		# visual lands in.
 		var is_solid: Variant = (entry as Dictionary).get("solid", false)
 		if is_solid is bool and is_solid == true:
-			_spawn_solid_body(parent, piece, img_cache[img_key], _nm, hidden_val)
+			_spawn_solid_body(piece_parent, piece, img_cache[img_key], _nm, hidden_val)
 
 	return out
 

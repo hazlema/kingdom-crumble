@@ -846,9 +846,16 @@ func _rebuild_scenery() -> void:
 		if is_instance_valid(body) and (body as Node).is_in_group("scenery_solid"):
 			body.queue_free()
 	_scenery_pieces = SceneryBuilder.spawn(self, current)
-	# Behind the whole stage in the editor preview too (below trebuchet).
-	for _zi in _scenery_pieces.size():
-		move_child(_scenery_pieces[_zi], 1 + _zi)
+	# Z-order split: back pieces go at early positions (below crates/props);
+	# front pieces use z_index=1 to render above crates in the editor preview.
+	# Using z_index for front avoids fighting move_child with runtime-added crates.
+	var _back_zi := 0
+	for s in _scenery_pieces:
+		if s.get_meta("front", false):
+			s.z_index = 1
+		else:
+			move_child(s, 1 + _back_zi)
+			_back_zi += 1
 	# Pieces re-emerge wearing any PENDING (unbaked) edit-state — a
 	# rebuild must never visually revert edits the dict still carries
 	# (import/delete/cap-skip all rebuild mid-session).
