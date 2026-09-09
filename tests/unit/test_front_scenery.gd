@@ -358,3 +358,28 @@ func test_peek_uses_crates_group() -> void:
 		await wait_physics_frames(2)
 		guard += 2
 	assert_lt(piece.modulate.a, 0.70, "crate inside rect also triggers fade")
+
+
+func test_front_pieces_actually_render_above_crates() -> void:
+	# Final-review Critical: parentage alone proved nothing — FrontScenery
+	# at z_index 0 lost to later-tree-order crates and the whole feature
+	# was visually inert in the game. Pin the RENDER ORDER: the front
+	# container's z must beat a gameplay crate's effective z.
+	var layout := LevelLayout.new()
+	layout.title = "front_z"
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	layout.images[key] = b64
+	layout.overlays.append({"image": key, "x": 832.0, "y": 380.0, "name": "roof", "front": true})
+	layout.crates.append({"x": 832.0, "y": 443.0, "type": "crate-wood"})
+	layout.shots = 3
+	Level.next_layout = layout
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	var front := lvl.get_node("FrontScenery") as Node2D
+	var crate: Node2D = lvl.get_tree().get_nodes_in_group("crates")[0]
+	assert_gt(front.z_index, crate.z_index,
+		"front container z beats gameplay z — later tree order must not win")

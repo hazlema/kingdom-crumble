@@ -563,6 +563,8 @@ func _tick_peek() -> void:
 			continue  # queue_freed pieces can linger in the group a frame
 		if not piece.get_meta("peek", false):
 			continue
+		if not piece.visible:
+			continue  # hidden pieces don't peek (churn + surprise pre-fade)
 
 		# Compute the piece's world-space rect (texture bounds).
 		var tex := piece.texture
