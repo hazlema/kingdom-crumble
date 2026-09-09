@@ -488,3 +488,212 @@ func test_selected_overlay_derived_setter_syncs_views() -> void:
 	assert_eq(ed.selected_overlay, -1, "getter returns -1 when no overlay selected")
 	assert_false(insp.visible, "inspector hidden after deselect")
 	assert_null(gizmo.piece, "gizmo piece null after deselect")
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Solid / Front / Peek checkboxes in PieceInspector
+# ---------------------------------------------------------------------------
+
+# Helper: create an inspector with a piece and the given overlay dict.
+func _make_insp_with_overlay(overlay_extra: Dictionary = {}) -> Array:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.CORAL)
+	var key := ed.import_scenery_image(img)
+	var ov: Dictionary = {"image": key, "x": 0.0, "y": 0.0}
+	ov.merge(overlay_extra, true)
+	ed.current.overlays.append(ov)
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1])
+	return [insp, ed.current.overlays[-1], ed._scenery_pieces[-1]]
+
+
+func test_solid_checkbox_writes_and_erases_key() -> void:
+	# set_solid(true) → overlay has "solid": true
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	insp.set_solid(true)
+	assert_true(overlay.get("solid", false), "set_solid(true) writes overlay[solid] = true")
+
+	# set_solid(false) → "solid" key ERASED (keeps files minimal)
+	insp.set_solid(false)
+	assert_false(overlay.has("solid"), "set_solid(false) erases overlay[solid] entirely")
+
+
+func test_front_checkbox_writes_and_erases_key() -> void:
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	insp.set_front(true)
+	assert_true(overlay.get("front", false), "set_front(true) writes overlay[front] = true")
+
+	insp.set_front(false)
+	assert_false(overlay.has("front"), "set_front(false) erases overlay[front] entirely")
+
+
+func test_peek_checkbox_writes_and_erases_key() -> void:
+	var result := _make_insp_with_overlay({"front": true})
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	insp.set_peek(true)
+	assert_true(overlay.get("peek", false), "set_peek(true) writes overlay[peek] = true")
+
+	insp.set_peek(false)
+	assert_false(overlay.has("peek"), "set_peek(false) erases overlay[peek] entirely")
+
+
+func test_peek_checkbox_enabled_only_while_front_is_checked() -> void:
+	# Without front: peek checkbox starts disabled.
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
+	# After open() with no "front" in overlay → PeekCheck must be disabled.
+	assert_true(peek_cb.disabled, "PeekCheck must be disabled when front is not set")
+
+	# Checking front → peek becomes enabled.
+	insp.set_front(true)
+	assert_false(peek_cb.disabled, "PeekCheck enabled when front is checked")
+
+	# Unchecking front → peek becomes disabled again.
+	insp.set_front(false)
+	assert_true(peek_cb.disabled, "PeekCheck disabled again when front is unchecked")
+
+
+func test_unchecking_front_erases_peek() -> void:
+	# Open with front=true, peek=true; uncheck front → peek key also erased.
+	var result := _make_insp_with_overlay({"front": true, "peek": true})
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	assert_true(overlay.get("front", false), "precondition: front = true in overlay")
+	assert_true(overlay.get("peek", false), "precondition: peek = true in overlay")
+
+	insp.set_front(false)
+
+	assert_false(overlay.has("front"), "front key erased after set_front(false)")
+	assert_false(overlay.has("peek"), "peek key also erased when front is unchecked")
+
+
+func test_solid_resets_travel_behavior_to_none() -> void:
+	# Overlay with DRIFT behavior; set_solid(true) → behavior reset to NONE.
+	var result := _make_insp_with_overlay({"behavior": "DRIFT"})
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	insp.set_solid(true)
+
+	assert_eq(str(overlay.get("behavior", "NONE")), "NONE",
+		"set_solid(true) resets DRIFT behavior to NONE in overlay")
+
+
+func test_solid_resets_wander_behavior_to_none() -> void:
+	var result := _make_insp_with_overlay({"behavior": "WANDER"})
+	var insp: PieceInspector = result[0]
+	var overlay: Dictionary = result[1]
+
+	insp.set_solid(true)
+
+	assert_eq(str(overlay.get("behavior", "NONE")), "NONE",
+		"set_solid(true) resets WANDER behavior to NONE in overlay")
+
+
+func test_solid_does_not_reset_sway_or_spin() -> void:
+	# SWAY is a legal verb on solid overlays — must NOT be reset.
+	var result_sway := _make_insp_with_overlay({"behavior": "SWAY"})
+	var insp_sway: PieceInspector = result_sway[0]
+	var overlay_sway: Dictionary = result_sway[1]
+	insp_sway.set_solid(true)
+	assert_eq(str(overlay_sway.get("behavior", "NONE")), "SWAY",
+		"set_solid(true) must NOT reset SWAY (sprite-only verb is legal)")
+
+	var result_spin := _make_insp_with_overlay({"behavior": "SPIN"})
+	var insp_spin: PieceInspector = result_spin[0]
+	var overlay_spin: Dictionary = result_spin[1]
+	insp_spin.set_solid(true)
+	assert_eq(str(overlay_spin.get("behavior", "NONE")), "SPIN",
+		"set_solid(true) must NOT reset SPIN")
+
+
+func test_solid_disables_drift_and_wander_items_in_dropdown() -> void:
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+	var opt: OptionButton = insp.get_node("%BehaviorOption")
+
+	# Before solid: both travel verbs enabled.
+	assert_false(opt.is_item_disabled(4), "DRIFT (idx 4) enabled by default")
+	assert_false(opt.is_item_disabled(5), "WANDER (idx 5) enabled by default")
+
+	insp.set_solid(true)
+
+	assert_true(opt.is_item_disabled(4), "DRIFT (idx 4) disabled while solid is checked")
+	assert_true(opt.is_item_disabled(5), "WANDER (idx 5) disabled while solid is checked")
+
+	# Un-solid → items re-enabled.
+	insp.set_solid(false)
+
+	assert_false(opt.is_item_disabled(4), "DRIFT re-enabled after solid unchecked")
+	assert_false(opt.is_item_disabled(5), "WANDER re-enabled after solid unchecked")
+
+
+func test_reduced_mode_hides_solid_front_peek() -> void:
+	# open() with reduced=true → Solid/Front/Peek controls not visible.
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.TEAL)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 0.0, "y": 0.0})
+	ed._rebuild_scenery()
+	var insp: PieceInspector = ed.get_node("%PieceInspector")
+	# Open in reduced (prop) mode.
+	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1], true)
+
+	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
+	var front_cb: CheckBox = insp.get_node("%FrontCheck")
+	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
+	assert_false(solid_cb.visible, "SolidCheck hidden in reduced mode")
+	assert_false(front_cb.visible, "FrontCheck hidden in reduced mode")
+	assert_false(peek_cb.visible, "PeekCheck hidden in reduced mode")
+
+
+func test_open_prepopulates_solid_front_peek_from_overlay() -> void:
+	# open() with solid=true, front=true, peek=true → checkboxes reflect state.
+	var result := _make_insp_with_overlay({"solid": true, "front": true, "peek": true})
+	var insp: PieceInspector = result[0]
+	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
+	var front_cb: CheckBox = insp.get_node("%FrontCheck")
+	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
+
+	assert_true(solid_cb.button_pressed, "SolidCheck checked when overlay has solid: true")
+	assert_true(front_cb.button_pressed, "FrontCheck checked when overlay has front: true")
+	assert_true(peek_cb.button_pressed, "PeekCheck checked when overlay has peek: true")
+	assert_false(peek_cb.disabled, "PeekCheck enabled when front: true")
+
+
+func test_open_unchecked_state_for_absent_keys() -> void:
+	# open() with no solid/front/peek keys → checkboxes unchecked.
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
+	var front_cb: CheckBox = insp.get_node("%FrontCheck")
+	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
+
+	assert_false(solid_cb.button_pressed, "SolidCheck unchecked when solid absent")
+	assert_false(front_cb.button_pressed, "FrontCheck unchecked when front absent")
+	assert_false(peek_cb.button_pressed, "PeekCheck unchecked when peek absent")
+
+
+func test_solid_checkbox_does_not_spawn_bodies_in_edit_mode() -> void:
+	# Toggling solid in the editor (no TEST spawn) must not create StaticBody2D nodes.
+	var result := _make_insp_with_overlay()
+	var insp: PieceInspector = result[0]
+
+	var bodies_before := get_tree().get_nodes_in_group("scenery_solid").size()
+	insp.set_solid(true)
+	insp.set_solid(false)
+	var bodies_after := get_tree().get_nodes_in_group("scenery_solid").size()
+
+	assert_eq(bodies_after, bodies_before,
+		"toggling solid checkbox in edit mode must not spawn StaticBody2D nodes")

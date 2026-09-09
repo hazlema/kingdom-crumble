@@ -4,6 +4,7 @@ extends PanelContainer
 # Floating inspector shown while a scenery piece is selected.
 # Exposes: behavior OptionButton (None/Spin/Sway/Bob), a 3x3 pivot grid
 # (radio-style toggle buttons), speed HSlider (0-2), movement HSlider (0-60, overlay key "amplitude").
+# Full mode only: Solid / Front / Peek CheckBoxes.
 #
 # open(overlay, piece) populates all controls from the dict and stores
 # references.  Setter methods are the single path through which both UI
@@ -16,6 +17,11 @@ extends PanelContainer
 # never silence or revert a verb.  Speed, movement, and pivot are applied
 # live the same way.  The tests confirm dict correctness, not animation
 # playback.
+#
+# _updating guard discipline: ALWAYS hoist _updating = true BEFORE any
+# programmatic set on a control that emits a signal; restore with was/false
+# after.  Never let the guard drop mid-block (use the was=_updating pattern
+# for nested helpers, see _press_axis / _press_pivot_button).
 
 var _overlay: Dictionary = {}
 var _piece: NarfDecor = null
@@ -35,6 +41,12 @@ var _axis_h: Button
 var _axis_v: Button
 var _travel_slider: HSlider
 var _tilt_slider: HSlider
+# Solid / Front / Peek checkboxes (full mode only).
+var _solid_check: CheckBox
+var _front_check: CheckBox
+var _peek_check: CheckBox
+# Separator above the scenery-flag row (hidden in reduced mode).
+var _sep_scenery: HSeparator
 # Nodes toggled by reduced mode (not all have unique_name_in_owner).
 var _pivot_label: Label
 var _axis_label: Label
@@ -109,6 +121,24 @@ func _ready() -> void:
 				set_pivot_by_index(captured_i)
 		)
 
+	# Solid / Front / Peek checkboxes (full-mode scenery flags).
+	_solid_check = %SolidCheck
+	_front_check = %FrontCheck
+	_peek_check = %PeekCheck
+	_sep_scenery = $Box/Separator7
+	_solid_check.toggled.connect(func(pressed: bool) -> void:
+		if not _updating:
+			set_solid(pressed)
+	)
+	_front_check.toggled.connect(func(pressed: bool) -> void:
+		if not _updating:
+			set_front(pressed)
+	)
+	_peek_check.toggled.connect(func(pressed: bool) -> void:
+		if not _updating:
+			set_peek(pressed)
+	)
+
 	visible = false
 
 
@@ -134,6 +164,11 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_travel_slider.visible = full
 	_tilt_label.visible = full
 	_tilt_slider.visible = full
+	# Scenery-only flags: hidden in reduced (prop) mode.
+	_sep_scenery.visible = full
+	_solid_check.visible = full
+	_front_check.visible = full
+	_peek_check.visible = full
 	_amplitude_slider.max_value = 60.0 if full else 12.0
 	_rebuild_behavior_options(full)
 
@@ -165,6 +200,18 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_press_axis(String(overlay.get("axis", "HORIZONTAL")))
 	_travel_slider.value = float(overlay.get("travel", 120.0))
 	_tilt_slider.value = float(overlay.get("tilt", 8.0))
+
+	# --- Pre-populate Solid / Front / Peek (full mode only) ---
+	if full:
+		var is_solid: bool = overlay.get("solid", false) == true
+		var is_front: bool = overlay.get("front", false) == true
+		var is_peek: bool = overlay.get("peek", false) == true
+		_solid_check.button_pressed = is_solid
+		_front_check.button_pressed = is_front
+		_peek_check.button_pressed = is_peek
+		_peek_check.disabled = not is_front
+		# Reflect travel-verb disabled state from current solid flag.
+		_set_travel_verbs_disabled(is_solid)
 
 	_updating = false
 
@@ -277,6 +324,72 @@ func set_tilt(v: float) -> void:
 		_updating = false
 
 
+# Writes or erases "solid" in the overlay dict.
+# When solid is set: disables DRIFT/WANDER dropdown items; if the current
+# behavior is a travel verb, resets it to NONE through the existing setter
+# (live piece updates, dict stays canonical).
+# When solid is cleared: re-enables DRIFT/WANDER items.
+# Absent = unchecked; we erase rather than write false to keep files minimal.
+func set_solid(v: bool) -> void:
+	if _overlay.is_empty():
+		return
+	if v:
+		_overlay["solid"] = true
+		# If the current behavior is a travel verb, reset to NONE.
+		var cur_behavior: String = _overlay.get("behavior", "NONE")
+		if cur_behavior == "DRIFT" or cur_behavior == "WANDER":
+			set_behavior_by_name("NONE")
+	else:
+		_overlay.erase("solid")
+	# Sync checkbox without re-entering the signal.
+	var was := _updating
+	_updating = true
+	_solid_check.button_pressed = v
+	_updating = was
+	# Update DRIFT/WANDER item enabled/disabled state.
+	_set_travel_verbs_disabled(v)
+
+
+# Writes or erases "front" in the overlay dict.
+# Unchecking front also erases peek (validator rejects orphan peek).
+func set_front(v: bool) -> void:
+	if _overlay.is_empty():
+		return
+	if v:
+		_overlay["front"] = true
+	else:
+		_overlay.erase("front")
+		# Peek requires front — erase it too to keep the dict valid.
+		_overlay.erase("peek")
+		# Uncheck peek checkbox and disable it.
+		var was := _updating
+		_updating = true
+		_peek_check.button_pressed = false
+		_updating = was
+	# Sync front checkbox.
+	var was := _updating
+	_updating = true
+	_front_check.button_pressed = v
+	_peek_check.disabled = not v
+	_updating = was
+
+
+# Writes or erases "peek" in the overlay dict.
+# Only meaningful while front is checked; caller is responsible for only
+# enabling the control when front is set (the _peek_check.disabled guard does this).
+func set_peek(v: bool) -> void:
+	if _overlay.is_empty():
+		return
+	if v:
+		_overlay["peek"] = true
+	else:
+		_overlay.erase("peek")
+	var was := _updating
+	_updating = true
+	_peek_check.button_pressed = v
+	_updating = was
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -309,3 +422,14 @@ func _rebuild_behavior_options(full: bool) -> void:
 	var count := BEHAVIOR_NAMES.size() if full else 4
 	for i in count:
 		_behavior_option.add_item(BEHAVIOR_NAMES[i])
+
+
+# Enables or disables DRIFT (index 4) and WANDER (index 5) in the behavior dropdown.
+# Called when solid is toggled.  Only affects items that actually exist (full mode
+# has 6 items; reduced mode only has 4 and travel verbs never appear there).
+func _set_travel_verbs_disabled(disabled: bool) -> void:
+	# Items 4 (DRIFT) and 5 (WANDER) only exist in full mode (6 items).
+	if _behavior_option.item_count > 4:
+		_behavior_option.set_item_disabled(4, disabled)
+	if _behavior_option.item_count > 5:
+		_behavior_option.set_item_disabled(5, disabled)
