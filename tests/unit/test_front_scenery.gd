@@ -330,8 +330,10 @@ func test_peek_restore_when_stone_leaves() -> void:
 	assert_gt(piece.modulate.a, 0.95, "piece alpha restored to 1.0 when stone left")
 
 
-func test_peek_uses_crates_group() -> void:
-	# A crate inside the rect also triggers the peek fade.
+func test_peek_reveals_action_not_resting_crates() -> void:
+	# Peek reveals ACTION: a MOVING crate (knocked) trips the fade; a
+	# crate at REST inside the structure must NOT hold it open forever
+	# (owner report: depot crates permanently faded the roof).
 	var l := _peek_layout()
 	Level.suppress_intro = true
 	Level.next_layout = l
@@ -347,17 +349,30 @@ func test_peek_uses_crates_group() -> void:
 			break
 	assert_not_null(piece, "piece must exist")
 
-	# Spawn a node in group "crates" inside the rect
-	var crate_host := RigidBody2D.new()
-	crate_host.position = Vector2(400.0, 400.0)
-	crate_host.add_to_group("crates")
-	level.add_child(crate_host)
+	# A RESTING crate inside the rect: freeze it so it's unambiguously idle.
+	var resting := RigidBody2D.new()
+	resting.position = Vector2(400.0, 400.0)
+	resting.freeze = true
+	resting.add_to_group("crates")
+	level.add_child(resting)
 	(level as Level)._tick_peek()
+	await wait_physics_frames(4)
+	assert_almost_eq(piece.modulate.a, 1.0, 0.02, "a resting crate does NOT trip the fade")
+
+	# Now a MOVING crate inside the rect: it IS action, fade triggers.
+	# Pin it in-rect + fast each tick so physics can't carry it out before
+	# the fade completes (we're testing the idle-gate, not ballistics).
+	var moving := RigidBody2D.new()
+	moving.add_to_group("crates")
+	level.add_child(moving)
 	var guard := 0
-	while piece.modulate.a > 0.70 and guard < 60:
+	while piece.modulate.a > 0.70 and guard < 80:
+		moving.position = Vector2(400.0, 400.0)
+		moving.linear_velocity = Vector2(600.0, 0.0)
+		(level as Level)._tick_peek()
 		await wait_physics_frames(2)
 		guard += 2
-	assert_lt(piece.modulate.a, 0.70, "crate inside rect also triggers fade")
+	assert_lt(piece.modulate.a, 0.70, "a crate in motion (knocked) DOES trip the fade")
 
 
 func test_front_pieces_actually_render_above_crates() -> void:

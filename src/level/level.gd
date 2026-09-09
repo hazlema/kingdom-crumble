@@ -585,7 +585,10 @@ func _tick_peek() -> void:
 		if not occupied:
 			for crate in get_tree().get_nodes_in_group("crates"):
 				var cn := crate as Node2D
-				if cn != null and world_rect.has_point(cn.global_position):
+				# Peek reveals ACTION, not furniture: a crate resting inside a
+				# depot must not hold the fade open forever. Only a crate in
+				# MOTION (knocked, tumbling) counts as something worth revealing.
+				if cn != null and not _is_idle(cn) and world_rect.has_point(cn.global_position):
 					occupied = true
 					break
 		# Also check active stones (not in a group — tracked directly by Level).
