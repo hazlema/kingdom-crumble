@@ -559,8 +559,8 @@ func _next_path_after_clear() -> String:
 func _tick_peek() -> void:
 	for piece_node in get_tree().get_nodes_in_group("scenery"):
 		var piece := piece_node as NarfDecor
-		if piece == null:
-			continue
+		if piece == null or not is_instance_valid(piece):
+			continue  # queue_freed pieces can linger in the group a frame
 		if not piece.get_meta("peek", false):
 			continue
 

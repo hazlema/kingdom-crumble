@@ -3,6 +3,12 @@ extends Node2D
 
 # Faint build-zone grid + ghost/selection markers, all draw-only.
 
+func _ready() -> void:
+	# Above front scenery (z=1): the placement ghost and selection ring
+	# must never hide under a foreground piece (Task-2 review catch).
+	z_index = 2
+
+
 var ghost_cell := Vector2i(-1, -1)
 var ghost_visible := false  # explicit — cells LEFT of the grid have negative
 							# x, which the old ghost_cell.x >= 0 guard read as
