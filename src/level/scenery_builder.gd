@@ -8,8 +8,39 @@ extends RefCounted
 # Caller adds the returned pieces BEFORE crates so tree order draws
 # scenery behind gameplay nodes — no z_index tricks needed.
 
+# Epsilon values tried in order for opaque_to_polygons when the polygon
+# point budget is exceeded.  2.0 is the spike value; escalation handles
+# pathological checkerboard art.
+const _SOLID_EPSILONS := [2.0, 4.0, 8.0]
+# Maximum total polygon points across all polygons for one solid overlay.
+# Generous: the spike measured a whole building at 7 points.
+const _SOLID_POINT_BUDGET := 512
 
-static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
+
+# Returns opaque-region polygons for the given image using BitMap alpha →
+# opaque_to_polygons with epsilon escalation.  Returns [] when over budget
+# even after escalation (push_warning is the CALLER's job — this function
+# is pure so it can be unit-tested without side-effects).
+static func solid_polygons(img: Image) -> Array[PackedVector2Array]:
+	if img == null:
+		return []
+	var bm := BitMap.new()
+	bm.create_from_image_alpha(img, 0.5)
+	var rect := Rect2i(Vector2i.ZERO, img.get_size())
+	for eps in _SOLID_EPSILONS:
+		var raw: Array = bm.opaque_to_polygons(rect, eps)
+		var total_pts := 0
+		for poly in raw:
+			total_pts += (poly as PackedVector2Array).size()
+		if total_pts <= _SOLID_POINT_BUDGET:
+			var out: Array[PackedVector2Array] = []
+			for poly in raw:
+				out.append(poly as PackedVector2Array)
+			return out
+	return []
+
+
+static func spawn(parent: Node, layout: LevelLayout, front_parent: Node = null) -> Array[NarfDecor]:
 	var out: Array[NarfDecor] = []
 	if layout.overlays.is_empty():
 		return out
@@ -22,6 +53,7 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 		if rk != "":
 			referenced[rk] = true
 	var tex_cache: Dictionary = {}
+	var img_cache: Dictionary = {}  # key → Image, needed for solid collision
 	for key in layout.images:
 		if not referenced.has(key):
 			continue
@@ -30,6 +62,7 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 			continue
 		var tex := ImageTexture.create_from_image(img)
 		tex_cache[key] = tex
+		img_cache[key] = img
 
 	var behavior_keys := NarfDecor.Behavior.keys()
 	var pivot_keys := NarfDecor.Pivot.keys()
@@ -85,7 +118,82 @@ static func spawn(parent: Node, layout: LevelLayout) -> Array[NarfDecor]:
 			piece.set_meta("overlay_name", _nm)
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
-		parent.add_child(piece)
+
+		# front: true pieces go into front_parent (when provided) so they render
+		# above gameplay nodes (crates/stones/props).  Fall back to parent when
+		# no front container is supplied (editor with single-parent or legacy callers).
+		var is_front: Variant = (entry as Dictionary).get("front", false)
+		var piece_parent: Node = parent
+		if is_front is bool and is_front == true and front_parent != null:
+			piece_parent = front_parent
+		piece_parent.add_child(piece)
+		# Store the front flag and peek flag as meta so level.gd can find peek pieces.
+		var is_peek: Variant = (entry as Dictionary).get("peek", false)
+		if is_front is bool and is_front == true:
+			piece.set_meta("front", true)
+		if is_peek is bool and is_peek == true:
+			piece.set_meta("peek", true)
 		out.append(piece)
 
+		# Solid overlay: spawn a sibling StaticBody2D whose collision polygon
+		# matches the painted alpha shape exactly (the picture IS the physics).
+		# Bodies always live in piece_parent (same container as the sprite) so
+		# the sibling relationship is preserved regardless of which layer the
+		# visual lands in.
+		var is_solid: Variant = (entry as Dictionary).get("solid", false)
+		if is_solid is bool and is_solid == true:
+			_spawn_solid_body(piece_parent, piece, img_cache[img_key], _nm, hidden_val)
+
 	return out
+
+
+# Builds a StaticBody2D sibling (same parent as piece) whose CollisionPolygon2D
+# nodes map the image alpha into the exact world rect the sprite occupies.
+#
+# Why sibling, not child?
+#   Solid overlays allow sprite-only verbs (SWAY/BOB/SPIN) that animate the
+#   NarfDecor's transform.  A child body would inherit those transforms and
+#   rotate/oscillate with the sprite — the collision would move.  A sibling
+#   has its own static transform anchored to the image top-left, independent
+#   of the sprite's animation.
+#
+# Coordinate mapping:
+#   NarfDecor: centered=false, offset = -(w*fx, h*fy) (pivot-based).
+#   Image top-left in world space = piece.position + piece.offset.
+#   opaque_to_polygons returns top-left-origin image coords.
+#   Body position = piece.position + piece.offset so body.global_transform * pt
+#   maps image-local coords directly to world space.
+static func _spawn_solid_body(
+	parent: Node,
+	piece: NarfDecor,
+	img: Image,
+	overlay_name: String,
+	hidden_val: Variant
+) -> void:
+	var polys := solid_polygons(img)
+	if polys.is_empty():
+		push_warning(
+			"SceneryBuilder: overlay '%s' — polygon budget exceeded; spawning visual-only" % overlay_name
+		)
+		return
+
+	var body := StaticBody2D.new()
+	# Anchor: image top-left world position = piece.position + piece.offset
+	# (piece.offset was set by _apply_pivot using the texture size + pivot).
+	body.position = piece.position + piece.offset
+	body.add_to_group("scenery_solid")
+	if overlay_name != "":
+		body.set_meta("overlay_name", overlay_name)
+
+	for poly in polys:
+		var cp := CollisionPolygon2D.new()
+		cp.polygon = poly
+		body.add_child(cp)
+
+	# Hidden solid overlay: disable physics so a hidden wall has no collision.
+	# Re-enabled when _set_scenery_visible is called with on=true.
+	# We use process_mode=DISABLED (StaticBody2D ignores physics when disabled).
+	if hidden_val is bool and hidden_val == true:
+		body.process_mode = Node.PROCESS_MODE_DISABLED
+
+	parent.add_child(body)

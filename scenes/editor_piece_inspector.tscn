@@ -169,3 +169,23 @@ min_value = 0.0
 max_value = 45.0
 step = 0.5
 value = 8.0
+
+[node name="Separator7" type="HSeparator" parent="Box"]
+
+[node name="SolidCheck" type="CheckBox" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+theme_override_font_sizes/font_size = 13
+text = "Solid (collision)"
+
+[node name="FrontCheck" type="CheckBox" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+theme_override_font_sizes/font_size = 13
+text = "Front layer"
+
+[node name="PeekCheck" type="CheckBox" parent="Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+theme_override_font_sizes/font_size = 13
+text = "Auto-peek"

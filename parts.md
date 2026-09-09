@@ -181,6 +181,77 @@ trigger, deleting a crate deletes it.
 
 ---
 
+## Scenery overlays
+
+Scenery is freeform painted art (imported PNGs) placed outside the prop
+grid. Each overlay is positioned by the editor and saved in the level's
+`overlays` array. Three optional flags control collision, rendering order,
+and the peek mechanic:
+
+### Solid
+
+Tick **Solid** to turn the painted silhouette into real collision.
+The engine derives a collision polygon directly from the baked image's
+alpha channel (`BitMap.create_from_image_alpha` → `opaque_to_polygons`).
+**The picture is the physics**: what the player sees is what they can
+stand on, no separate collision shape needed.
+
+Image guidance:
+
+- **Keep art ≤ 1024 px on the long edge.** The polygon tracer runs
+  at spawn time; large images slow loading and produce over-detailed
+  edges. The art pipeline downcaps on import anyway.
+- **Transparency is passage.** A gap in the image (alpha = 0) is a hole
+  the stone will fall through. Paint the roofline solid if you want
+  stones to rest on it; leave gaps intentional if you want a gate.
+- **Travel verbs (DRIFT/WANDER) are refused on solid overlays.**
+  Collision is a `StaticBody2D` — it cannot move. The inspector
+  disables the DRIFT/WANDER items in the behavior dropdown while Solid
+  is checked, and resets any active travel verb to NONE when you first
+  check the box.
+- **Point-budget cap:** the tracer allows up to 512 polygon points per
+  overlay. Over budget, the engine retries at higher epsilon values
+  (simplifying the outline); if still over budget it logs a warning
+  and spawns the overlay visual-only (never crashes, never blocks the
+  level). The budget is generous — the spike measured a whole building
+  silhouette at 7 points.
+- **Hidden solid pieces spawn with collision disabled.** A `show:`
+  trigger that reveals the piece also re-enables the body, so a
+  secret wall can appear mid-level as a design feature.
+
+Solid overlays join group `"scenery_solid"` and behave like the
+`static` piece class: they deflect stones and crates, are never scored,
+and are invisible to triggers and powerups.
+
+### Front layer
+
+Tick **Front** to promote the overlay to a container drawn **above**
+gameplay (crates, stones, props) but **below** the HUD. Use it for
+foreground elements that should read over the action — a sign that
+hangs in front of the catapult, a vine draped across the field.
+
+Solid and Front can be combined: a solid+front wall stops stones and
+draws over them, so the roofline of a foreground building is both a
+physical surface and a visual frame.
+
+### Auto-peek
+
+Tick **Peek** (only available while Front is checked) to activate the
+auto-peek mechanic. While any stone or crate center falls inside the
+piece's world rectangle, the engine tweens the overlay's alpha down to
+0.65 over ~0.2 s, then back to 1.0 when the object leaves. This means
+the player always sees their projectiles pass behind a foreground
+element — no manual alpha tweaking per level.
+
+**Why not a mouseover?** On touch devices there is no hover; peek is
+driven by physics-object proximity so it works identically on all
+platforms without any input.
+
+The fade is cosmetic only — it never touches collision, visibility
+triggers, or selection.
+
+---
+
 ## Editor behavior
 
 - Palette sections are fed by class: CRATES, then OBSTACLES (statics,
@@ -204,6 +275,15 @@ trigger, deleting a crate deletes it.
   or a `sound:` stem. Each action is parameterized per type; up to 16
   actions per crate. This is why overlays want names — anonymous
   overlays don't appear in the picker.
+- Selecting a scenery piece (full mode) opens the piece inspector with
+  Behavior, Pivot, Speed, Movement, Axis, Travel, Tilt dials plus the
+  **Solid**, **Front**, and **Peek** checkboxes. In reduced (prop)
+  mode the scenery flags are hidden — they are scenery concepts.
+  Checking **Solid** disables DRIFT/WANDER in the behavior dropdown and
+  resets any active travel verb to NONE. Unchecking **Front** also
+  unchecks **Peek** (validator rejects a peek overlay without front).
+  The checkbox only writes the overlay dict; collision bodies are spawned
+  by the game/TEST path, not the editor canvas.
 - Selection is one fact; the views (ring, inspector, gizmo) render it.
   Loading/clearing a level always deselects.
 - TEST runs the real game spawners — what you test is what ships.
