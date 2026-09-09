@@ -293,6 +293,15 @@ static func validate(d: Dictionary) -> String:
 		var _ti: Variant = (_entry as Dictionary).get("tilt", 0.0)
 		if not (_tr is float or _tr is int) or not (_ti is float or _ti is int):
 			return "overlay %d: travel/tilt must be numbers" % oi
+		# solid: strict bool gate — wrong type is an error, not a coerce.
+		var _solid: Variant = (_entry as Dictionary).get("solid", false)
+		if not _solid is bool:
+			return "overlay %d: solid must be true/false" % oi
+		# solid + travel verbs (DRIFT/WANDER) = collision cannot move.
+		if _solid == true:
+			var _beh: String = str((_entry as Dictionary).get("behavior", "NONE"))
+			if _beh == "DRIFT" or _beh == "WANDER":
+				return "overlay %d: solid pieces cannot travel" % oi
 	return ""
 
 

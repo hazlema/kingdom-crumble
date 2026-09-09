@@ -494,11 +494,22 @@ func _fire_action_list(ids: Array, at: Vector2, source: Node2D = null) -> void:
 
 
 func _set_scenery_visible(overlay_name: String, on: bool) -> void:
+	var found := false
 	for piece in get_tree().get_nodes_in_group("scenery"):
 		if piece.get_meta("overlay_name", "") == overlay_name:
 			piece.visible = on
-			return
-	push_warning("Trigger references unknown scenery '%s'" % overlay_name)
+			found = true
+			break
+	# Toggle matching solid body (group "scenery_solid") alongside the sprite.
+	# Hidden solid = no collision; shown solid = collision re-enabled.
+	for body in get_tree().get_nodes_in_group("scenery_solid"):
+		if (body as Node).get_meta("overlay_name", "") == overlay_name:
+			(body as Node).process_mode = (
+				Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+			)
+			break
+	if not found:
+		push_warning("Trigger references unknown scenery '%s'" % overlay_name)
 
 
 func _open_jump() -> void:

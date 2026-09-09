@@ -839,6 +839,12 @@ func _rebuild_scenery() -> void:
 		if is_instance_valid(s):
 			s.queue_free()
 	_scenery_pieces.clear()
+	# Free sibling solid bodies spawned alongside pieces (same parent = self).
+	# These are NOT in _scenery_pieces (they're StaticBody2D, not NarfDecor),
+	# so we track them via the "scenery_solid" group filtered to our children.
+	for body in get_children():
+		if is_instance_valid(body) and (body as Node).is_in_group("scenery_solid"):
+			body.queue_free()
 	_scenery_pieces = SceneryBuilder.spawn(self, current)
 	# Behind the whole stage in the editor preview too (below trebuchet).
 	for _zi in _scenery_pieces.size():
