@@ -23,6 +23,7 @@ var _press_world := Vector2.ZERO
 var _moved := false
 const _MOVE_EPS := 4.0
 var _scenery_context: PopupMenu = null
+var _match_menu: PopupMenu = null
 var _lmb_down := false
 
 
@@ -330,10 +331,52 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 		var _nm := str((ed.current.overlays[_ci] as Dictionary).get("name", ""))
 		if _nm != "":
 			_scenery_context.add_item("Copy Name  \"%s\"" % _nm, 5)
+	# Match → [named piece]: copy that piece's whole transform onto this one
+	# (position, scale, rotation, flips, pivot). Aligned AND size-equalized
+	# in one click — the same-canvas twin workflow (owner ask, the cheap
+	# right-click answer to multi-select).
+	if _match_menu == null:
+		_match_menu = PopupMenu.new()
+		_match_menu.id_pressed.connect(_on_match_item)
+		ed.register_popup(_match_menu)
+	_match_menu.clear()
+	var have_targets := false
+	for mi in ed.current.overlays.size():
+		if mi == _ci:
+			continue
+		var mnm := str((ed.current.overlays[mi] as Dictionary).get("name", ""))
+		if mnm != "":
+			_match_menu.add_item(mnm, mi)
+			have_targets = true
+	if have_targets and _ci >= 0:
+		_scenery_context.add_submenu_node_item("Match →", _match_menu)
 	_scenery_context.add_separator()
 	_scenery_context.add_item("Delete", 2)
 	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
 	_scenery_context.popup()
+
+
+func _on_match_item(src_idx: int) -> void:
+	match_transform(ed.selected_overlay, src_idx)
+
+
+# Copy src overlay's transform (x/y, pivot, _rot/_scale/_flip_h/_flip_v)
+# onto dst; keys absent on src are erased on dst. The rebuild respawns the
+# piece wearing the pending edit-state (pinned behavior), so the canvas
+# updates immediately and the next save bakes it.
+func match_transform(dst_idx: int, src_idx: int) -> void:
+	if dst_idx < 0 or src_idx < 0 or dst_idx == src_idx:
+		return
+	if dst_idx >= ed.current.overlays.size() or src_idx >= ed.current.overlays.size():
+		return
+	var dst: Dictionary = ed.current.overlays[dst_idx]
+	var src: Dictionary = ed.current.overlays[src_idx]
+	for k in ["x", "y", "pivot", "_rot", "_scale", "_flip_h", "_flip_v"]:
+		if src.has(k):
+			dst[k] = src[k]
+		else:
+			dst.erase(k)
+	ed._rebuild_scenery()
 
 
 func _on_scenery_context_item(id: int) -> void:

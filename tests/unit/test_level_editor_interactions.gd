@@ -1262,3 +1262,31 @@ func test_ctrl_resize_snaps_width_to_whole_cells() -> void:
 	assert_almost_eq(w, 128.0, 0.01, "scaled width lands on a whole cell count (2x64)")
 	var tl_after := piece.to_global(piece.offset)
 	assert_almost_eq(tl_after.x, tl_before.x, 0.5, "top-left stays pinned while snap-resizing")
+
+
+func test_match_transform_makes_pieces_twins() -> void:
+	# Right-click Match: dst copies src's whole transform — aligned AND
+	# size-equalized in one action (the same-canvas twin workflow).
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 700.0, "y": 380.0, "name": "structure",
+		"_scale": 1.5, "_rot": 0.25})
+	ed.current.overlays.append({"image": key, "x": 913.0, "y": 444.0, "name": "insides",
+		"_scale": 0.9})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+	ed.select_overlay(1)
+	var st: SceneryTool = ed._scenery_tool
+	st.match_transform(1, 0)
+	var a: Dictionary = ed.current.overlays[0]
+	var b: Dictionary = ed.current.overlays[1]
+	for k in ["x", "y", "_scale", "_rot"]:
+		assert_eq(b.get(k), a.get(k), "matched key %s" % k)
+	assert_false(b.has("_flip_h"), "keys absent on src are erased on dst")
+	var pa: NarfDecor = ed._scenery_pieces[0]
+	var pb: NarfDecor = ed._scenery_pieces[1]
+	var tla := pa.to_global(pa.offset)
+	var tlb := pb.to_global(pb.offset)
+	assert_almost_eq(tla.x, tlb.x, 0.01, "pieces are pixel twins after match (x)")
+	assert_almost_eq(tla.y, tlb.y, 0.01, "pieces are pixel twins after match (y)")
