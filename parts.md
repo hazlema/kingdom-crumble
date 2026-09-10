@@ -260,6 +260,11 @@ triggers, or selection.
 - Imported scenery gets an automatic **name** from its filename
   (sanitized, deduped: `sign`, `sign2`...) — right-click the piece →
   **Copy Name** for a clipboard-ready `show:`/`hide:` trigger target.
+- In scenery mode: **arrows** nudge the selected piece 1 px (Shift =
+  10 px), **hold Ctrl while dragging** to snap its top-left corner onto
+  the crate-cell lattice (press **G** to see the grid you're snapping
+  to), and corner-resize grows from the piece's **upper-left** like an
+  art tool — the top-left corner stays pinned while the image scales.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
   it. Right-click a **crate** for Info/Copy-Key.

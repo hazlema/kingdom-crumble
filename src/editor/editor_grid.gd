@@ -20,6 +20,17 @@ static func cols() -> int:
 	return int((MAX_X - MIN_X) / CELL)
 
 
+# Snap a world point to the nearest scenery snap corner: the crate-cell
+# lattice (column left-edges every CELL px from MIN_X; row TOP edges every
+# ROW_H px, derived from REST_Y so a snapped image sits flush with crates).
+static func snap_scenery(p: Vector2) -> Vector2:
+	var oy := REST_Y - ROW_H / 2.0  # top edge of the ground row's cell
+	return Vector2(
+		MIN_X + roundf((p.x - MIN_X) / CELL) * CELL,
+		oy + roundf((p.y - oy) / ROW_H) * ROW_H
+	)
+
+
 static func cell_to_world(c: Vector2i) -> Vector2:
 	return Vector2(MIN_X + c.x * CELL + CELL / 2.0, REST_Y - c.y * ROW_H)
 

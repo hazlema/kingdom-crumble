@@ -12,6 +12,8 @@ var _scenery_drag_start_world := Vector2.ZERO   # world pos when drag began
 var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
 var _scenery_handle := -1             # -1 = body, 0-3 = corner, 4 = rotate
 var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
+var _scenery_drag_press_tl := Vector2.ZERO  # piece's world top-left at press
+var snap_override := false  # tests can force Ctrl-snap without real input
 # Click-cycle (Inkscape-style): a click without motion on a pile holding the
 # current selection steps to the next-lower piece — decided on RELEASE so a
 # click-to-drag never dives (owner's "actions on the up event").
@@ -112,6 +114,7 @@ func _scenery_press(world: Vector2) -> void:
 			_scenery_dragging = true
 			_scenery_drag_start_world = world
 			_scenery_drag_piece_origin = piece.position
+			_scenery_drag_press_tl = piece.to_global(piece.offset)
 			var po: Dictionary = ed.current.overlays[cur_idx]
 			_scenery_drag_press_scale = po.get("_scale", 1.0)
 			return
@@ -141,6 +144,7 @@ func _scenery_press(world: Vector2) -> void:
 	_scenery_dragging = true
 	_scenery_drag_start_world = world
 	_scenery_drag_piece_origin = piece.position
+	_scenery_drag_press_tl = piece.to_global(piece.offset)
 	var po: Dictionary = ed.current.overlays[target]
 	_scenery_drag_press_scale = po.get("_scale", 1.0)
 	if not already:
@@ -183,6 +187,12 @@ func _scenery_drag(world: Vector2) -> void:
 	if _scenery_handle == -1:
 		# Body drag — move piece, and keep overlay dict in sync for mid-drag saves.
 		piece.position = _scenery_drag_piece_origin + delta
+		if snap_override or Input.is_key_pressed(KEY_CTRL):
+			# Ctrl-snap: land the piece's visual top-left on the crate-cell
+			# lattice so scenery sits flush with grid-locked solids (G shows
+			# the grid; Ctrl makes it magnetic).
+			var tl := piece.to_global(piece.offset)
+			piece.position += EditorGrid.snap_scenery(tl) - tl
 		piece.rehome()  # else a live verb snaps it back to where it was born
 		o["x"] = piece.position.x
 		o["y"] = piece.position.y
@@ -210,6 +220,13 @@ func _scenery_drag(world: Vector2) -> void:
 					max_scale = minf(20.0, 1024.0 / float(long_edge))
 			var new_scale := clampf(_scenery_drag_press_scale * (dist_now / dist_start), 0.05, max_scale)
 			piece.scale = Vector2(new_scale, new_scale)
+			# Anchor the visual TOP-LEFT while scaling (owner ask: grow from
+			# the upper-left like an art tool, not from the pivot/center).
+			var tl_now := piece.to_global(piece.offset)
+			piece.position += _scenery_drag_press_tl - tl_now
+			piece.rehome()
+			o["x"] = piece.position.x
+			o["y"] = piece.position.y
 			o["_scale"] = new_scale
 
 

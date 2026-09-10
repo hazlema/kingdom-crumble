@@ -1173,3 +1173,66 @@ func test_editor_scenery_never_draws_above_crates() -> void:
 	var crate: Node = ed._spawned[0]
 	assert_true(veil.get_index() > backdrop.get_index(), "peek above plain scenery")
 	assert_true(crate.get_index() > veil.get_index(), "crates above ALL scenery — even fresh peek pieces")
+
+
+func test_snap_scenery_lands_on_crate_lattice() -> void:
+	# Columns: left edges every 64 from MIN_X; rows: cell TOP edges every 63
+	# derived from REST_Y (569 - 31.5 = 537.5 for the ground row).
+	var s := EditorGrid.snap_scenery(Vector2(640.0, 530.0))
+	assert_almost_eq(s.x, 672.0, 0.01, "x snaps to 608 + 64k")
+	assert_almost_eq(s.y, 537.5, 0.01, "y snaps to the row-top lattice")
+	var s2 := EditorGrid.snap_scenery(Vector2(609.0, 400.0))
+	assert_almost_eq(s2.x, 608.0, 0.01, "left edge of column 0")
+	assert_almost_eq(s2.y, 411.5, 0.01, "537.5 - 2*63")
+
+
+func test_ctrl_drag_snaps_scenery_topleft_to_grid() -> void:
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 700.0, "y": 400.0, "name": "wall"})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+	ed.select_overlay(0)
+	var st: SceneryTool = ed._scenery_tool
+	var piece: NarfDecor = ed._scenery_pieces[0]
+	st.snap_override = true
+	st._scenery_handle = -1
+	st._scenery_dragging = true
+	st._scenery_drag_start_world = Vector2(700.0, 400.0)
+	st._scenery_drag_piece_origin = piece.position
+	st._scenery_drag_press_tl = piece.to_global(piece.offset)
+	st._scenery_drag(Vector2(713.0, 391.0))  # ragged move
+	st.snap_override = false
+	var tl := piece.to_global(piece.offset)
+	assert_almost_eq(fposmod(tl.x - EditorGrid.MIN_X, float(EditorGrid.CELL)), 0.0, 0.01,
+		"snapped TL sits on a column edge")
+	var oy := EditorGrid.REST_Y - EditorGrid.ROW_H / 2.0
+	assert_almost_eq(fposmod(tl.y - oy, float(EditorGrid.ROW_H)), 0.0, 0.01,
+		"snapped TL sits on a row-top edge")
+	assert_almost_eq(float(ed.current.overlays[0]["x"]), piece.position.x, 0.01, "dict synced")
+
+
+func test_corner_resize_anchors_top_left() -> void:
+	var img := Image.create(100, 80, false, Image.FORMAT_RGBA8)
+	img.fill(Color.GREEN)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 900.0, "y": 400.0, "name": "grow"})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+	ed.select_overlay(0)
+	var st: SceneryTool = ed._scenery_tool
+	var piece: NarfDecor = ed._scenery_pieces[0]
+	var tl_before := piece.to_global(piece.offset)
+	st._scenery_handle = 2  # a corner handle
+	st._scenery_dragging = true
+	st._scenery_drag_start_world = piece.position + Vector2(50.0, 40.0)
+	st._scenery_drag_piece_origin = piece.position
+	st._scenery_drag_press_tl = tl_before
+	st._scenery_drag_press_scale = 1.0
+	st._scenery_drag(piece.position + Vector2(75.0, 60.0))  # pull outward 1.5x
+	var tl_after := piece.to_global(piece.offset)
+	assert_almost_eq(tl_after.x, tl_before.x, 0.5, "top-left x pinned while scaling")
+	assert_almost_eq(tl_after.y, tl_before.y, 0.5, "top-left y pinned while scaling")
+	assert_gt(float(ed.current.overlays[0]["_scale"]), 1.2, "scale actually grew")
+	assert_almost_eq(float(ed.current.overlays[0]["x"]), piece.position.x, 0.01, "position dict synced")
