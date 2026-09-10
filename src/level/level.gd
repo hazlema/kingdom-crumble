@@ -51,7 +51,6 @@ var _chain_end := false
 @onready var trebuchet: Trebuchet = $Trebuchet
 @onready var cam: CameraDirector = $CameraDirector
 @onready var hud: Hud = $Hud
-@onready var _front_scenery: Node2D = $FrontScenery
 
 # Per-piece tween trackers for peek fade (kill-on-retarget hygiene).
 var _peek_tweens: Dictionary = {}  # NarfDecor instance_id → Tween
@@ -85,10 +84,9 @@ func _ready() -> void:
 		push_warning("No loadable layout (default included)")
 		hud.add_child(INVALID_LEVEL_SCENE.instantiate())
 		layout = LevelLayout.new()
-	var _pieces := SceneryBuilder.spawn(self, layout, _front_scenery)
+	var _pieces := SceneryBuilder.spawn(self, layout)
 	# Back scenery lives BEHIND the whole stage (spec: below crates AND the
 	# trebuchet) — tuck back pieces right after the Environment backdrop.
-	# Front pieces are already in _front_scenery (above gameplay, below HUD)
 	# and need no reordering here.
 	var _back_idx := 1
 	for piece in _pieces:
@@ -551,11 +549,15 @@ func _next_path_after_clear() -> String:
 	return "" if nxt == -1 else chain[nxt]["path"]
 
 
-# Peek watcher: for each front+peek scenery piece, check whether any stone or
-# crate has its center inside the piece's world rect.  If so, tween modulate.a
-# to 0.35 (0.2s); otherwise restore to 1.0.  Kill-on-retarget hygiene matches
-# flash_overlay in level_editor.gd: a new target direction kills the prior tween
-# and starts fresh so directions never compound.
+# Peek watcher (owner design): peek is an object PROPERTY — "fade out when
+# a shot comes near".  Peek pieces draw under crates/stones so the goal is
+# never obscured; the fade is pure feedback that the object isn't solid.
+# A stone inside the piece's rect grown by PEEK_MARGIN → tween modulate.a
+# to 0.35 (0.2s); no stone near → restore 1.0.  Kill-on-retarget hygiene
+# matches flash_overlay in level_editor.gd.
+const PEEK_MARGIN := 120.0  # px around the piece that counts as "near"
+
+
 func _tick_peek() -> void:
 	for piece_node in get_tree().get_nodes_in_group("scenery"):
 		var piece := piece_node as NarfDecor
@@ -573,33 +575,24 @@ func _tick_peek() -> void:
 		var sz := tex.get_size()
 		# NarfDecor: centered=false, offset is pivot-derived top-left offset.
 		var world_tl: Vector2 = piece.global_position + piece.offset
-		var world_rect := Rect2(world_tl, sz)
+		var near_rect := Rect2(world_tl, sz).grow(PEEK_MARGIN)
 
-		# Check any stone in group "stones" or crate in group "crates".
-		var occupied := false
+		# "A shot comes near": any stone (group or the level's active list)
+		# inside the grown rect.  Crates are irrelevant — they draw over the
+		# piece anyway, and the fade is about the incoming shot.
+		var shot_near := false
 		for stone in get_tree().get_nodes_in_group("stones"):
 			var sn := stone as Node2D
-			if sn != null and world_rect.has_point(sn.global_position):
-				occupied = true
+			if sn != null and near_rect.has_point(sn.global_position):
+				shot_near = true
 				break
-		if not occupied:
-			for crate in get_tree().get_nodes_in_group("crates"):
-				var cn := crate as Node2D
-				# A crate behind a front piece keeps it faded — the fade is the
-				# AFFORDANCE (owner: an opaque frame reads as a solid wall;
-				# the translucency tells the player it's passable AND shows
-				# the targets). Resting crates count, that's the point.
-				if cn != null and world_rect.has_point(cn.global_position):
-					occupied = true
-					break
-		# Also check active stones (not in a group — tracked directly by Level).
-		if not occupied:
+		if not shot_near:
 			for stone in _active_stones:
-				if is_instance_valid(stone) and world_rect.has_point(stone.global_position):
-					occupied = true
+				if is_instance_valid(stone) and near_rect.has_point(stone.global_position):
+					shot_near = true
 					break
 
-		var target_alpha := 0.35 if occupied else 1.0  # see-through: read the targets
+		var target_alpha := 0.35 if shot_near else 1.0  # feedback: "not solid"
 		var current_alpha := piece.modulate.a
 		# Skip if already at target (avoid needless tween churn).
 		if absf(current_alpha - target_alpha) < 0.01:

@@ -302,16 +302,13 @@ static func validate(d: Dictionary) -> String:
 			var _beh: String = str((_entry as Dictionary).get("behavior", "NONE"))
 			if _beh == "DRIFT" or _beh == "WANDER":
 				return "overlay %d: solid pieces cannot travel" % oi
-		# front: strict bool gate (mirrors hidden/solid).
-		var _front: Variant = (_entry as Dictionary).get("front", false)
-		if not _front is bool:
-			return "overlay %d: front must be true/false" % oi
-		# peek: strict bool gate; requires front: true.
+		# peek: strict bool gate — a standalone object property ("fade when
+		# a shot comes near"). The old "front" key is dead vocabulary:
+		# ignored on load like any unknown key (owner: no front concept;
+		# z-order is background -> peek -> crates -> stones -> hud).
 		var _peek: Variant = (_entry as Dictionary).get("peek", false)
 		if not _peek is bool:
 			return "overlay %d: peek must be true/false" % oi
-		if _peek == true and _front != true:
-			return "overlay %d: peek requires front" % oi
 	return ""
 
 

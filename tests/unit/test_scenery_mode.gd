@@ -491,7 +491,7 @@ func test_selected_overlay_derived_setter_syncs_views() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Task 3: Solid / Front / Peek checkboxes in PieceInspector
+# Solid / Peek object-property checkboxes in PieceInspector
 # ---------------------------------------------------------------------------
 
 # Helper: create an inspector with a piece and the given overlay dict.
@@ -522,20 +522,8 @@ func test_solid_checkbox_writes_and_erases_key() -> void:
 	assert_false(overlay.has("solid"), "set_solid(false) erases overlay[solid] entirely")
 
 
-func test_front_checkbox_writes_and_erases_key() -> void:
-	var result := _make_insp_with_overlay()
-	var insp: PieceInspector = result[0]
-	var overlay: Dictionary = result[1]
-
-	insp.set_front(true)
-	assert_true(overlay.get("front", false), "set_front(true) writes overlay[front] = true")
-
-	insp.set_front(false)
-	assert_false(overlay.has("front"), "set_front(false) erases overlay[front] entirely")
-
-
 func test_peek_checkbox_writes_and_erases_key() -> void:
-	var result := _make_insp_with_overlay({"front": true})
+	var result := _make_insp_with_overlay()
 	var insp: PieceInspector = result[0]
 	var overlay: Dictionary = result[1]
 
@@ -546,36 +534,13 @@ func test_peek_checkbox_writes_and_erases_key() -> void:
 	assert_false(overlay.has("peek"), "set_peek(false) erases overlay[peek] entirely")
 
 
-func test_peek_checkbox_enabled_only_while_front_is_checked() -> void:
-	# Without front: peek checkbox starts disabled.
+func test_peek_checkbox_is_always_enabled() -> void:
+	# Peek is a standalone object property (no front concept) — the
+	# checkbox is live the moment the inspector opens.
 	var result := _make_insp_with_overlay()
 	var insp: PieceInspector = result[0]
 	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
-	# After open() with no "front" in overlay → PeekCheck must be disabled.
-	assert_true(peek_cb.disabled, "PeekCheck must be disabled when front is not set")
-
-	# Checking front → peek becomes enabled.
-	insp.set_front(true)
-	assert_false(peek_cb.disabled, "PeekCheck enabled when front is checked")
-
-	# Unchecking front → peek becomes disabled again.
-	insp.set_front(false)
-	assert_true(peek_cb.disabled, "PeekCheck disabled again when front is unchecked")
-
-
-func test_unchecking_front_erases_peek() -> void:
-	# Open with front=true, peek=true; uncheck front → peek key also erased.
-	var result := _make_insp_with_overlay({"front": true, "peek": true})
-	var insp: PieceInspector = result[0]
-	var overlay: Dictionary = result[1]
-
-	assert_true(overlay.get("front", false), "precondition: front = true in overlay")
-	assert_true(overlay.get("peek", false), "precondition: peek = true in overlay")
-
-	insp.set_front(false)
-
-	assert_false(overlay.has("front"), "front key erased after set_front(false)")
-	assert_false(overlay.has("peek"), "peek key also erased when front is unchecked")
+	assert_false(peek_cb.disabled, "PeekCheck is enabled standalone — no front prerequisite")
 
 
 func test_solid_resets_travel_behavior_to_none() -> void:
@@ -639,8 +604,8 @@ func test_solid_disables_drift_and_wander_items_in_dropdown() -> void:
 	assert_false(opt.is_item_disabled(5), "WANDER re-enabled after solid unchecked")
 
 
-func test_reduced_mode_hides_solid_front_peek() -> void:
-	# open() with reduced=true → Solid/Front/Peek controls not visible.
+func test_reduced_mode_hides_solid_peek() -> void:
+	# open() with reduced=true → Solid/Peek controls not visible.
 	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
 	img.fill(Color.TEAL)
 	var key := ed.import_scenery_image(img)
@@ -651,37 +616,31 @@ func test_reduced_mode_hides_solid_front_peek() -> void:
 	insp.open(ed.current.overlays[-1], ed._scenery_pieces[-1], true)
 
 	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
-	var front_cb: CheckBox = insp.get_node("%FrontCheck")
 	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
 	assert_false(solid_cb.visible, "SolidCheck hidden in reduced mode")
-	assert_false(front_cb.visible, "FrontCheck hidden in reduced mode")
 	assert_false(peek_cb.visible, "PeekCheck hidden in reduced mode")
 
 
-func test_open_prepopulates_solid_front_peek_from_overlay() -> void:
-	# open() with solid=true, front=true, peek=true → checkboxes reflect state.
-	var result := _make_insp_with_overlay({"solid": true, "front": true, "peek": true})
+func test_open_prepopulates_solid_peek_from_overlay() -> void:
+	# open() with solid=true, peek=true → checkboxes reflect state.
+	var result := _make_insp_with_overlay({"solid": true, "peek": true})
 	var insp: PieceInspector = result[0]
 	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
-	var front_cb: CheckBox = insp.get_node("%FrontCheck")
 	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
 
 	assert_true(solid_cb.button_pressed, "SolidCheck checked when overlay has solid: true")
-	assert_true(front_cb.button_pressed, "FrontCheck checked when overlay has front: true")
 	assert_true(peek_cb.button_pressed, "PeekCheck checked when overlay has peek: true")
-	assert_false(peek_cb.disabled, "PeekCheck enabled when front: true")
+	assert_false(peek_cb.disabled, "PeekCheck enabled — standalone property")
 
 
 func test_open_unchecked_state_for_absent_keys() -> void:
-	# open() with no solid/front/peek keys → checkboxes unchecked.
+	# open() with no solid/peek keys → checkboxes unchecked.
 	var result := _make_insp_with_overlay()
 	var insp: PieceInspector = result[0]
 	var solid_cb: CheckBox = insp.get_node("%SolidCheck")
-	var front_cb: CheckBox = insp.get_node("%FrontCheck")
 	var peek_cb: CheckBox = insp.get_node("%PeekCheck")
 
 	assert_false(solid_cb.button_pressed, "SolidCheck unchecked when solid absent")
-	assert_false(front_cb.button_pressed, "FrontCheck unchecked when front absent")
 	assert_false(peek_cb.button_pressed, "PeekCheck unchecked when peek absent")
 
 

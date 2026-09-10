@@ -4,7 +4,7 @@ extends PanelContainer
 # Floating inspector shown while a scenery piece is selected.
 # Exposes: behavior OptionButton (None/Spin/Sway/Bob), a 3x3 pivot grid
 # (radio-style toggle buttons), speed HSlider (0-2), movement HSlider (0-60, overlay key "amplitude").
-# Full mode only: Solid / Front / Peek CheckBoxes.
+# Full mode only: Solid / Peek CheckBoxes (object properties).
 #
 # open(overlay, piece) populates all controls from the dict and stores
 # references.  Setter methods are the single path through which both UI
@@ -41,9 +41,8 @@ var _axis_h: Button
 var _axis_v: Button
 var _travel_slider: HSlider
 var _tilt_slider: HSlider
-# Solid / Front / Peek checkboxes (full mode only).
+# Solid / Peek checkboxes (full mode only).
 var _solid_check: CheckBox
-var _front_check: CheckBox
 var _peek_check: CheckBox
 # Separator above the scenery-flag row (hidden in reduced mode).
 var _sep_scenery: HSeparator
@@ -121,18 +120,13 @@ func _ready() -> void:
 				set_pivot_by_index(captured_i)
 		)
 
-	# Solid / Front / Peek checkboxes (full-mode scenery flags).
+	# Solid / Peek checkboxes (full-mode object properties).
 	_solid_check = %SolidCheck
-	_front_check = %FrontCheck
 	_peek_check = %PeekCheck
 	_sep_scenery = $Box/Separator7
 	_solid_check.toggled.connect(func(pressed: bool) -> void:
 		if not _updating:
 			set_solid(pressed)
-	)
-	_front_check.toggled.connect(func(pressed: bool) -> void:
-		if not _updating:
-			set_front(pressed)
 	)
 	_peek_check.toggled.connect(func(pressed: bool) -> void:
 		if not _updating:
@@ -167,7 +161,6 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	# Scenery-only flags: hidden in reduced (prop) mode.
 	_sep_scenery.visible = full
 	_solid_check.visible = full
-	_front_check.visible = full
 	_peek_check.visible = full
 	_amplitude_slider.max_value = 60.0 if full else 12.0
 	_rebuild_behavior_options(full)
@@ -201,15 +194,13 @@ func open(overlay: Dictionary, piece: NarfDecor, reduced := false) -> void:
 	_travel_slider.value = float(overlay.get("travel", 120.0))
 	_tilt_slider.value = float(overlay.get("tilt", 8.0))
 
-	# --- Pre-populate Solid / Front / Peek (full mode only) ---
+	# --- Pre-populate Solid / Peek (full mode only) ---
 	if full:
 		var is_solid: bool = overlay.get("solid", false) == true
-		var is_front: bool = overlay.get("front", false) == true
 		var is_peek: bool = overlay.get("peek", false) == true
 		_solid_check.button_pressed = is_solid
-		_front_check.button_pressed = is_front
 		_peek_check.button_pressed = is_peek
-		_peek_check.disabled = not is_front
+		_peek_check.disabled = false  # peek is a standalone property
 		# Reflect travel-verb disabled state from current solid flag.
 		_set_travel_verbs_disabled(is_solid)
 
@@ -350,33 +341,8 @@ func set_solid(v: bool) -> void:
 	_set_travel_verbs_disabled(v)
 
 
-# Writes or erases "front" in the overlay dict.
-# Unchecking front also erases peek (validator rejects orphan peek).
-func set_front(v: bool) -> void:
-	if _overlay.is_empty():
-		return
-	if v:
-		_overlay["front"] = true
-	else:
-		_overlay.erase("front")
-		# Peek requires front — erase it too to keep the dict valid.
-		_overlay.erase("peek")
-		# Uncheck peek checkbox and disable it.
-		var was := _updating
-		_updating = true
-		_peek_check.button_pressed = false
-		_updating = was
-	# Sync front checkbox.
-	var was := _updating
-	_updating = true
-	_front_check.button_pressed = v
-	_peek_check.disabled = not v
-	_updating = was
-
-
-# Writes or erases "peek" in the overlay dict.
-# Only meaningful while front is checked; caller is responsible for only
-# enabling the control when front is set (the _peek_check.disabled guard does this).
+# Writes or erases "peek" in the overlay dict — a standalone object
+# property: the piece fades when a shot comes near (feedback: not solid).
 func set_peek(v: bool) -> void:
 	if _overlay.is_empty():
 		return

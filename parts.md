@@ -223,29 +223,26 @@ Solid overlays join group `"scenery_solid"` and behave like the
 `static` piece class: they deflect stones and crates, are never scored,
 and are invisible to triggers and powerups.
 
-### Front layer
-
-Tick **Front** to promote the overlay to a container drawn **above**
-gameplay (crates, stones, props) but **below** the HUD. Use it for
-foreground elements that should read over the action — a sign that
-hangs in front of the catapult, a vine draped across the field.
-
-Solid and Front can be combined: a solid+front wall stops stones and
-draws over them, so the roofline of a foreground building is both a
-physical surface and a visual frame.
-
 ### Auto-peek
 
-Tick **Peek** (only available while Front is checked) to activate the
-auto-peek mechanic. While any stone or crate center falls inside the
-piece's world rectangle, the engine tweens the overlay's alpha down to
-0.65 over ~0.2 s, then back to 1.0 when the object leaves. This means
-the player always sees their projectiles pass behind a foreground
-element — no manual alpha tweaking per level.
+Tick **Peek** to give the overlay the second object property: *fade
+out when a shot comes near*. When any stone flies within ~120 px of
+the piece, its alpha tweens down to 0.35 over ~0.2 s, then back to 1.0
+when the shot is gone. The fade is pure feedback — it tells the player
+"this thing isn't solid" without them having to test-fire at it.
+
+Draw order is fixed and simple: background scenery, then peek pieces,
+then crates, then stones, then the HUD. Peek pieces sit above plain
+backdrops but **below the crates and stones — the goal is never
+obscured** by scenery, faded or not.
+
+Solid and Peek combine naturally: a solid depot with a peek awning is
+a real wall wherever it's painted, and the awning advertises its
+passable parts by fading as your shot arrives.
 
 **Why not a mouseover?** On touch devices there is no hover; peek is
-driven by physics-object proximity so it works identically on all
-platforms without any input.
+driven by shot proximity so it works identically on all platforms
+without any input.
 
 The fade is cosmetic only — it never touches collision, visibility
 triggers, or selection.
@@ -277,13 +274,12 @@ triggers, or selection.
   overlays don't appear in the picker.
 - Selecting a scenery piece (full mode) opens the piece inspector with
   Behavior, Pivot, Speed, Movement, Axis, Travel, Tilt dials plus the
-  **Solid**, **Front**, and **Peek** checkboxes. In reduced (prop)
-  mode the scenery flags are hidden — they are scenery concepts.
-  Checking **Solid** disables DRIFT/WANDER in the behavior dropdown and
-  resets any active travel verb to NONE. Unchecking **Front** also
-  unchecks **Peek** (validator rejects a peek overlay without front).
-  The checkbox only writes the overlay dict; collision bodies are spawned
-  by the game/TEST path, not the editor canvas.
+  **Solid** and **Peek** checkboxes — the two object properties. In
+  reduced (prop) mode the scenery flags are hidden — they are scenery
+  concepts. Checking **Solid** disables DRIFT/WANDER in the behavior
+  dropdown and resets any active travel verb to NONE. The checkboxes
+  only write the overlay dict; collision bodies are spawned by the
+  game/TEST path, not the editor canvas.
 - Selection is one fact; the views (ring, inspector, gizmo) render it.
   Loading/clearing a level always deselects.
 - TEST runs the real game spawners — what you test is what ships.

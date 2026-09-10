@@ -178,12 +178,6 @@ custom_minimum_size = Vector2(0, 28)
 theme_override_font_sizes/font_size = 13
 text = "Solid (collision)"
 
-[node name="FrontCheck" type="CheckBox" parent="Box"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 28)
-theme_override_font_sizes/font_size = 13
-text = "Front layer"
-
 [node name="PeekCheck" type="CheckBox" parent="Box"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 28)

@@ -40,7 +40,9 @@ static func solid_polygons(img: Image) -> Array[PackedVector2Array]:
 	return []
 
 
-static func spawn(parent: Node, layout: LevelLayout, front_parent: Node = null) -> Array[NarfDecor]:
+static func spawn(parent: Node, layout: LevelLayout, _front_parent_unused: Node = null) -> Array[NarfDecor]:
+	# _front_parent_unused: legacy arg from the retired "front layer" concept;
+	# accepted and ignored so old call sites don't break.
 	var out: Array[NarfDecor] = []
 	if layout.overlays.is_empty():
 		return out
@@ -119,18 +121,13 @@ static func spawn(parent: Node, layout: LevelLayout, front_parent: Node = null) 
 		piece.add_to_group("scenery")
 		piece.set_meta("overlay_index", i)  # source index; used by editor for index alignment
 
-		# front: true pieces go into front_parent (when provided) so they render
-		# above gameplay nodes (crates/stones/props).  Fall back to parent when
-		# no front container is supplied (editor with single-parent or legacy callers).
-		var is_front: Variant = (entry as Dictionary).get("front", false)
+		# Everything is a background object (owner's z-order: background ->
+		# peek -> crates -> stones -> hud).  Peek pieces draw LAST among the
+		# scenery so they sit above plain backdrops, while tree order keeps
+		# them under crates/stones — the goal is never obscured.
 		var piece_parent: Node = parent
-		if is_front is bool and is_front == true and front_parent != null:
-			piece_parent = front_parent
 		piece_parent.add_child(piece)
-		# Store the front flag and peek flag as meta so level.gd can find peek pieces.
 		var is_peek: Variant = (entry as Dictionary).get("peek", false)
-		if is_front is bool and is_front == true:
-			piece.set_meta("front", true)
 		if is_peek is bool and is_peek == true:
 			piece.set_meta("peek", true)
 		out.append(piece)
@@ -144,6 +141,12 @@ static func spawn(parent: Node, layout: LevelLayout, front_parent: Node = null) 
 		if is_solid is bool and is_solid == true:
 			_spawn_solid_body(piece_parent, piece, img_cache[img_key], _nm, hidden_val)
 
+	# Final ordering pass: peek pieces move to the END of the container so
+	# they draw above every plain backdrop regardless of authoring order —
+	# tree order still keeps them under crates/stones added later.
+	for piece in out:
+		if piece.get_meta("peek", false):
+			piece.get_parent().move_child(piece, piece.get_parent().get_child_count() - 1)
 	return out
 
 
