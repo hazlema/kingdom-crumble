@@ -56,6 +56,11 @@ var _mat := PhysicsMaterial.new()
 
 
 func _ready() -> void:
+	# Boom impulses launch crates fast enough to tunnel THIN colliders
+	# (painted solid-scenery walls especially) — same bug class as the
+	# stone's corner-vanish. Ray-cast CCD, same cure: catches the swept
+	# motion without touching bounce/damp, so crate feel is unchanged.
+	continuous_cd = RigidBody2D.CCD_MODE_CAST_RAY
 	home = global_position
 	_full_bounce = Settings.preset.crate_natural_bounce if Settings.preset else 0.5
 	_mat.bounce = 0.0

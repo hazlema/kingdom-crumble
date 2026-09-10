@@ -42,3 +42,40 @@ func test_fast_stone_does_not_tunnel_thin_floor() -> void:
 			tunneled = true
 			break
 	assert_false(tunneled, "fast steep stone is stopped by the thin floor, not tunneled through")
+
+
+func test_crate_enables_ccd() -> void:
+	# Crate edition of the tunneling fix: boom impulses hurl crates through
+	# thin painted solid-scenery walls (owner field report, depot demo).
+	var c: RigidBody2D = preload("res://scenes/crate.tscn").instantiate()
+	add_child_autofree(c)
+	await wait_frames(1)
+	assert_eq(c.continuous_cd, RigidBody2D.CCD_MODE_CAST_RAY,
+		"crates use ray-cast CCD so boom-launched crates cannot tunnel painted walls")
+
+
+func test_boom_speed_crate_does_not_tunnel_thin_wall() -> void:
+	var host := Node2D.new()
+	add_child_autofree(host)
+	# An 18px-thin vertical wall — a painted depot spire's worth of collider.
+	var wall := StaticBody2D.new()
+	var cs := CollisionShape2D.new()
+	var r := RectangleShape2D.new()
+	r.size = Vector2(18, 2000)
+	cs.shape = r
+	wall.add_child(cs)
+	wall.global_position = Vector2(2000, 400)
+	host.add_child(wall)
+	var crate: RigidBody2D = preload("res://scenes/crate.tscn").instantiate()
+	host.add_child(crate)
+	crate.global_position = Vector2(1700, 400)
+	crate.linear_velocity = Vector2(3500.0, 0.0)  # boom-impulse territory
+	var tunneled := false
+	for step in 40:
+		await wait_physics_frames(1)
+		if not is_instance_valid(crate):
+			break
+		if crate.global_position.x > 2060.0:  # past the wall's far side
+			tunneled = true
+			break
+	assert_false(tunneled, "a boom-launched crate is stopped by a thin painted wall")
