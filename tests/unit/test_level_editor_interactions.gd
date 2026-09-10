@@ -1142,3 +1142,34 @@ func test_single_piece_pile_never_cycles() -> void:
 	st._scenery_press(Vector2(500.0, 400.0)); st._scenery_release()
 	st._scenery_press(Vector2(500.0, 400.0)); st._scenery_release()
 	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "solo", "lone piece stays selected across clicks")
+
+
+func test_editor_scenery_never_draws_above_crates() -> void:
+	# Owner's video catch: freshly placed scenery (especially peek pieces)
+	# landed at the END of the editor's children — above the persistent
+	# crates.  Decree: background -> peek -> crates.  Editor must mirror it.
+	ed.current.crates.append({"x": 832.0, "y": 443.0, "type": "crate-wood"})
+	ed._rebuild()
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 100.0, "y": 100.0, "name": "veil", "peek": true})
+	var img2 := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img2.fill(Color.BLUE)
+	var key2 := ed.import_scenery_image(img2)
+	ed.current.overlays.append({"image": key2, "x": 100.0, "y": 100.0, "name": "backdrop"})
+	ed._rebuild_scenery()
+
+	var veil: NarfDecor = null
+	var backdrop: NarfDecor = null
+	for p in ed._scenery_pieces:
+		if p.get_meta("peek", false):
+			veil = p
+		else:
+			backdrop = p
+	assert_not_null(veil)
+	assert_not_null(backdrop)
+	assert_true(ed._spawned.size() > 0, "a crate exists in the canvas")
+	var crate: Node = ed._spawned[0]
+	assert_true(veil.get_index() > backdrop.get_index(), "peek above plain scenery")
+	assert_true(crate.get_index() > veil.get_index(), "crates above ALL scenery — even fresh peek pieces")

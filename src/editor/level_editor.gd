@@ -893,13 +893,20 @@ func _rebuild_scenery() -> void:
 		if is_instance_valid(body) and (body as Node).is_in_group("scenery_solid"):
 			body.queue_free()
 	_scenery_pieces = SceneryBuilder.spawn(self, current)
-	# All scenery sits below crates/props (owner z-order: background ->
-	# peek -> crates -> stones -> hud).  Non-peek pieces go to early
-	# positions; peek pieces stay later so they draw above the backdrops
-	# but never above the gameplay pieces.
+	# ALL scenery sits below crates/props (owner z-order: background ->
+	# peek -> crates -> stones -> hud).  In the editor the crates are
+	# persistent children, so fresh scenery spawns AFTER them in tree
+	# order — every piece must be moved into the early block: plain
+	# backdrops first, peek pieces right after them, crates above all.
+	# (Owner's video catch: a fresh peek piece left at the end drew
+	# over the crates.)
 	var _back_zi := 0
 	for s in _scenery_pieces:
 		if not s.get_meta("peek", false):
+			move_child(s, 1 + _back_zi)
+			_back_zi += 1
+	for s in _scenery_pieces:
+		if s.get_meta("peek", false):
 			move_child(s, 1 + _back_zi)
 			_back_zi += 1
 	# Pieces re-emerge wearing any PENDING (unbaked) edit-state — a
