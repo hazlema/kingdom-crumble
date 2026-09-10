@@ -1236,3 +1236,29 @@ func test_corner_resize_anchors_top_left() -> void:
 	assert_almost_eq(tl_after.y, tl_before.y, 0.5, "top-left y pinned while scaling")
 	assert_gt(float(ed.current.overlays[0]["_scale"]), 1.2, "scale actually grew")
 	assert_almost_eq(float(ed.current.overlays[0]["x"]), piece.position.x, 0.01, "position dict synced")
+
+
+func test_ctrl_resize_snaps_width_to_whole_cells() -> void:
+	var img := Image.create(100, 80, false, Image.FORMAT_RGBA8)
+	img.fill(Color.PURPLE)
+	var key := ed.import_scenery_image(img)
+	ed.current.overlays.append({"image": key, "x": 900.0, "y": 400.0, "name": "exact"})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+	ed.select_overlay(0)
+	var st: SceneryTool = ed._scenery_tool
+	var piece: NarfDecor = ed._scenery_pieces[0]
+	var tl_before := piece.to_global(piece.offset)
+	st.snap_override = true
+	st._scenery_handle = 2
+	st._scenery_dragging = true
+	st._scenery_drag_start_world = piece.position + Vector2(50.0, 40.0)
+	st._scenery_drag_piece_origin = piece.position
+	st._scenery_drag_press_tl = tl_before
+	st._scenery_drag_press_scale = 1.0
+	st._scenery_drag(piece.position + Vector2(75.0, 60.0))  # ~1.5x -> 150px -> snaps to 128
+	st.snap_override = false
+	var w := piece.texture.get_width() * piece.scale.x
+	assert_almost_eq(w, 128.0, 0.01, "scaled width lands on a whole cell count (2x64)")
+	var tl_after := piece.to_global(piece.offset)
+	assert_almost_eq(tl_after.x, tl_before.x, 0.5, "top-left stays pinned while snap-resizing")

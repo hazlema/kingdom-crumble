@@ -219,6 +219,13 @@ func _scenery_drag(world: Vector2) -> void:
 				if long_edge > 0:
 					max_scale = minf(20.0, 1024.0 / float(long_edge))
 			var new_scale := clampf(_scenery_drag_press_scale * (dist_now / dist_start), 0.05, max_scale)
+			if (snap_override or Input.is_key_pressed(KEY_CTRL)) and tex != null and tex.get_width() > 0:
+				# Ctrl-resize: snap the scaled WIDTH to whole cells so pieces
+				# get exact dimensions — and two same-canvas layers resized to
+				# the same cell-width get identical scale (aligned by math).
+				var target_w := maxf(float(EditorGrid.CELL),
+					roundf(tex.get_width() * new_scale / EditorGrid.CELL) * EditorGrid.CELL)
+				new_scale = clampf(target_w / float(tex.get_width()), 0.05, max_scale)
 			piece.scale = Vector2(new_scale, new_scale)
 			# Anchor the visual TOP-LEFT while scaling (owner ask: grow from
 			# the upper-left like an art tool, not from the pivot/center).

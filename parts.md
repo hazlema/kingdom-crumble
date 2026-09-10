@@ -265,6 +265,9 @@ triggers, or selection.
   the crate-cell lattice (press **G** to see the grid you're snapping
   to), and corner-resize grows from the piece's **upper-left** like an
   art tool — the top-left corner stays pinned while the image scales.
+  **Ctrl while resizing** snaps the scaled width to whole cells — two
+  same-canvas layers Ctrl-resized to the same cell count get identical
+  scale, so stacked art stays pixel-aligned.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
   it. Right-click a **crate** for Info/Copy-Key.
