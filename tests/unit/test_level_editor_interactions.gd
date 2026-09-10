@@ -1029,3 +1029,76 @@ func test_trigger_merge_overflow_caps_at_sixteen() -> void:
 	var key := LevelEditor.crate_trigger_key(Vector2i(7, 1))
 	assert_true(ed.current.triggers.has(key), "merged onto the snapped key")
 	assert_eq((ed.current.triggers[key] as Array).size(), 16, "merge capped at 16")
+
+
+# ---------------------------------------------------------------------------
+# Editor QoL from building the depot: click-cycle-down, keyboard nudge,
+# grid toggle. (Owner-designed: cycle decided on the up-event so a
+# click-to-drag never dives.)
+# ---------------------------------------------------------------------------
+
+func _stack_two_overlays_at(px: float, py: float) -> void:
+	# Two overlapping scenery pieces at the same spot: index 0 lower, 1 upper.
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	ed.current.images[key] = b64
+	ed.current.overlays.append({"image": key, "x": px, "y": py, "name": "lower"})
+	ed.current.overlays.append({"image": key, "x": px, "y": py, "name": "upper"})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+
+
+func test_click_cycles_down_the_overlap_stack() -> void:
+	_stack_two_overlays_at(500.0, 400.0)
+	var st: SceneryTool = ed._scenery_tool
+	var hit := Vector2(500.0, 400.0)
+	# First click (press+release, no motion): selects the TOP piece.
+	st._scenery_press(hit)
+	st._scenery_release()
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "upper", "first click grabs the top")
+	# Second click same spot, no motion: cycles to the LOWER piece.
+	st._scenery_press(hit)
+	st._scenery_release()
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "lower", "click again dives to the lower piece")
+	# Third click: wraps back to the top.
+	st._scenery_press(hit)
+	st._scenery_release()
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "upper", "cycle wraps to the top")
+
+
+func test_drag_moves_selection_and_does_not_cycle() -> void:
+	_stack_two_overlays_at(500.0, 400.0)
+	var st: SceneryTool = ed._scenery_tool
+	st._scenery_press(Vector2(500.0, 400.0))
+	st._scenery_release()  # top selected
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "upper")
+	# Press then MOVE past the threshold then release = a drag, NOT a cycle.
+	st._scenery_press(Vector2(500.0, 400.0))
+	st._scenery_drag(Vector2(560.0, 400.0))
+	st._scenery_release()
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "upper", "a drag keeps the selection (no dive)")
+	assert_almost_eq(float(ed.current.overlays[ed.selected_overlay]["x"]), 560.0, 1.0, "the dragged piece moved")
+
+
+func test_nudge_moves_selected_scenery_by_pixels() -> void:
+	_stack_two_overlays_at(500.0, 400.0)
+	ed.select_overlay(0)
+	var before: float = float(ed.current.overlays[0]["x"])
+	ed._nudge_scenery(Vector2(1.0, 0.0))
+	assert_almost_eq(float(ed.current.overlays[0]["x"]), before + 1.0, 0.01, "1px nudge")
+	ed._nudge_scenery(Vector2(0.0, -10.0))
+	assert_almost_eq(float(ed.current.overlays[0]["y"]), 390.0, 0.01, "10px vertical nudge writes the dict")
+
+
+func test_grid_toggle_flips_overlay_visibility() -> void:
+	ed._enter_scenery()
+	assert_false(ed.overlay.visible, "scenery mode hides the grid")
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_G
+	ev.pressed = true
+	ed._unhandled_input(ev)
+	assert_true(ed.overlay.visible, "G brings the grid back in scenery mode")
+	ed._unhandled_input(ev)
+	assert_false(ed.overlay.visible, "G toggles it off again")

@@ -12,6 +12,14 @@ var _scenery_drag_start_world := Vector2.ZERO   # world pos when drag began
 var _scenery_drag_piece_origin := Vector2.ZERO  # piece.position when drag began
 var _scenery_handle := -1             # -1 = body, 0-3 = corner, 4 = rotate
 var _scenery_drag_press_scale := 1.0  # piece._scale at the moment of press
+# Click-cycle (Inkscape-style): a click without motion on a pile holding the
+# current selection steps to the next-lower piece — decided on RELEASE so a
+# click-to-drag never dives (owner's "actions on the up event").
+var _cycle_stack: Array[int] = []
+var _cycle_armed := false
+var _press_world := Vector2.ZERO
+var _moved := false
+const _MOVE_EPS := 4.0
 var _scenery_context: PopupMenu = null
 var _lmb_down := false
 
@@ -22,6 +30,8 @@ func enter() -> void:
 	ed._grid_tool.reset_input_state()
 	_lmb_down = false
 	ed._rmb_down = false  # a held right-click must not menu on re-entry
+	_cycle_armed = false
+	_moved = false
 	ed.deselect()
 	ed.palette.visible = false
 	ed.get_node("%SceneryPanel").visible = true
@@ -104,38 +114,61 @@ func _scenery_press(world: Vector2) -> void:
 			_scenery_drag_press_scale = po.get("_scale", 1.0)
 			return
 
-	# Pick a new piece.
-	var idx := _pick_piece(world)
-	if idx >= 0:
-		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, idx)
-		if piece == null:
-			return
-		_scenery_handle = -1  # body drag
-		_scenery_dragging = true
-		_scenery_drag_start_world = world
-		_scenery_drag_piece_origin = piece.position
-		var po: Dictionary = ed.current.overlays[idx]
-		_scenery_drag_press_scale = po.get("_scale", 1.0)
-		ed.select_overlay(idx)
-	else:
-		# Deselect.
+	# Body press: build the overlap stack (top-most first) and arm a gesture.
+	_press_world = world
+	_moved = false
+	var stack := _pick_stack(world)
+	if stack.is_empty():
 		_scenery_dragging = false
+		_cycle_armed = false
 		ed.deselect()
+		return
+
+	var cur := ed.selected_overlay
+	var already := stack.has(cur)
+	# Cur under the cursor → don't reselect: a drag moves it, a click cycles
+	# down (armed only when there's actually something below to reach).
+	var target: int = cur if already else stack[0]
+	_cycle_stack = stack
+	_cycle_armed = already and stack.size() > 1
+
+	var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, target)
+	if piece == null:
+		return
+	_scenery_handle = -1  # body drag
+	_scenery_dragging = true
+	_scenery_drag_start_world = world
+	_scenery_drag_piece_origin = piece.position
+	var po: Dictionary = ed.current.overlays[target]
+	_scenery_drag_press_scale = po.get("_scale", 1.0)
+	if not already:
+		ed.select_overlay(target)  # fresh pick commits on press so drag works
 
 
 func _scenery_release() -> void:
-	var cur_idx := ed.selected_overlay
-	if _scenery_dragging and cur_idx >= 0 and cur_idx < ed.current.overlays.size():
-		var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, cur_idx)
-		if piece != null:
-			var o: Dictionary = ed.current.overlays[cur_idx]
-			o["x"] = piece.position.x
-			o["y"] = piece.position.y
+	if _cycle_armed and not _moved:
+		# A true click on a pile with the selection → next-lower piece.
+		var cur := ed.selected_overlay
+		var pos := _cycle_stack.find(cur)
+		if pos >= 0 and _cycle_stack.size() > 1:
+			ed.select_overlay(_cycle_stack[(pos + 1) % _cycle_stack.size()])
+	else:
+		var cur_idx := ed.selected_overlay
+		if _scenery_dragging and cur_idx >= 0 and cur_idx < ed.current.overlays.size():
+			var piece := LevelEditor._piece_for_overlay_from_array(ed._scenery_pieces, cur_idx)
+			if piece != null:
+				var o: Dictionary = ed.current.overlays[cur_idx]
+				o["x"] = piece.position.x
+				o["y"] = piece.position.y
+	_cycle_armed = false
+	_moved = false
 	_scenery_dragging = false
 	_scenery_handle = -1
 
 
 func _scenery_drag(world: Vector2) -> void:
+	if not _moved and world.distance_to(_press_world) > _MOVE_EPS:
+		_moved = true
 	var cur_idx := ed.selected_overlay
 	if cur_idx < 0 or cur_idx >= ed.current.overlays.size():
 		return
@@ -182,19 +215,23 @@ func _scenery_drag(world: Vector2) -> void:
 
 # Returns the index of the topmost piece whose world-space rect contains `world_pos`,
 # or -1 if none. Exposed so unit tests can call it directly.
-func _pick_piece(world_pos: Vector2) -> int:
-	# Iterate in reverse (top-most drawn last).
+func _pick_stack(world_pos: Vector2) -> Array[int]:
+	# All overlays whose rect contains the point, TOP-MOST first (draw order).
+	# to_local() accounts for the piece's position/rotation/scale; the rect
+	# from get_rect() is un-scaled local space — no further division needed.
+	var out: Array[int] = []
 	for i in range(ed._scenery_pieces.size() - 1, -1, -1):
 		var piece := ed._scenery_pieces[i]
 		if not is_instance_valid(piece):
 			continue
-		var rect := piece.get_rect()
-		# to_local() already accounts for the piece's position, rotation, and scale;
-		# the rect from get_rect() is in un-scaled local space — no further division needed.
-		var local := piece.to_local(world_pos)
-		if rect.has_point(local):
-			return piece.get_meta("overlay_index", i) as int
-	return -1
+		if piece.get_rect().has_point(piece.to_local(world_pos)):
+			out.append(piece.get_meta("overlay_index", i) as int)
+	return out
+
+
+func _pick_piece(world_pos: Vector2) -> int:
+	var stack := _pick_stack(world_pos)
+	return stack[0] if not stack.is_empty() else -1
 
 
 # Returns which handle (0-3 corners, 4 rotate) is within hit radius at world_pos,

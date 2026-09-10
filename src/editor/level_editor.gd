@@ -753,6 +753,23 @@ func _update_drag_preview(mouse: Vector2, over_ui: bool) -> void:
 
 # Bare-letter shortcuts stay quiet while the user is typing or any dialog
 # is up — a letter behind a dialog must never edit the document.
+# Move the selected scenery piece by a pixel delta (keyboard nudge). Writes
+# the live piece AND the overlay dict, same as a drag, and rehomes so an
+# animated verb anchors to the nudged position.
+func _nudge_scenery(delta: Vector2) -> void:
+	var idx := selected_overlay
+	if idx < 0 or idx >= current.overlays.size():
+		return
+	var piece := LevelEditor._piece_for_overlay_from_array(_scenery_pieces, idx)
+	if piece == null:
+		return
+	piece.position += delta
+	piece.rehome()
+	var o: Dictionary = current.overlays[idx]
+	o["x"] = piece.position.x
+	o["y"] = piece.position.y
+
+
 func _shortcut_blocked() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
@@ -772,7 +789,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		and event.pressed
 		and not event.alt_pressed
 		and not event.meta_pressed
-		and event.keycode in [KEY_S, KEY_A, KEY_T, KEY_C, KEY_M]
+		and event.keycode in [KEY_S, KEY_A, KEY_T, KEY_C, KEY_M, KEY_G]
 		and not _shortcut_blocked()
 	):
 		# Bare letters — same convention as the game's L/B keys, and the
@@ -791,6 +808,31 @@ func _unhandled_input(event: InputEvent) -> void:
 					_enter_scenery()
 			KEY_M:
 				Music.cycle_tier()
+			KEY_G:
+				# Toggle the build grid — scenery mode auto-hides it, this
+				# brings it back for aligning scenery to grid-locked solids.
+				overlay.visible = not overlay.visible
+	elif (
+		event is InputEventKey
+		and event.pressed
+		and not _shortcut_blocked()
+		and mode == Mode.SCENERY
+		and selected_overlay >= 0
+		and event.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]
+	):
+		# Fine keyboard nudge for freeform scenery — 1px, Shift = 10px.
+		var step := 10.0 if event.shift_pressed else 1.0
+		var d := Vector2.ZERO
+		match event.keycode:
+			KEY_LEFT:
+				d.x = -step
+			KEY_RIGHT:
+				d.x = step
+			KEY_UP:
+				d.y = -step
+			KEY_DOWN:
+				d.y = step
+		_nudge_scenery(d)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_DELETE:
 		if mode == Mode.SCENERY:
 			_delete_selected_piece()
