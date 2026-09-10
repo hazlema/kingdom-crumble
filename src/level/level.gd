@@ -553,7 +553,7 @@ func _next_path_after_clear() -> String:
 
 # Peek watcher: for each front+peek scenery piece, check whether any stone or
 # crate has its center inside the piece's world rect.  If so, tween modulate.a
-# to 0.65 (0.2s); otherwise restore to 1.0.  Kill-on-retarget hygiene matches
+# to 0.35 (0.2s); otherwise restore to 1.0.  Kill-on-retarget hygiene matches
 # flash_overlay in level_editor.gd: a new target direction kills the prior tween
 # and starts fresh so directions never compound.
 func _tick_peek() -> void:
@@ -585,10 +585,11 @@ func _tick_peek() -> void:
 		if not occupied:
 			for crate in get_tree().get_nodes_in_group("crates"):
 				var cn := crate as Node2D
-				# Peek reveals ACTION, not furniture: a crate resting inside a
-				# depot must not hold the fade open forever. Only a crate in
-				# MOTION (knocked, tumbling) counts as something worth revealing.
-				if cn != null and not _is_idle(cn) and world_rect.has_point(cn.global_position):
+				# A crate behind a front piece keeps it faded — the fade is the
+				# AFFORDANCE (owner: an opaque frame reads as a solid wall;
+				# the translucency tells the player it's passable AND shows
+				# the targets). Resting crates count, that's the point.
+				if cn != null and world_rect.has_point(cn.global_position):
 					occupied = true
 					break
 		# Also check active stones (not in a group — tracked directly by Level).
@@ -598,7 +599,7 @@ func _tick_peek() -> void:
 					occupied = true
 					break
 
-		var target_alpha := 0.65 if occupied else 1.0
+		var target_alpha := 0.35 if occupied else 1.0  # see-through: read the targets
 		var current_alpha := piece.modulate.a
 		# Skip if already at target (avoid needless tween churn).
 		if absf(current_alpha - target_alpha) < 0.01:

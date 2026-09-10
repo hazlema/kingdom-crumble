@@ -330,10 +330,11 @@ func test_peek_restore_when_stone_leaves() -> void:
 	assert_gt(piece.modulate.a, 0.95, "piece alpha restored to 1.0 when stone left")
 
 
-func test_peek_reveals_action_not_resting_crates() -> void:
-	# Peek reveals ACTION: a MOVING crate (knocked) trips the fade; a
-	# crate at REST inside the structure must NOT hold it open forever
-	# (owner report: depot crates permanently faded the roof).
+func test_peek_fades_for_crates_behind_it() -> void:
+	# The fade is the passability affordance (owner: an opaque front frame
+	# reads as a solid wall). A crate behind a front piece — resting or
+	# moving — keeps it see-through so the player knows it can shoot there
+	# and can see the targets.
 	var l := _peek_layout()
 	Level.suppress_intro = true
 	Level.next_layout = l
@@ -349,30 +350,18 @@ func test_peek_reveals_action_not_resting_crates() -> void:
 			break
 	assert_not_null(piece, "piece must exist")
 
-	# A RESTING crate inside the rect: freeze it so it's unambiguously idle.
-	var resting := RigidBody2D.new()
-	resting.position = Vector2(400.0, 400.0)
-	resting.freeze = true
-	resting.add_to_group("crates")
-	level.add_child(resting)
-	(level as Level)._tick_peek()
-	await wait_physics_frames(4)
-	assert_almost_eq(piece.modulate.a, 1.0, 0.02, "a resting crate does NOT trip the fade")
-
-	# Now a MOVING crate inside the rect: it IS action, fade triggers.
-	# Pin it in-rect + fast each tick so physics can't carry it out before
-	# the fade completes (we're testing the idle-gate, not ballistics).
-	var moving := RigidBody2D.new()
-	moving.add_to_group("crates")
-	level.add_child(moving)
+	# A crate behind the front piece (even resting/frozen) fades it.
+	var crate := RigidBody2D.new()
+	crate.position = Vector2(400.0, 400.0)
+	crate.freeze = true
+	crate.add_to_group("crates")
+	level.add_child(crate)
 	var guard := 0
-	while piece.modulate.a > 0.70 and guard < 80:
-		moving.position = Vector2(400.0, 400.0)
-		moving.linear_velocity = Vector2(600.0, 0.0)
+	while piece.modulate.a > 0.5 and guard < 80:
 		(level as Level)._tick_peek()
 		await wait_physics_frames(2)
 		guard += 2
-	assert_lt(piece.modulate.a, 0.70, "a crate in motion (knocked) DOES trip the fade")
+	assert_lt(piece.modulate.a, 0.5, "a crate behind the front piece fades it see-through (the affordance)")
 
 
 func test_front_pieces_actually_render_above_crates() -> void:
