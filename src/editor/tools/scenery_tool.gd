@@ -43,6 +43,8 @@ func enter() -> void:
 
 func exit() -> void:
 	_lmb_down = false
+	_cycle_armed = false
+	_moved = false
 	ed._grid_tool.reset_input_state()
 	ed._rmb_down = false  # a held right-click must not menu on mode return
 	ed.deselect()

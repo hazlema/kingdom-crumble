@@ -811,10 +811,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_G:
 				# Toggle the build grid — scenery mode auto-hides it, this
 				# brings it back for aligning scenery to grid-locked solids.
-				overlay.visible = not overlay.visible
+				# CRATES mode's grid is the working grid; leave it alone.
+				if mode == Mode.SCENERY:
+					overlay.visible = not overlay.visible
 	elif (
 		event is InputEventKey
 		and event.pressed
+		and not event.ctrl_pressed
+		and not event.alt_pressed
+		and not event.meta_pressed
 		and not _shortcut_blocked()
 		and mode == Mode.SCENERY
 		and selected_overlay >= 0

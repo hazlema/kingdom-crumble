@@ -1102,3 +1102,43 @@ func test_grid_toggle_flips_overlay_visibility() -> void:
 	assert_true(ed.overlay.visible, "G brings the grid back in scenery mode")
 	ed._unhandled_input(ev)
 	assert_false(ed.overlay.visible, "G toggles it off again")
+
+
+func test_grid_toggle_leaves_crates_grid_alone() -> void:
+	# Review catch: G is scenery-only — CRATES mode's working grid stays.
+	assert_eq(ed.mode, LevelEditor.Mode.CRATES)
+	var before := ed.overlay.visible
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_G
+	ev.pressed = true
+	ed._unhandled_input(ev)
+	assert_eq(ed.overlay.visible, before, "G does not touch the grid in CRATES mode")
+
+
+func test_ctrl_arrow_does_not_nudge() -> void:
+	# Review catch: Ctrl/Alt/Meta+arrow must not nudge (browser/system keys).
+	_stack_two_overlays_at(500.0, 400.0)
+	ed.select_overlay(0)
+	var before: float = float(ed.current.overlays[0]["x"])
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_RIGHT
+	ev.pressed = true
+	ev.ctrl_pressed = true
+	ed._unhandled_input(ev)
+	assert_almost_eq(float(ed.current.overlays[0]["x"]), before, 0.01, "Ctrl+arrow is not a nudge")
+
+
+func test_single_piece_pile_never_cycles() -> void:
+	# stack.size() == 1 must not arm the cycle — repeated clicks keep it.
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color.GREEN)
+	var b64 := Marshalls.raw_to_base64(img.save_png_to_buffer())
+	var key := LevelJson.image_key(Marshalls.base64_to_raw(b64))
+	ed.current.images[key] = b64
+	ed.current.overlays.append({"image": key, "x": 500.0, "y": 400.0, "name": "solo"})
+	ed._enter_scenery()
+	ed._rebuild_scenery()
+	var st: SceneryTool = ed._scenery_tool
+	st._scenery_press(Vector2(500.0, 400.0)); st._scenery_release()
+	st._scenery_press(Vector2(500.0, 400.0)); st._scenery_release()
+	assert_eq(ed.current.overlays[ed.selected_overlay].get("name"), "solo", "lone piece stays selected across clicks")
