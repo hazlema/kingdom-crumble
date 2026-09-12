@@ -5,6 +5,13 @@ signal menu_pressed
 signal info_pressed
 
 const FIRE_STONE := preload("res://assets/ui/stone.png")
+const DEED_BANNER_SCRIPT := preload("res://src/ui/deed_banner.gd")
+
+# Deed banner layer — sits above everything, manages its own FIFO queue.
+var _deed_banner: Node = null
+
+# Stale-request guard for deferred deed banners (mirrors _banner_seq discipline).
+var _deed_seq := 0
 
 
 func _ready() -> void:
@@ -41,6 +48,16 @@ func _ready() -> void:
 				Input.action_press("check")
 			else:
 				Input.action_release("check")
+	)
+	# Deed banner: create the layer now; connect Deeds signal.
+	_deed_banner = DEED_BANNER_SCRIPT.new()
+	add_child(_deed_banner)
+	Deeds.deed_unlocked.connect(_on_deed_unlocked)
+	# Disconnect cleanly when this hud leaves the tree (Deeds is an autoload —
+	# connections outlive scenes; dangling callbacks cause the classic leak).
+	tree_exiting.connect(func() -> void:
+		if Deeds.deed_unlocked.is_connected(_on_deed_unlocked):
+			Deeds.deed_unlocked.disconnect(_on_deed_unlocked)
 	)
 
 
@@ -145,3 +162,43 @@ func _fire_icon_for(buffs: Array[StringName]) -> Texture2D:
 
 func set_angle(deg: float) -> void:
 	%AngleReadout.text = str(roundi(deg))
+
+
+# ---------------------------------------------------------------------------
+# Deed banner — queue politely behind toasts, connect to Deeds signal
+# ---------------------------------------------------------------------------
+
+func _on_deed_unlocked(id: String) -> void:
+	# Look up the entry from the Deeds manifest to pass art/name to the banner.
+	var entry: Dictionary = {}
+	for e in Deeds.entries():
+		if e["id"] == id:
+			entry = e
+			break
+	if entry.is_empty():
+		# Entry not in current manifest (can happen if manifest changed at runtime).
+		entry = {"id": id, "name": id, "solid": "", "ghost": "", "text": "", "secret": false, "trigger": ""}
+	_queue_deed_banner(entry)
+
+
+## Queue a deed banner entry — defers behind an active toast using the
+## min-remaining cap+epsilon idiom from hud.banner().
+func _queue_deed_banner(entry: Dictionary) -> void:
+	_deed_seq += 1
+	var seq := _deed_seq
+	var now := Time.get_ticks_msec() * 0.001
+	if now < _toast_until:
+		# Courtesy beat, same cap as the victory banner defer
+		get_tree().create_timer(minf(_toast_until - now, 2.5) + 0.15).timeout.connect(
+			func() -> void:
+				if _deed_seq == seq and is_inside_tree() and _deed_banner != null:
+					_deed_banner.celebrate(entry)
+		)
+	else:
+		if _deed_banner != null:
+			_deed_banner.celebrate(entry)
+
+
+## Returns true if a deed banner is currently mid-animation (for tests).
+func _deed_banner_active() -> bool:
+	return _deed_banner != null and _deed_banner.visible
