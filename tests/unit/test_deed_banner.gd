@@ -252,3 +252,34 @@ func test_defer_behind_active_hud_toast() -> void:
 	await wait_seconds(hud.TOAST_SECS + 0.5)
 	assert_true(hud._deed_banner_active(),
 		"deed banner shows after toast beat clears")
+
+
+func test_multi_deed_defer_drops_nothing() -> void:
+	# Review catch: the old seq guard dropped all but the LAST deed when
+	# several deferred behind a toast. The pending queue keeps every one.
+	var hud: Node = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(hud)
+	await wait_frames(1)
+	hud.toast("busy toast", 0.6)
+	var a := {"id": "a", "name": "Alpha", "solid": "", "ghost": "", "text": "", "trigger": "", "secret": false}
+	var b := {"id": "b", "name": "Beta", "solid": "", "ghost": "", "text": "", "trigger": "", "secret": false}
+	hud._queue_deed_banner(a)
+	hud._queue_deed_banner(b)
+	assert_eq(hud._pending_deeds.size(), 2, "both deeds pending behind the toast")
+	var guard := 0
+	while hud._pending_deeds.size() > 0 and guard < 120:
+		await wait_physics_frames(2)
+		guard += 2
+	assert_eq(hud._pending_deeds.size(), 0, "the drain timer delivered every pending deed")
+
+
+func test_deed_defers_behind_victory_banner() -> void:
+	# Review catch: the victory banner also owns the slot — a medallion
+	# must not stamp over KINGDOM CRUMBLED!.
+	var hud: Node = load("res://scenes/hud.tscn").instantiate()
+	add_child_autofree(hud)
+	await wait_frames(1)
+	hud.banner("KINGDOM CRUMBLED!", "sub")
+	var a := {"id": "a", "name": "Alpha", "solid": "", "ghost": "", "text": "", "trigger": "", "secret": false}
+	hud._queue_deed_banner(a)
+	assert_eq(hud._pending_deeds.size(), 1, "deed waits while the victory banner is visible")

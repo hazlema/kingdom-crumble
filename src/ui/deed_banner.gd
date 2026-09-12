@@ -156,42 +156,18 @@ func _play_deed_sound() -> void:
 
 
 func _fire_confetti() -> void:
-	# We need a Node2D to parent the CPUParticles2D; the banner is a Control
-	# (CanvasLayer child). We spawn a temporary Node2D sibling on the parent
-	# CanvasLayer — it self-destructs after particle lifetime.
+	# THE Effects confetti (review catch: never shadow the library — a
+	# tuned Effects burst must stay the single source of celebration).
+	# The banner is a Control on a CanvasLayer; Effects wants a Node2D
+	# host, so spawn a transient one at the medallion position.
 	var parent := get_parent()
 	if parent == null:
 		return
 	var host := Node2D.new()
 	parent.add_child(host)
-	# Viewport center-top — confetti erupts from the medallion position
-	var vp := get_viewport()
 	var at := Vector2(0.0, 150.0)
+	var vp := get_viewport()
 	if vp != null:
 		at = Vector2(vp.get_visible_rect().size.x * 0.5, 150.0)
-
-	var p := CPUParticles2D.new()
-	p.position = at
-	p.emitting = true
-	p.one_shot = true
-	p.amount = 80
-	p.lifetime = 1.4
-	p.explosiveness = 1.0
-	p.spread = 80.0
-	p.gravity = Vector2(0, 700)
-	p.initial_velocity_min = 200.0
-	p.initial_velocity_max = 500.0
-	p.scale_amount_min = 3.0
-	p.scale_amount_max = 6.0
-	p.color_ramp = _confetti_colors()
-	host.add_child(p)
+	Effects._confetti(host, at)
 	get_tree().create_timer(3.0).timeout.connect(host.queue_free)
-
-
-static func _confetti_colors() -> Gradient:
-	var g := Gradient.new()
-	g.set_color(0, Color(1.0, 0.83, 0.29))
-	g.add_point(0.33, Color(0.91, 0.28, 0.25))
-	g.add_point(0.66, Color(0.31, 0.66, 0.9))
-	g.set_color(1, Color(0.55, 0.79, 0.47))
-	return g
