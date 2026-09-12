@@ -149,6 +149,8 @@ func _physics_process(delta: float) -> void:
 		_apply_backdrop_alpha(_backdrop.toggle())
 	if not _editor_session and Input.is_action_just_pressed("jump_levels"):
 		_open_jump()
+	if not _editor_session and Input.is_action_just_pressed("deeds"):
+		_toggle_deeds()
 	_tick_hold(delta)
 	_update_crate_check()
 	match state:
@@ -526,6 +528,18 @@ func _set_scenery_visible(overlay_name: String, on: bool) -> void:
 			break
 	if not found:
 		push_warning("Trigger references unknown scenery '%s'" % overlay_name)
+
+
+# T toggles the deeds parchment in-game (popup over the hud; the game
+# keeps running behind it — it's a read-only ledger, not a pause).
+func _toggle_deeds() -> void:
+	var existing := hud.get_node_or_null("DeedsPopup")
+	if existing != null:
+		existing.queue_free()
+		return
+	var page: Control = load("res://scenes/deeds_page.tscn").instantiate()
+	page.name = "DeedsPopup"
+	hud.add_child(page)
 
 
 func _open_jump() -> void:

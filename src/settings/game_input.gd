@@ -11,6 +11,7 @@ const BINDINGS := {
 	"jump_levels": [KEY_L, KEY_J],
 	"check": [KEY_H],
 	"backdrop_toggle": [KEY_B],
+	"deeds": [KEY_T],  # A was the owner's ask but it aims the trebuchet
 }
 
 

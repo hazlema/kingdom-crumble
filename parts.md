@@ -354,6 +354,10 @@ brain fart demands.
 
 ## Deeds of the Kingdom
 
+Press **T** during play to flip the deeds parchment open over the game
+(and **T** or ✕ to tuck it away); on the main menu it's the **Deeds**
+button. The game keeps running behind it — it's a ledger, not a pause.
+
 Deeds are local achievements — a parchment page of round medallions,
 each celebrating something you did. There are no scores and no
 leaderboards; the kingdom simply remembers.

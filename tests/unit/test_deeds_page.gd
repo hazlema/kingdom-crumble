@@ -367,3 +367,25 @@ func test_menu_buttons_actually_flow_vertically() -> void:
 		ys.append(gy)
 	if ys.size() >= 2:
 		assert_almost_eq(ys[1] - ys[0], 88.0, 4.0, "the original 88px pitch is reproduced")
+
+
+func test_deeds_hotkey_action_registered() -> void:
+	assert_true(InputMap.has_action("deeds"), "the in-game deeds action exists")
+
+
+func test_toggle_deeds_opens_and_closes_popup_on_level() -> void:
+	var l := LevelLayout.new()
+	l.title = "hotkey"
+	l.crates.append({"x": 832.0, "y": 443.0, "type": "crate-wood"})
+	l.shots = 3
+	Level.suppress_intro = true
+	Level.next_layout = l
+	var lvl: Level = load("res://scenes/level.tscn").instantiate()
+	add_child_autofree(lvl)
+	await wait_frames(2)
+	lvl._toggle_deeds()
+	await wait_frames(1)
+	assert_not_null(lvl.hud.get_node_or_null("DeedsPopup"), "T opens the parchment over the hud")
+	lvl._toggle_deeds()
+	await wait_frames(2)
+	assert_null(lvl.hud.get_node_or_null("DeedsPopup"), "T again closes it")
