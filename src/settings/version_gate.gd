@@ -12,7 +12,7 @@ extends Node
 #   the built-in Config category keeps both dials side by side)
 
 const STAMP_PATH := "user://version.cfg"
-const WIPE_FILES: Array[String] = ["user://progress.cfg", "user://unlocks.cfg"]
+const WIPE_FILES: Array[String] = ["user://progress.cfg", "user://unlocks.cfg", "user://deeds.cfg"]
 
 
 func _init() -> void:

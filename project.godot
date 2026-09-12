@@ -20,6 +20,7 @@ config/testing_reset=true
 [autoload]
 
 VersionGate="*res://src/settings/version_gate.gd"
+Deeds="*res://src/settings/deeds.gd"
 Settings="*res://src/settings/settings.gd"
 GameInput="*res://src/settings/game_input.gd"
 Music="*res://src/audio/music_director.gd"
