@@ -141,8 +141,8 @@ func _build_ui() -> void:
 	var grid := GridContainer.new()
 	grid.name = "Grid"
 	grid.columns = COLS
-	grid.add_theme_constant_override("h_separation", 36)
-	grid.add_theme_constant_override("v_separation", 22)
+	grid.add_theme_constant_override("h_separation", 30)
+	grid.add_theme_constant_override("v_separation", 26)
 	center.add_child(grid)
 
 	# Populate slots
@@ -173,10 +173,10 @@ func _build_ui() -> void:
 	close_btn.flat = true
 	close_btn.add_theme_font_size_override("font_size", 30)
 	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	close_btn.offset_left = -PANEL_W * 0.055
-	close_btn.offset_top = PANEL_H * 0.012
-	close_btn.offset_right = -PANEL_W * 0.012
-	close_btn.offset_bottom = PANEL_H * 0.075
+	close_btn.offset_left = -PANEL_W * 0.065
+	close_btn.offset_top = PANEL_H * 0.025
+	close_btn.offset_right = -PANEL_W * 0.022
+	close_btn.offset_bottom = PANEL_H * 0.085
 	close_btn.pressed.connect(_go_back)
 	panel.add_child(close_btn)
 
@@ -187,7 +187,7 @@ func _make_slot(entry: Dictionary) -> Control:
 
 	var slot := Button.new()
 	slot.name = "Slot_" + entry["id"]
-	slot.custom_minimum_size = Vector2(180, 186)
+	slot.custom_minimum_size = Vector2(190, 182)
 	slot.focus_mode = Control.FOCUS_CLICK
 	slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# Use flat style so our VBox layout shows through
@@ -215,14 +215,20 @@ func _make_slot(entry: Dictionary) -> Control:
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lbl.custom_minimum_size = Vector2(176, 50)
-	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.custom_minimum_size = Vector2(176, 46)
+	lbl.clip_text = false
+	lbl.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	lbl.add_theme_font_size_override("font_size", 13)
 	lbl.add_theme_color_override("font_color", Color(0.29, 0.23, 0.16, 1.0))  # theme ink
 	var ribbon := TextureRect.new()
 	ribbon.name = "Ribbon"
 	ribbon.texture = _load_tex("deeds-ribbon.png")
 	ribbon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
+	# CRITICAL: without this the TextureRect demands its natural 360px as
+	# minimum size, blowing every grid cell out (owner screenshot catch —
+	# overlapping giant ribbons).
+	ribbon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ribbon.show_behind_parent = true
 	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lbl.add_child(ribbon)
