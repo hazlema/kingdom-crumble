@@ -229,97 +229,45 @@ script = ExtResource("nd")
 behavior = 1
 speed = 0.1
 
-[node name="Options" type="Control" parent="menu" unique_id=105177080]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Chill" parent="menu/Options" unique_id=1372417551 instance=ExtResource("mo")]
+[node name="Options" type="VBoxContainer" parent="menu" unique_id=105177080]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
 offset_left = 749.0
 offset_top = 490.0
 offset_right = 2669.0
-offset_bottom = 890.0
+offset_bottom = 490.0
 grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
+theme_override_constants/separation = 0
+mouse_filter = 2
+
+[node name="Chill" parent="menu/Options" unique_id=1372417551 instance=ExtResource("mo")]
+layout_mode = 2
 lbl = "Chill"
 
 [node name="HeartPumper" parent="menu/Options" unique_id=1714832500 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 578.0
-offset_right = 2669.0
-offset_bottom = 978.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Heart-Pumper"
 
 [node name="Hardcore" parent="menu/Options" unique_id=1023579983 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 666.0
-offset_right = 2669.0
-offset_bottom = 1066.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Hardcore"
 
 [node name="Editor" parent="menu/Options" unique_id=687088712 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 754.0
-offset_right = 2669.0
-offset_bottom = 1154.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Editor"
 
 [node name="Deeds" parent="menu/Options" unique_id=1570006327 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 842.0
-offset_right = 2669.0
-offset_bottom = 1242.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Deeds"
 
 [node name="Fullscreen" parent="menu/Options" unique_id=1570006328 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 930.0
-offset_right = 2669.0
-offset_bottom = 1330.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Fullscreen"
 
 [node name="Quit" parent="menu/Options" unique_id=1182060954 instance=ExtResource("mo")]
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 749.0
-offset_top = 1018.0
-offset_right = 2669.0
-offset_bottom = 1418.0
-grow_horizontal = 1
-scale = Vector2(0.22, 0.22)
+layout_mode = 2
 lbl = "Quit"
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=460252435]

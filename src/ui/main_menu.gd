@@ -37,10 +37,8 @@ func _ready() -> void:
 		func(_o: String) -> void: _toggle_fullscreen()
 	)
 	$menu/Options/Quit.MenuOptionSelected.connect(func(_o: String) -> void: _quit())
-	# Desktop hides Fullscreen — collapse its empty slot so the sign
-	# chain hangs without a hole.
-	if not $menu/Options/Fullscreen.visible:
-		$menu/Options/Quit.position.y = $menu/Options/Fullscreen.position.y
+	# Desktop hides Fullscreen — the VBoxContainer automatically closes the
+	# gap when a child is invisible, so no manual position adjustment needed.
 
 
 func _toggle_fullscreen() -> void:
