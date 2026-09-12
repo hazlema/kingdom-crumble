@@ -25,6 +25,9 @@ const ART_DIR := "res://achievements/"
 
 const PUNCH_DURATION := 0.25  # scale-punch settle time (s)
 const PUNCH_SCALE := 1.6      # starting scale factor
+const CARD_ART := "res://achievements/deed-card.png"
+const CARD_W := 560.0
+const CARD_H := 313.0
 const HOLD_SECS := 2.5        # dwell time after punch
 const FADE_SECS := 0.3        # fade-out duration
 
@@ -74,17 +77,34 @@ func _run(entry: Dictionary) -> void:
 	for c in get_children():
 		c.queue_free()
 
-	# Center container so everything sits center-top.
+	# The framed plaque card, centered on screen (owner direction: border
+	# + background, mid-screen — an EVENT, not floating UI debris).
+	var card := TextureRect.new()
+	card.name = "Card"
+	card.texture = load(CARD_ART) if ResourceLoader.exists(CARD_ART) else null
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.offset_left = -CARD_W / 2.0
+	card.offset_right = CARD_W / 2.0
+	# card center sits a touch above true center so it reads over the action
+	card.offset_top = -CARD_H / 2.0 - 40.0
+	card.offset_bottom = CARD_H / 2.0 - 40.0
+	card.stretch_mode = TextureRect.STRETCH_SCALE
+	card.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(card)
+
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	vbox.offset_top = 60.0  # push below the HUD's stat card
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_top = CARD_H * 0.06
+	vbox.offset_bottom = -CARD_H * 0.06
+	vbox.add_theme_constant_override("separation", 6)
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(vbox)
+	card.add_child(vbox)
 
 	# Medallion TextureRect
 	var medallion := TextureRect.new()
-	medallion.custom_minimum_size = Vector2(128, 128)
+	medallion.custom_minimum_size = Vector2(132, 132)
 	medallion.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	medallion.expand_mode = TextureRect.EXPAND_FIT_WIDTH
 	medallion.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -188,10 +208,11 @@ func _fire_confetti() -> void:
 		return
 	var host := Node2D.new()
 	parent.add_child(host)
-	var at := Vector2(0.0, 150.0)
+	var at := Vector2(0.0, 300.0)
 	var vp := get_viewport()
 	if vp != null:
-		at = Vector2(vp.get_visible_rect().size.x * 0.5, 150.0)
+		var r := vp.get_visible_rect().size
+		at = Vector2(r.x * 0.5, r.y * 0.5 - 40.0)
 	Effects._confetti(host, at)
 	Effects._confetti(host, at + Vector2(-70, 20))
 	Effects._confetti(host, at + Vector2(70, 20))
