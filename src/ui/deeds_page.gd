@@ -122,7 +122,7 @@ func _build_ui() -> void:
 	interior.name = "Interior"
 	interior.set_anchors_preset(Control.PRESET_FULL_RECT)
 	interior.offset_left = PANEL_W * 0.055
-	interior.offset_top = PANEL_H * 0.175
+	interior.offset_top = PANEL_H * 0.215
 	interior.offset_right = -PANEL_W * 0.055
 	interior.offset_bottom = -PANEL_H * 0.145
 	panel.add_child(interior)

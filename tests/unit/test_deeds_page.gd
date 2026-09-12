@@ -287,7 +287,7 @@ func test_ghost_of_null_input() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Test: shipped manifest loads all 10 wave-1 entries
+# Test: shipped manifest loads all entries (10 wave-1 + 9 slinger scroll-testers)
 # ---------------------------------------------------------------------------
 func test_shipped_manifest_entry_count() -> void:
 	Deeds.cfg_path = CFG_SCRATCH
@@ -295,7 +295,7 @@ func test_shipped_manifest_entry_count() -> void:
 	Deeds.reload()
 
 	var entries: Array = Deeds.entries()
-	assert_eq(entries.size(), 10, "shipped manifest loads all 10 wave-1 entries")
+	assert_eq(entries.size(), 19, "shipped manifest loads all 19 entries")
 
 
 # ---------------------------------------------------------------------------
