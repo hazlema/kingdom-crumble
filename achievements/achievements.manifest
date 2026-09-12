@@ -1,0 +1,92 @@
+[
+  {
+    "id": "first_shot",
+    "name": "First Shot",
+    "text": "Loose your first stone from the trebuchet.",
+    "solid": "first-shot.png",
+    "ghost": "first-shot-ghost.png",
+    "trigger": "count:shots_fired>=1",
+    "secret": false
+  },
+  {
+    "id": "crate_smasher",
+    "name": "Crate Smasher",
+    "text": "Clear your first level.",
+    "solid": "crate-smasher.png",
+    "ghost": "crate-smasher-ghost.png",
+    "trigger": "count:levels_cleared>=1",
+    "secret": false
+  },
+  {
+    "id": "crate_crusher",
+    "name": "Crate Crusher",
+    "text": "Smash 100 crates across all your battles.",
+    "solid": "crate-smasher.png",
+    "ghost": "crate-smasher-ghost.png",
+    "trigger": "count:crates_smashed>=100",
+    "secret": true
+  },
+  {
+    "id": "warp_master",
+    "name": "Warp Master",
+    "text": "Send a stone through a wormhole.",
+    "solid": "warp-master.png",
+    "ghost": "warp-master-ghost.png",
+    "trigger": "count:wormhole_transits>=1",
+    "secret": false
+  },
+  {
+    "id": "skunks_ally",
+    "name": "Skunk's Ally",
+    "text": "Make a friend in unexpected places.",
+    "solid": "skunks-ally.png",
+    "ghost": "skunks-ally-ghost.png",
+    "trigger": "flag:skunk",
+    "secret": false
+  },
+  {
+    "id": "kingdom_defender",
+    "name": "Kingdom Defender",
+    "text": "Conquer an entire tier of the kingdom.",
+    "solid": "kingdom-defender.png",
+    "ghost": "kingdom-defender-ghost.png",
+    "trigger": "count:tiers_cleared>=1",
+    "secret": false
+  },
+  {
+    "id": "lucky_shot",
+    "name": "Lucky Shot",
+    "text": "Open a mystery crate and discover its secret.",
+    "solid": "lucky-shot.png",
+    "ghost": "lucky-shot-ghost.png",
+    "trigger": "count:mystery_opened>=1",
+    "secret": false
+  },
+  {
+    "id": "master_builder",
+    "name": "Master Builder",
+    "text": "Save your first custom level in the editor.",
+    "solid": "master-builder.png",
+    "ghost": "master-builder-ghost.png",
+    "trigger": "count:editor_saves>=1",
+    "secret": false
+  },
+  {
+    "id": "windmill_whiz",
+    "name": "Windmill Whiz",
+    "text": "The windmill knows your name.",
+    "solid": "windmill-whiz.png",
+    "ghost": "windmill-whiz-ghost.png",
+    "trigger": "count:windmill_rides>=1",
+    "secret": true
+  },
+  {
+    "id": "dragon_tamer",
+    "name": "Dragon Tamer",
+    "text": "Here there be dragons.",
+    "solid": "dragon-tamer.png",
+    "ghost": "dragon-tamer-ghost.png",
+    "trigger": "count:dragons_tamed>=1",
+    "secret": true
+  }
+]

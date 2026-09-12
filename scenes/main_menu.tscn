@@ -286,7 +286,7 @@ grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Editor"
 
-[node name="Fullscreen" parent="menu/Options" unique_id=1570006328 instance=ExtResource("mo")]
+[node name="Deeds" parent="menu/Options" unique_id=1570006327 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -296,9 +296,9 @@ offset_right = 2669.0
 offset_bottom = 1242.0
 grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
-lbl = "Fullscreen"
+lbl = "Deeds"
 
-[node name="Quit" parent="menu/Options" unique_id=1182060954 instance=ExtResource("mo")]
+[node name="Fullscreen" parent="menu/Options" unique_id=1570006328 instance=ExtResource("mo")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -306,6 +306,18 @@ offset_left = 749.0
 offset_top = 930.0
 offset_right = 2669.0
 offset_bottom = 1330.0
+grow_horizontal = 1
+scale = Vector2(0.22, 0.22)
+lbl = "Fullscreen"
+
+[node name="Quit" parent="menu/Options" unique_id=1182060954 instance=ExtResource("mo")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 749.0
+offset_top = 1018.0
+offset_right = 2669.0
+offset_bottom = 1418.0
 grow_horizontal = 1
 scale = Vector2(0.22, 0.22)
 lbl = "Quit"

@@ -27,6 +27,9 @@ func _ready() -> void:
 	$menu/Options/Editor.MenuOptionSelected.connect(
 		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
 	)
+	$menu/Options/Deeds.MenuOptionSelected.connect(
+		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/deeds_page.tscn")
+	)
 	# Browsers only grant fullscreen from a user tap, so it's a button —
 	# and only a web problem; desktop players have F11 and a window manager.
 	$menu/Options/Fullscreen.visible = OS.has_feature("web")
