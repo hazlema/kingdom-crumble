@@ -1301,3 +1301,16 @@ func test_editor_pan_is_horizontal_only() -> void:
 	ed._pan_camera(Vector2(80.0, 60.0))
 	assert_almost_eq(cam.position.y, y_before, 0.001, "vertical pan is locked")
 	assert_almost_eq(cam.position.x, x_before - 80.0, 0.001, "horizontal pan still works")
+
+
+func test_crate_context_delete_removes_the_crate() -> void:
+	# Owner ask: Delete on the crate right-click menu — one menu action,
+	# same delete path as the DELETE key (occupancy + trigger cleanup).
+	ed.current.crates.append({"x": 832.0, "y": 443.0, "type": "crate-wood"})
+	ed._rebuild()
+	var cell := EditorGrid.world_to_cell(Vector2(832.0, 443.0))
+	assert_true(ed.occupancy.has(cell), "crate occupies its cell")
+	ed._grid_tool._info_cell = cell
+	ed._grid_tool._on_crate_context_item(2)
+	assert_false(ed.occupancy.has(cell), "context Delete clears the cell")
+	assert_eq(ed.current.crates.size(), 0, "crate removed from the document")

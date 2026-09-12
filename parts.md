@@ -273,7 +273,7 @@ triggers, or selection.
   one — same-canvas layer pairs become pixel twins in one click.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
-  it. Right-click a **crate** for Info/Copy-Key.
+  it. Right-click a **crate** for Info, Add Trigger…, or Delete.
 - Right-click a **crate** → **Add Trigger…** opens the trigger dialog:
   pick named scenery overlays as `show:`/`hide:` targets, `confetti`,
   `smoke` (the hit crate starts smoldering — color picker tints it),
