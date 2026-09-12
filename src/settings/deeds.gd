@@ -218,6 +218,11 @@ func _is_valid_trigger_syntax(trigger: String, entry_id: String) -> bool:
 		if stat_part == "" or not n_part.is_valid_int():
 			push_warning("Deeds: entry %s trigger '%s' malformed — skipped" % [entry_id, trigger])
 			return false
+		if int(n_part) < 0:
+			# A negative threshold is always-true — silent auto-unlock is an
+			# authoring bug, not a feature (review catch).
+			push_warning("Deeds: entry %s trigger '%s' has a negative threshold — skipped" % [entry_id, trigger])
+			return false
 		return true
 	elif trigger.begins_with("flag:"):
 		var flag_name := trigger.substr(5)
@@ -345,7 +350,11 @@ func _evaluate() -> void:
 	# Collect all newly-unlocked ids in manifest order before emitting signals.
 	var all_newly: Array[String] = []
 
-	while true:
+	# Belt-and-braces: cycles are removed at load, so each pass must unlock
+	# at least one new id — entries.size()+1 passes is mathematically enough.
+	var _passes_left := _entries.size() + 1
+	while _passes_left > 0:
+		_passes_left -= 1
 		var newly: Array[String] = []
 		for entry in _entries:
 			var id: String = entry["id"]

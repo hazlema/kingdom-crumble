@@ -269,3 +269,11 @@ func test_version_gate_wipes_deeds_cfg() -> void:
 	if FileAccess.file_exists(STAMP):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(STAMP))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR))
+
+
+func test_negative_threshold_rejected() -> void:
+	# Review catch: count:x>=-1 is always-true — an authoring bug, skipped.
+	_write_manifest([{"id": "oops", "name": "Oops", "text": "t",
+		"solid": "x.png", "trigger": "count:shots_fired>=-1"}])
+	Deeds.reload()
+	assert_eq(Deeds.entries().size(), 0, "negative threshold entry is skipped at load")
