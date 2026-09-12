@@ -85,6 +85,7 @@ Wave-1 stats (seams that already exist — no new plumbing):
 | Stat | Seam |
 |---|---|
 | `shots_fired` | trebuchet fire path |
+| `crates_smashed` | `_on_crate_knocked` (owner call-out: lifetime knock count — feeds Crate Smasher tiers) |
 | `levels_cleared` | `_record_clear` |
 | `tiers_cleared` | chain-end clear |
 | `wormhole_transits` | wormhole teleport |
