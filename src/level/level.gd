@@ -300,6 +300,7 @@ func _settle() -> void:
 		state = State.CLEARED
 		_record_clear()
 		_chain_end = current_stem != "" and _next_path_after_clear() == ""
+		if _chain_end: Deeds.bump("tiers_cleared")
 		# on_all_cleared fires FIRST so its display: toasts claim the banner
 		# slot; the victory banner then queues politely behind them.
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
@@ -441,6 +442,7 @@ static func count_standing(crates: Array) -> int:
 
 func _on_crate_knocked(crate: Crate) -> void:
 	_fire_crate_triggers(crate)
+	Deeds.bump("crates_smashed")
 	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
 	# the once-ever ceremony never fires — the plain pool rolls instead.
@@ -464,6 +466,7 @@ func _on_crate_knocked(crate: Crate) -> void:
 			_floaty(verdict["label"], crate.global_position)
 		"skunk":
 			Unlocks.set_flag("skunk")
+			Deeds.flag("skunk")
 			var frame: RareUnlockFrame = UNLOCK_FRAME_SCENE.instantiate()
 			hud.add_child(frame)
 			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
@@ -540,6 +543,7 @@ func _record_clear() -> void:
 	if _editor_session or current_stem == "":
 		return
 	Progress.mark_cleared(Settings.tier, current_stem)
+	Deeds.bump("levels_cleared")
 
 
 # "" when the chain is conquered.

@@ -394,6 +394,8 @@ func _on_save() -> void:
 	await _bake_and_capture()
 	if LevelStore.save_user(current, stem) == "":
 		menu.show_save_error(LevelJson.last_error)
+	else:
+		Deeds.bump("editor_saves")
 
 
 # Save As IS the naming act — the dialog stem is the editor's only title
@@ -406,6 +408,7 @@ func _on_save_as(stem: String) -> void:
 	if save_path == "":
 		menu.show_save_error(LevelJson.last_error)
 	else:
+		Deeds.bump("editor_saves")
 		menu.suggested_stem = stem
 
 

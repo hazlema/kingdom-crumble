@@ -143,6 +143,7 @@ func _fire() -> void:
 		$Soldier/AnimationPlayer.play("fire")
 	_swing_arm()
 	_recoil(kick)
+	Deeds.bump("shots_fired")
 	fired.emit(v)
 
 

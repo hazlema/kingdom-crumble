@@ -52,6 +52,7 @@ func _start(tier: String) -> void:
 	var chain := LevelChain.entries()
 	if not chain.is_empty():
 		Level.next_layout_path = chain[LevelChain.frontier(chain, tier)]["path"]
+	if Pieces.packs().any(func(p: Dictionary) -> bool: return p.get("in_season", false) and not (p.get("months", []) as Array).is_empty()): Deeds.flag("seasonal_played")
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 

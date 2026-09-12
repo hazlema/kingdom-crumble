@@ -43,6 +43,7 @@ static func _route_power(power: String, skunk_unlocked: bool, roll: Callable) ->
 			var buff := StringName(power)
 			return {"kind": "buff", "buff": buff, "label": BUFF_LABELS[buff]}
 		"mystery":
+			Deeds.bump("mystery_opened")
 			if not skunk_unlocked and roll.call() < SKUNK_CHANCE:
 				return {"kind": "skunk"}
 			var pick: StringName = POOL[clampi(int(roll.call() * POOL.size()), 0, POOL.size() - 1)]

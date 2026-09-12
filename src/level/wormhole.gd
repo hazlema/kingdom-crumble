@@ -65,6 +65,7 @@ func _teleport(body: Node) -> void:
 		Transform2D(rb.global_rotation, partner.global_position)
 	)
 	(body as Node2D).global_position = partner.global_position
+	Deeds.bump("wormhole_transits")
 	body.reset_physics_interpolation()
 	# Exit trajectory rides the exit portal's visible rotation (owner
 	# amendment): speed preserved, direction = entry rotated by the exit
