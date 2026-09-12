@@ -28,7 +28,9 @@ func _ready() -> void:
 		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
 	)
 	$menu/Options/Deeds.MenuOptionSelected.connect(
-		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/deeds_page.tscn")
+		func(_o: String) -> void:
+			# Popup over the living menu, not a scene swap (owner design).
+			add_child(load("res://scenes/deeds_page.tscn").instantiate())
 	)
 	# Browsers only grant fullscreen from a user tap, so it's a button —
 	# and only a web problem; desktop players have F11 and a window manager.

@@ -17,6 +17,8 @@ extends Control
 
 const ART_DIR := "res://achievements/"
 const COLS := 4
+const PANEL_W := 1560.0
+const PANEL_H := 869.0
 
 # Cache of auto-generated ghost textures (keyed by source texture object id).
 var _ghost_cache: Dictionary = {}
@@ -89,64 +91,59 @@ func _build_ui() -> void:
 	if theme_res != null:
 		theme = theme_res
 
-	# Full-screen layout
+	# Popup overlay: the menu keeps living behind a dimmer; the panel is
+	# the PAINTED framed parchment (deeds-frame.png — header baked in).
 	anchor_right = 1.0
 	anchor_bottom = 1.0
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
-	# Dark parchment background
-	var bg := ColorRect.new()
-	bg.name = "Background"
-	bg.color = Color(0.13, 0.09, 0.06, 1.0)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
+	var dim := ColorRect.new()
+	dim.name = "Dimmer"
+	dim.color = Color(0.0, 0.0, 0.0, 0.45)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
 
-	# Main vertical layout
-	var vbox := VBoxContainer.new()
-	vbox.name = "VBox"
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 40.0
-	vbox.offset_top = 30.0
-	vbox.offset_right = -40.0
-	vbox.offset_bottom = -20.0
-	vbox.add_theme_constant_override("separation", 12)
-	add_child(vbox)
+	var panel := TextureRect.new()
+	panel.name = "Panel"
+	panel.texture = _load_tex("deeds-frame.png")
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(PANEL_W, PANEL_H)
+	panel.offset_left = -PANEL_W / 2.0
+	panel.offset_top = -PANEL_H / 2.0
+	panel.offset_right = PANEL_W / 2.0
+	panel.offset_bottom = PANEL_H / 2.0
+	panel.stretch_mode = TextureRect.STRETCH_SCALE
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(panel)
 
-	# Header
-	var header := Label.new()
-	header.name = "Header"
-	header.text = "Deeds of the Kingdom"
-	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_theme_font_size_override("font_size", 48)
-	header.add_theme_color_override("font_color", Color(0.95, 0.80, 0.35, 1.0))
-	vbox.add_child(header)
+	# Interior: the parchment area inside the frame, below the baked header.
+	var interior := Control.new()
+	interior.name = "Interior"
+	interior.set_anchors_preset(Control.PRESET_FULL_RECT)
+	interior.offset_left = PANEL_W * 0.055
+	interior.offset_top = PANEL_H * 0.175
+	interior.offset_right = -PANEL_W * 0.055
+	interior.offset_bottom = -PANEL_H * 0.145
+	panel.add_child(interior)
 
-	# Plaque label (deed description / "Not yet discovered…")
-	_plaque = Label.new()
-	_plaque.name = "Plaque"
-	_plaque.text = ""
-	_plaque.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_plaque.add_theme_font_size_override("font_size", 22)
-	_plaque.add_theme_color_override("font_color", Color(0.85, 0.75, 0.55, 1.0))
-	_plaque.custom_minimum_size = Vector2(0, 36)
-	_plaque.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(_plaque)
-
-	# Scrollable grid area
 	var scroll := ScrollContainer.new()
 	scroll.name = "ScrollContainer"
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	vbox.add_child(scroll)
+	interior.add_child(scroll)
+
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(center)
 
 	var grid := GridContainer.new()
 	grid.name = "Grid"
 	grid.columns = COLS
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 20)
-	grid.add_theme_constant_override("v_separation", 20)
-	scroll.add_child(grid)
+	grid.add_theme_constant_override("h_separation", 36)
+	grid.add_theme_constant_override("v_separation", 22)
+	center.add_child(grid)
 
 	# Populate slots
 	_slot_nodes = []
@@ -155,17 +152,33 @@ func _build_ui() -> void:
 		grid.add_child(slot)
 		_slot_nodes.append(slot)
 
-	# Back button
-	var back_btn := Button.new()
-	back_btn.name = "BackButton"
-	back_btn.text = "Back"
-	back_btn.custom_minimum_size = Vector2(160, 48)
-	back_btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	back_btn.pressed.connect(_go_back)
-	var btn_hbox := HBoxContainer.new()
-	btn_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	btn_hbox.add_child(back_btn)
-	vbox.add_child(btn_hbox)
+	# Plaque strip in the parchment's lower margin (inside the frame).
+	_plaque = Label.new()
+	_plaque.name = "Plaque"
+	_plaque.text = ""
+	_plaque.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_plaque.add_theme_font_size_override("font_size", 20)
+	_plaque.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_plaque.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_plaque.offset_left = PANEL_W * 0.08
+	_plaque.offset_right = -PANEL_W * 0.08
+	_plaque.offset_top = -PANEL_H * 0.135
+	_plaque.offset_bottom = -PANEL_H * 0.055
+	panel.add_child(_plaque)
+
+	# Close ✕ on the frame's top-right corner.
+	var close_btn := Button.new()
+	close_btn.name = "CloseButton"
+	close_btn.text = "✕"
+	close_btn.flat = true
+	close_btn.add_theme_font_size_override("font_size", 30)
+	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close_btn.offset_left = -PANEL_W * 0.055
+	close_btn.offset_top = PANEL_H * 0.012
+	close_btn.offset_right = -PANEL_W * 0.012
+	close_btn.offset_bottom = PANEL_H * 0.075
+	close_btn.pressed.connect(_go_back)
+	panel.add_child(close_btn)
 
 
 func _make_slot(entry: Dictionary) -> Control:
@@ -174,7 +187,7 @@ func _make_slot(entry: Dictionary) -> Control:
 
 	var slot := Button.new()
 	slot.name = "Slot_" + entry["id"]
-	slot.custom_minimum_size = Vector2(128, 160)
+	slot.custom_minimum_size = Vector2(180, 186)
 	slot.focus_mode = Control.FOCUS_CLICK
 	slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# Use flat style so our VBox layout shows through
@@ -188,29 +201,32 @@ func _make_slot(entry: Dictionary) -> Control:
 	# Medallion image
 	var img_rect := TextureRect.new()
 	img_rect.name = "Medallion"
-	img_rect.custom_minimum_size = Vector2(100, 100)
+	img_rect.custom_minimum_size = Vector2(124, 124)
 	img_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	img_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	img_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_apply_medallion_texture(img_rect, entry, unlocked)
 	vbox.add_child(img_rect)
 
-	# Name ribbon
+	# Name ribbon: the painted ribbon rides INSIDE the label (behind the
+	# text), so the tree stays VBox -> Medallion, NameLabel for tests.
 	var lbl := Label.new()
 	lbl.name = "NameLabel"
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lbl.add_theme_font_size_override("font_size", 14)
-	if unlocked:
-		lbl.text = str(entry.get("name", ""))
-		lbl.add_theme_color_override("font_color", Color(0.95, 0.80, 0.35, 1.0))
-	elif secret:
-		lbl.text = "???"
-		lbl.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 1.0))
-	else:
-		lbl.text = str(entry.get("name", "")) + " ?"
-		lbl.add_theme_color_override("font_color", Color(0.65, 0.60, 0.50, 1.0))
+	lbl.custom_minimum_size = Vector2(176, 50)
+	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.add_theme_color_override("font_color", Color(0.29, 0.23, 0.16, 1.0))  # theme ink
+	var ribbon := TextureRect.new()
+	ribbon.name = "Ribbon"
+	ribbon.texture = _load_tex("deeds-ribbon.png")
+	ribbon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
+	ribbon.show_behind_parent = true
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.add_child(ribbon)
+	_style_name_label(lbl, entry, unlocked, secret)
 	vbox.add_child(lbl)
 
 	# Wire click to plaque update
@@ -218,6 +234,18 @@ func _make_slot(entry: Dictionary) -> Control:
 	slot.pressed.connect(func() -> void: _on_slot_clicked(entry_copy))
 
 	return slot
+
+
+static func _style_name_label(lbl: Label, entry: Dictionary, unlocked: bool, secret: bool) -> void:
+	if unlocked:
+		lbl.text = str(entry.get("name", ""))
+		lbl.modulate = Color.WHITE
+	elif secret:
+		lbl.text = "???"
+		lbl.modulate = Color(1, 1, 1, 0.55)
+	else:
+		lbl.text = str(entry.get("name", "")) + " ?"
+		lbl.modulate = Color(1, 1, 1, 0.7)
 
 
 func _apply_medallion_texture(img_rect: TextureRect, entry: Dictionary, unlocked: bool) -> void:
@@ -288,15 +316,7 @@ func _refresh_slots() -> void:
 					if grandchild.name == "NameLabel":
 						lbl = grandchild as Label
 		if lbl != null:
-			if unlocked:
-				lbl.text = str(entry.get("name", ""))
-				lbl.add_theme_color_override("font_color", Color(0.95, 0.80, 0.35, 1.0))
-			elif secret:
-				lbl.text = "???"
-				lbl.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 1.0))
-			else:
-				lbl.text = str(entry.get("name", "")) + " ?"
-				lbl.add_theme_color_override("font_color", Color(0.65, 0.60, 0.50, 1.0))
+			_style_name_label(lbl, entry, unlocked, secret)
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +324,12 @@ func _refresh_slots() -> void:
 # ---------------------------------------------------------------------------
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	# As a popup over the menu we just vanish; as a standalone scene
+	# (tests, direct loads) fall back to the menu swap.
+	if get_tree().current_scene != self:
+		queue_free()
+	else:
+		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:

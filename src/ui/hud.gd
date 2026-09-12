@@ -185,34 +185,31 @@ func _on_deed_unlocked(id: String) -> void:
 ## Queue a deed banner entry — defers behind an active toast using the
 ## min-remaining cap+epsilon idiom from hud.banner().
 func _queue_deed_banner(entry: Dictionary) -> void:
-	# Review catch: a seq stale-guard DROPPED all but the last deed when
-	# several unlocked together (cascading meta-deeds). A pending queue
-	# drained by one timer loses nothing; the DeedBanner's own FIFO is
-	# the ordering authority once entries reach it.
-	var now := Time.get_ticks_msec() * 0.001
-	var busy: bool = now < _toast_until or %BannerCenter.visible  # toast OR victory banner
-	if not busy:
-		if _deed_banner != null:
-			_deed_banner.celebrate(entry)
-		return
+	# Review catches (task-3 + final): no seq guard (dropped deeds), and the
+	# pending queue is NEVER popped until actually deliverable (pop+requeue
+	# rotated FIFO). One armed timer re-checks until the slot is free.
 	_pending_deeds.append(entry)
+	_drain_deeds()
+
+
+func _drain_deeds() -> void:
+	if _pending_deeds.is_empty() or _deed_banner == null:
+		return
+	var now := Time.get_ticks_msec() * 0.001
+	var busy: bool = now < _toast_until or %BannerCenter.visible
+	if not busy:
+		while not _pending_deeds.is_empty():
+			_deed_banner.celebrate(_pending_deeds.pop_front())
+		return
 	if _deed_drain_armed:
 		return
 	_deed_drain_armed = true
 	var wait := minf(maxf(_toast_until - now, 0.0), 2.5) + 0.15
-	get_tree().create_timer(wait).timeout.connect(
-		func() -> void:
-			_deed_drain_armed = false
-			if not is_inside_tree() or _deed_banner == null:
-				return
-			if %BannerCenter.visible:
-				# victory banner still up — re-arm one more courtesy beat
-				if not _pending_deeds.is_empty():
-					_queue_deed_banner(_pending_deeds.pop_front())
-				return
-			while not _pending_deeds.is_empty():
-				_deed_banner.celebrate(_pending_deeds.pop_front())
-	)
+	get_tree().create_timer(wait).timeout.connect(func() -> void:
+		_deed_drain_armed = false
+		if is_inside_tree():
+			_drain_deeds())
+
 
 
 ## Returns true if a deed banner is currently mid-animation (for tests).

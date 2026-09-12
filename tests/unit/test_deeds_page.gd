@@ -69,14 +69,9 @@ func _find_slots(page: Node) -> Array:
 
 
 func _find_grid(page: Node) -> GridContainer:
-	for child in page.get_children():
-		if child is VBoxContainer:
-			for c2 in child.get_children():
-				if c2 is ScrollContainer:
-					for c3 in c2.get_children():
-						if c3 is GridContainer:
-							return c3 as GridContainer
-	return null
+	# Structure-agnostic: the popup rebuild moved the grid under the
+	# painted panel — find it by name wherever it lives.
+	return page.find_child("Grid", true, false) as GridContainer
 
 
 func _find_label_in_slot(slot: Button) -> Label:
@@ -89,12 +84,8 @@ func _find_label_in_slot(slot: Button) -> Label:
 
 
 func _find_plaque(page: Node) -> Label:
-	for child in page.get_children():
-		if child is VBoxContainer:
-			for c2 in child.get_children():
-				if c2 is Label and c2.name == "Plaque":
-					return c2 as Label
-	return null
+	# Structure-agnostic after the popup rebuild.
+	return page.find_child("Plaque", true, false) as Label
 
 
 # ---------------------------------------------------------------------------

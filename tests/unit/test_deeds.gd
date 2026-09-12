@@ -24,7 +24,17 @@ func _write_manifest(entries: Array) -> void:
 	fa.close()
 
 
+var _entry_cfg := ""
+var _entry_manifest := ""
+
+
 func before_each() -> void:
+	# Capture whatever the suite-wide hook set (the scratch sandbox) so
+	# after_each restores THAT — restoring the hardcoded real path here
+	# defeated the hook and polluted the developer's real save (final
+	# review catch, proven live).
+	_entry_cfg = Deeds.cfg_path
+	_entry_manifest = Deeds.manifest_path
 	# Remove any stale scratch files
 	if FileAccess.file_exists(CFG_SCRATCH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG_SCRATCH))
@@ -44,8 +54,8 @@ func after_each() -> void:
 	if Deeds.deed_unlocked.is_connected(_signal_cb):
 		Deeds.deed_unlocked.disconnect(_signal_cb)
 	# Restore defaults and clean up
-	Deeds.cfg_path = "user://deeds.cfg"
-	Deeds.manifest_path = "res://achievements/achievements.manifest"
+	Deeds.cfg_path = _entry_cfg
+	Deeds.manifest_path = _entry_manifest
 	Deeds.reload()
 	if FileAccess.file_exists(CFG_SCRATCH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG_SCRATCH))
