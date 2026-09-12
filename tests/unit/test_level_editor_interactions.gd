@@ -1290,3 +1290,14 @@ func test_match_transform_makes_pieces_twins() -> void:
 	var tlb := pb.to_global(pb.offset)
 	assert_almost_eq(tla.x, tlb.x, 0.01, "pieces are pixel twins after match (x)")
 	assert_almost_eq(tla.y, tlb.y, 0.01, "pieces are pixel twins after match (y)")
+
+
+func test_editor_pan_is_horizontal_only() -> void:
+	# Owner catch: RMB pan drifted vertically off the field — the board is
+	# a horizontal strip; the editor camera matches the game camera's axis.
+	var cam: Camera2D = ed.get_node("Camera")
+	var y_before := cam.position.y
+	var x_before := cam.position.x
+	ed._pan_camera(Vector2(80.0, 60.0))
+	assert_almost_eq(cam.position.y, y_before, 0.001, "vertical pan is locked")
+	assert_almost_eq(cam.position.x, x_before - 80.0, 0.001, "horizontal pan still works")
