@@ -540,10 +540,12 @@ func _show_intro() -> void:
 # Log the clear — never from the editor sandbox, never for pathless
 # layouts (spec: testing is just testing).
 func _record_clear() -> void:
+	# Deeds records BEFORE the editor/pathless guard — an editor TEST clear
+	# is a real clear to the deed ledger (plan: do not special-case).
+	Deeds.bump("levels_cleared")
 	if _editor_session or current_stem == "":
 		return
 	Progress.mark_cleared(Settings.tier, current_stem)
-	Deeds.bump("levels_cleared")
 
 
 # "" when the chain is conquered.

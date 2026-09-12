@@ -350,3 +350,15 @@ func test_seasonal_played_flag_not_set_when_no_in_season_pack() -> void:
 	DirAccess.remove_absolute(TOYBOX_DIR_SEASONAL)
 	Pieces.toybox_root = "user://toybox"
 	Pieces.scan()
+
+
+func test_editor_session_clear_still_counts() -> void:
+	# Review catch: the bump must fire BEFORE the editor guard — an editor
+	# TEST clear is a real clear to the ledger (plan: no special-casing).
+	var before := int(Deeds._cfg.get_value("stats", "levels_cleared", 0)) if Deeds._cfg else 0
+	var lvl := Level.new()
+	lvl._editor_session = true
+	lvl._record_clear()
+	var after := int(Deeds._cfg.get_value("stats", "levels_cleared", 0))
+	assert_eq(after, before + 1, "editor clears count toward levels_cleared")
+	lvl.free()
