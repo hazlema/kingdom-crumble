@@ -303,6 +303,8 @@ func _show_crate_context(screen_pos: Vector2, cell: Vector2i) -> void:
 	_crate_context.clear()
 	_crate_context.add_item("Info", 0)
 	_crate_context.add_item("Add Trigger…", 1)
+	_crate_context.add_separator()
+	_crate_context.add_item("Delete", 2)
 	_crate_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))
 	_crate_context.popup()
 
@@ -313,6 +315,12 @@ func _on_crate_context_item(id: int) -> void:
 			_show_crate_info(_info_cell)
 		1:
 			_show_trigger_dialog(_info_cell)
+		2:
+			# Select the right-clicked cell, then run the one delete path
+			# (footprint anchor resolution, occupancy, trigger-key erase).
+			var node: Variant = ed.occupancy.get(_info_cell)
+			ed.select_cell(_info_cell, Vector2i(1, 1), node if node is Node2D else null)
+			_delete_selected()
 
 
 func _show_crate_info(cell: Vector2i) -> void:

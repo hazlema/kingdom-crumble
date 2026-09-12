@@ -27,6 +27,11 @@ func _ready() -> void:
 	$menu/Options/Editor.MenuOptionSelected.connect(
 		func(_o: String) -> void: get_tree().change_scene_to_file("res://scenes/editor.tscn")
 	)
+	$menu/Options/Deeds.MenuOptionSelected.connect(
+		func(_o: String) -> void:
+			# Popup over the living menu, not a scene swap (owner design).
+			add_child(load("res://scenes/deeds_page.tscn").instantiate())
+	)
 	# Browsers only grant fullscreen from a user tap, so it's a button —
 	# and only a web problem; desktop players have F11 and a window manager.
 	$menu/Options/Fullscreen.visible = OS.has_feature("web")
@@ -34,10 +39,8 @@ func _ready() -> void:
 		func(_o: String) -> void: _toggle_fullscreen()
 	)
 	$menu/Options/Quit.MenuOptionSelected.connect(func(_o: String) -> void: _quit())
-	# Desktop hides Fullscreen — collapse its empty slot so the sign
-	# chain hangs without a hole.
-	if not $menu/Options/Fullscreen.visible:
-		$menu/Options/Quit.position.y = $menu/Options/Fullscreen.position.y
+	# Desktop hides Fullscreen — the VBoxContainer automatically closes the
+	# gap when a child is invisible, so no manual position adjustment needed.
 
 
 func _toggle_fullscreen() -> void:
@@ -52,6 +55,7 @@ func _start(tier: String) -> void:
 	var chain := LevelChain.entries()
 	if not chain.is_empty():
 		Level.next_layout_path = chain[LevelChain.frontier(chain, tier)]["path"]
+	if Pieces.packs().any(func(p: Dictionary) -> bool: return p.get("in_season", false) and not (p.get("months", []) as Array).is_empty()): Deeds.flag("seasonal_played")
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 

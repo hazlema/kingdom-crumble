@@ -268,12 +268,12 @@ triggers, or selection.
   **Ctrl while resizing** snaps the scaled width to whole cells — two
   same-canvas layers Ctrl-resized to the same cell count get identical
   scale, so stacked art stays pixel-aligned.
-- Right-click a scenery piece → **Match → [name]** copies that piece's
+- Right-click a scenery piece → **Clone Position → [name]** copies that piece's
   whole transform (position, scale, rotation, flips, pivot) onto this
   one — same-canvas layer pairs become pixel twins in one click.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
   **Drag** moves the whole piece (grab any cell). **DELETE** removes
-  it. Right-click a **crate** for Info/Copy-Key.
+  it. Right-click a **crate** for Info, Add Trigger…, or Delete.
 - Right-click a **crate** → **Add Trigger…** opens the trigger dialog:
   pick named scenery overlays as `show:`/`hide:` targets, `confetti`,
   `smoke` (the hit crate starts smoldering — color picker tints it),
@@ -349,6 +349,68 @@ brain fart demands.
   `2026-09-06-animatable-props-design.md` — class deep-dives
 - `docs/audits/2026-09-06-editor-architecture.md` — why the editor is
   shaped the way it is
+
+---
+
+## Deeds of the Kingdom
+
+Press **T** during play to flip the deeds parchment open over the game
+(and **T** or ✕ to tuck it away); on the main menu it's the **Deeds**
+button. The game keeps running behind it — it's a ledger, not a pause.
+
+Deeds are local achievements — a parchment page of round medallions,
+each celebrating something you did. There are no scores and no
+leaderboards; the kingdom simply remembers.
+
+**Reading the page.** Main menu → Deeds opens a full-screen grid of
+medallion slots in curated display order. Earned medallions glow with
+their full-color art; unearned ones appear as pencil-sketch ghosts.
+Tap any medallion to read its inscription — earned deeds show their
+full description; unearned ones say only "Not yet discovered…".
+Secrets stay secret until you find them (they show "???" for the name
+too, and no hint). Press Back or Escape to return to the menu.
+
+**How deeds unlock.** Every deed is tied to a single trigger: a counter
+reaching a threshold (`count:shots_fired>=1`), a flag being set
+(`flag:skunk`), or a set of other deeds all being earned. When you
+cross a threshold mid-session, the medallion stamps onto the screen
+with a scale-punch and a gold ribbon: "⚜ Deed Accomplished —
+Crate Smasher ⚜". Multiple unlocks queue politely.
+
+**Adding a new deed (content-first).** No code required:
+
+1. Paint the solid medallion PNG (256 × 256, round composition,
+   transparent corners). An optional ghost PNG can be provided — if
+   absent, the game auto-desaturates the solid art.
+2. Drop the PNG(s) into `res://achievements/` and run a headless
+   import (`godot --headless --import`).
+3. Add one entry to `res://achievements/achievements.manifest` in the
+   display position you want. A deed always goes where the manifest
+   puts it — order is first-class.
+
+Example entry:
+
+```json
+{ "id": "windmill_whiz",
+  "name": "Windmill Whiz",
+  "text": "The windmill knows your name.",
+  "solid": "windmill-whiz.png",
+  "ghost": "windmill-whiz-ghost.png",
+  "trigger": "count:windmill_rides>=1",
+  "secret": true }
+```
+
+The trigger vocabulary is fixed and baked — content selects from it,
+never extends it. Unknown stat names in triggers warn once and never
+fire (a safe foreshadowing slot). Malformed entries warn and skip;
+the rest of the page always loads.
+
+**Wave-1 deeds (shipped):** First Shot, Crate Smasher, Crate Crusher
+(secret), Warp Master, Skunk's Ally, Kingdom Defender, Lucky Shot,
+Master Builder, and two mystery teasers — Windmill Whiz and Dragon
+Tamer — whose unlock conditions are not yet wired up.
+
+**Related docs:** `docs/superpowers/specs/2026-09-12-achievements-design.md`
 
 ---
 

@@ -349,7 +349,7 @@ func _show_scenery_context(screen_pos: Vector2) -> void:
 			_match_menu.add_item(mnm, mi)
 			have_targets = true
 	if have_targets and _ci >= 0:
-		_scenery_context.add_submenu_node_item("Match →", _match_menu)
+		_scenery_context.add_submenu_node_item("Clone Position →", _match_menu)
 	_scenery_context.add_separator()
 	_scenery_context.add_item("Delete", 2)
 	_scenery_context.position = Vector2i(int(screen_pos.x), int(screen_pos.y))

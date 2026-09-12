@@ -149,6 +149,8 @@ func _physics_process(delta: float) -> void:
 		_apply_backdrop_alpha(_backdrop.toggle())
 	if not _editor_session and Input.is_action_just_pressed("jump_levels"):
 		_open_jump()
+	if not _editor_session and Input.is_action_just_pressed("deeds"):
+		_toggle_deeds()
 	_tick_hold(delta)
 	_update_crate_check()
 	match state:
@@ -300,6 +302,7 @@ func _settle() -> void:
 		state = State.CLEARED
 		_record_clear()
 		_chain_end = current_stem != "" and _next_path_after_clear() == ""
+		if _chain_end: Deeds.bump("tiers_cleared")
 		# on_all_cleared fires FIRST so its display: toasts claim the banner
 		# slot; the victory banner then queues politely behind them.
 		var effects: Array = layout.triggers.get("on_all_cleared", [])
@@ -441,6 +444,7 @@ static func count_standing(crates: Array) -> int:
 
 func _on_crate_knocked(crate: Crate) -> void:
 	_fire_crate_triggers(crate)
+	Deeds.bump("crates_smashed")
 	hud.set_crates(count_standing(_crates()), layout.crates.size())
 	# During editor playtests the skunk is treated as already unlocked so
 	# the once-ever ceremony never fires — the plain pool rolls instead.
@@ -464,6 +468,7 @@ func _on_crate_knocked(crate: Crate) -> void:
 			_floaty(verdict["label"], crate.global_position)
 		"skunk":
 			Unlocks.set_flag("skunk")
+			Deeds.flag("skunk")
 			var frame: RareUnlockFrame = UNLOCK_FRAME_SCENE.instantiate()
 			hud.add_child(frame)
 			frame.show_unlock("Rare Unlock", RareUnlockFrame.skunk_frames())
@@ -525,6 +530,18 @@ func _set_scenery_visible(overlay_name: String, on: bool) -> void:
 		push_warning("Trigger references unknown scenery '%s'" % overlay_name)
 
 
+# T toggles the deeds parchment in-game (popup over the hud; the game
+# keeps running behind it — it's a read-only ledger, not a pause).
+func _toggle_deeds() -> void:
+	var existing := hud.get_node_or_null("DeedsPopup")
+	if existing != null:
+		existing.queue_free()
+		return
+	var page: Control = load("res://scenes/deeds_page.tscn").instantiate()
+	page.name = "DeedsPopup"
+	hud.add_child(page)
+
+
 func _open_jump() -> void:
 	%JumpDialog.open(Settings.tier)
 
@@ -537,6 +554,9 @@ func _show_intro() -> void:
 # Log the clear — never from the editor sandbox, never for pathless
 # layouts (spec: testing is just testing).
 func _record_clear() -> void:
+	# Deeds records BEFORE the editor/pathless guard — an editor TEST clear
+	# is a real clear to the deed ledger (plan: do not special-case).
+	Deeds.bump("levels_cleared")
 	if _editor_session or current_stem == "":
 		return
 	Progress.mark_cleared(Settings.tier, current_stem)

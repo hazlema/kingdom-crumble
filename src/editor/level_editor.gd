@@ -292,7 +292,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var mouse := get_viewport().get_mouse_position()
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		$Camera.position -= mouse - _last_mouse
+		_pan_camera(mouse - _last_mouse)
 		_clamp_camera()
 	_last_mouse = mouse
 
@@ -394,6 +394,8 @@ func _on_save() -> void:
 	await _bake_and_capture()
 	if LevelStore.save_user(current, stem) == "":
 		menu.show_save_error(LevelJson.last_error)
+	else:
+		Deeds.bump("editor_saves")
 
 
 # Save As IS the naming act — the dialog stem is the editor's only title
@@ -406,6 +408,7 @@ func _on_save_as(stem: String) -> void:
 	if save_path == "":
 		menu.show_save_error(LevelJson.last_error)
 	else:
+		Deeds.bump("editor_saves")
 		menu.suggested_stem = stem
 
 
@@ -862,6 +865,12 @@ func _mouse_over_ui(p: Vector2) -> bool:
 		if (c.visible or e["blocks_hidden"]) and c.get_global_rect().has_point(p):
 			return true
 	return false
+
+
+# RMB pan — HORIZONTAL ONLY, matching the game camera (owner catch:
+# vertical drift loses the field; the board is a horizontal strip).
+func _pan_camera(delta: Vector2) -> void:
+	$Camera.position.x -= delta.x
 
 
 # Clamp pan POSITION to the camera limits — past the bounds the display

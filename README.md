@@ -144,6 +144,11 @@ can make a PNG, you can mod this game.
   no tools required
 - 📈 **Progression & unlocks** — per-difficulty level chains, a level
   select, and rare unlockables (say hello to Mr. Skunk)
+- 🏅 **Deeds of the Kingdom** — a parchment page of medallion achievements
+  earned through play. Unlocks stamp live onto the screen with a gold ribbon
+  and confetti; the full gallery is one button from the main menu. Adding a
+  new deed is a content act — paint the art, drop it in, add one line to the
+  manifest
 - 📱 **Plays everywhere** — browser, installable PWA, full touch
   support on mobile, desktop builds from source
 
