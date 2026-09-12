@@ -354,3 +354,25 @@ func test_shipped_manifest_exactly_two_unknown_stat_teaser_warns() -> void:
 		"dragons_tamed flagged as unknown stat (dragon_tamer tease)")
 	assert_eq(warned.size(), 2,
 		"exactly two unknown-stat warns: windmill_rides and dragons_tamed")
+
+
+func test_menu_buttons_actually_flow_vertically() -> void:
+	# Owner screenshot catch: zero-min-size children stacked all seven
+	# buttons at one spot (only Quit visible on top of the pile). Pin the
+	# flow: each button sits strictly below the previous, ~88px pitch.
+	var menu: Node = load("res://scenes/main_menu.tscn").instantiate()
+	add_child_autofree(menu)
+	await wait_frames(2)
+	var box: VBoxContainer = menu.get_node("menu/Options")
+	var prev_y := -INF
+	var ys: Array[float] = []
+	for child in box.get_children():
+		var c := child as Control
+		if not c.visible:
+			continue  # hidden buttons (Fullscreen on desktop) aren't positioned
+		var gy := c.global_position.y
+		assert_gt(gy, prev_y, "%s sits below the previous button" % c.name)
+		prev_y = gy
+		ys.append(gy)
+	if ys.size() >= 2:
+		assert_almost_eq(ys[1] - ys[0], 88.0, 4.0, "the original 88px pitch is reproduced")
