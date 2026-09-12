@@ -130,6 +130,8 @@ func _run(entry: Dictionary) -> void:
 	rib_tex.texture = load("res://achievements/deeds-ribbon.png") if ResourceLoader.exists("res://achievements/deeds-ribbon.png") else null
 	rib_tex.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rib_tex.stretch_mode = TextureRect.STRETCH_SCALE
+	rib_tex.offset_top = 3.0
+	rib_tex.offset_bottom = 3.0  # ribbon rides 3px low so the text sits high on the band
 	rib_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rib_tex.show_behind_parent = true
 	rib_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE

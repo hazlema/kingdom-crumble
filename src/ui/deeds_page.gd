@@ -225,6 +225,8 @@ func _make_slot(entry: Dictionary) -> Control:
 	ribbon.texture = _load_tex("deeds-ribbon.png")
 	ribbon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
+	ribbon.offset_top = 3.0
+	ribbon.offset_bottom = 3.0  # ribbon rides 3px low so the text sits high on the band
 	# CRITICAL: without this the TextureRect demands its natural 360px as
 	# minimum size, blowing every grid cell out (owner screenshot catch —
 	# overlapping giant ribbons).
