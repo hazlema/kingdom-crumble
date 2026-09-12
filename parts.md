@@ -268,7 +268,7 @@ triggers, or selection.
   **Ctrl while resizing** snaps the scaled width to whole cells — two
   same-canvas layers Ctrl-resized to the same cell count get identical
   scale, so stacked art stays pixel-aligned.
-- Right-click a scenery piece → **Match → [name]** copies that piece's
+- Right-click a scenery piece → **Clone → [name]** copies that piece's
   whole transform (position, scale, rotation, flips, pivot) onto this
   one — same-canvas layer pairs become pixel twins in one click.
 - **Select** any cell of a piece — the ring wraps the whole footprint.
