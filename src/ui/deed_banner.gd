@@ -65,7 +65,7 @@ func _next() -> void:
 func _run(entry: Dictionary) -> void:
 	var id: String = entry.get("id", "")
 	var name_val: String = entry.get("name", "")
-	ribbon_text = "⚜ Deed Accomplished — %s ⚜" % name_val
+	ribbon_text = "⚜ Deed Accomplished — %s ⚜" % name_val  # tests read this; display splits it
 
 	visible = true
 	modulate.a = 1.0
@@ -95,12 +95,35 @@ func _run(entry: Dictionary) -> void:
 		medallion.texture = tex
 	vbox.add_child(medallion)
 
-	# Gold ribbon label
+	# The deed NAME rides the painted ribbon (ink on cream — readable over
+	# any sky; owner catch: bare gold text washed out over the meadow).
+	var name_lbl := Label.new()
+	name_lbl.text = str(entry.get("name", ""))
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_lbl.custom_minimum_size = Vector2(300, 74)
+	name_lbl.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	name_lbl.add_theme_color_override("font_color", Color(0.29, 0.23, 0.16, 1))
+	name_lbl.add_theme_font_size_override("font_size", 26)
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rib_tex := TextureRect.new()
+	rib_tex.texture = load("res://achievements/deeds-ribbon.png") if ResourceLoader.exists("res://achievements/deeds-ribbon.png") else null
+	rib_tex.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rib_tex.stretch_mode = TextureRect.STRETCH_SCALE
+	rib_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rib_tex.show_behind_parent = true
+	rib_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_lbl.add_child(rib_tex)
+	vbox.add_child(name_lbl)
+
+	# "Deed Accomplished" line — gold with a dark outline for sky contrast.
 	var ribbon := Label.new()
 	ribbon.text = ribbon_text
 	ribbon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ribbon.add_theme_color_override("font_color", Color(0.96, 0.77, 0.26, 1))
-	ribbon.add_theme_font_size_override("font_size", 28)
+	ribbon.add_theme_color_override("font_outline_color", Color(0.25, 0.15, 0.05, 1))
+	ribbon.add_theme_constant_override("outline_size", 8)
+	ribbon.add_theme_font_size_override("font_size", 22)
 	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(ribbon)
 
@@ -170,4 +193,6 @@ func _fire_confetti() -> void:
 	if vp != null:
 		at = Vector2(vp.get_visible_rect().size.x * 0.5, 150.0)
 	Effects._confetti(host, at)
+	Effects._confetti(host, at + Vector2(-70, 20))
+	Effects._confetti(host, at + Vector2(70, 20))
 	get_tree().create_timer(3.0).timeout.connect(host.queue_free)
