@@ -122,6 +122,42 @@ The full field manual — image rules, every sidecar key, trigger
 authoring, pack anatomy — lives in **[parts.md](parts.md)**. If you
 can make a PNG, you can mod this game.
 
+## Controls 🎹
+
+Everything works with just the mouse (or a finger on touch) — the
+keyboard is all shortcuts.
+
+**Playing:**
+
+| Key | Does |
+|---|---|
+| `←` `→` or `A` `D` | Aim the trebuchet |
+| `Space` | Charge & fire (hold, release) |
+| `Q` `E` or `,` `.` | Scout the battlefield left / right |
+| `H` (hold) | Crate check — standing glow green, fallen red |
+| `T` | Flip open the Deeds of the Kingdom parchment |
+| `B` | Toggle the backdrop dimmer |
+| `L` or `J` | Jump between unlocked levels |
+| `Enter` | Advance dialogs |
+| `Esc` | Pause menu |
+
+**In the editor:**
+
+| Key | Does |
+|---|---|
+| `S` / `A` | Save / Save As (Ctrl+S works on desktop) |
+| `T` | Playtest the level (Ctrl+T on desktop) |
+| `C` | Enter / leave scenery mode |
+| `G` | Toggle the grid (scenery mode) |
+| `M` | Next soundtrack album |
+| `Shift` + place | Stamp multiple copies of a piece |
+| Arrows / `Shift`+arrows | Nudge selected scenery 1 px / 10 px |
+| `Ctrl` + drag | Snap scenery to the crate grid |
+| `Ctrl` + resize | Snap width to whole cells |
+| `DELETE` | Remove the selection |
+| `Esc` | Drop a carried piece / leave scenery mode |
+| Right-click | Context menus (crates & scenery) — pan with a drag |
+
 ## Features
 
 - 🏹 **Physics artillery** — real trajectories, tumbling crates, lean
