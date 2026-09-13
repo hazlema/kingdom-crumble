@@ -32,6 +32,9 @@ var _plaque: Label
 # Callable ref so we can disconnect on exit.
 var _deed_unlocked_cb: Callable
 
+# The framed panel — clicks OUTSIDE it close the popup.
+var _panel: Control
+
 
 func _ready() -> void:
 	_build_ui()
@@ -104,7 +107,8 @@ func _build_ui() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
-	var panel := TextureRect.new()
+	_panel = TextureRect.new()
+	var panel := _panel
 	panel.name = "Panel"
 	panel.texture = _load_tex("deeds-frame.png")
 	panel.set_anchors_preset(Control.PRESET_CENTER)
@@ -344,3 +348,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		accept_event()
 		_go_back()
+
+
+func _gui_input(event: InputEvent) -> void:
+	# Click on the dimmer (anywhere outside the parchment) closes the
+	# popup — standard popup law (owner microscope finding #1).
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _panel != null and not _panel.get_global_rect().has_point(event.global_position):
+			accept_event()
+			_go_back()

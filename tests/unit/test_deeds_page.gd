@@ -389,3 +389,22 @@ func test_toggle_deeds_opens_and_closes_popup_on_level() -> void:
 	lvl._toggle_deeds()
 	await wait_frames(2)
 	assert_null(lvl.hud.get_node_or_null("DeedsPopup"), "T again closes it")
+
+
+func test_click_outside_panel_closes_popup() -> void:
+	# Microscope finding: clicking the dimmer closes; clicking the
+	# parchment does not.
+	var page := await _make_page()
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	# inside the panel: stays open
+	ev.global_position = page._panel.get_global_rect().get_center()
+	page._gui_input(ev)
+	await wait_frames(1)
+	assert_true(is_instance_valid(page) and page.is_inside_tree(), "click on parchment keeps it open")
+	# outside the panel (top-left corner of screen): closes
+	ev.global_position = Vector2(2.0, 2.0)
+	page._gui_input(ev)
+	await wait_frames(2)
+	assert_false(is_instance_valid(page) and page.is_inside_tree(), "click on the dimmer closes the popup")
